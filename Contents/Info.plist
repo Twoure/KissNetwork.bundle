@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.plexapp.plugins.kissmanga</string>
+	<key>PlexClientPlatforms</key>
+	<string>*</string>
+	<key>PlexFrameworkVersion</key>
+	<string>2</string>
+	<key>PlexPluginConsoleLogging</key>
+	<string>1</string>
+	<key>PlexPluginDevMode</key>
+  <string>1</string>
+  <key>PlexPluginCodePolicy</key>
+  <string>Elevated</string>
+</dict>
+</plist>
