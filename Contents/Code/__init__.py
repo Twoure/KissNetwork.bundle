@@ -1,16 +1,31 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissManga Plex Channel -- v1.0                                     #
+#                               KissNetwork Plex Channel -- v1.0                                   #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
 import random
+import cfrepack
 
 # set global variables
-PREFIX = '/photos/kissmanga'
-TITLE = 'KissManga'
-BASE_URL = 'http://kissmanga.com'
-SEARCH_URL = BASE_URL + '/Search/Manga?keyword=%s'
+PREFIX = '/photos/kissnetwork'
+TITLE = 'KissNetwork'
+
+# KissAnime
+ANIME_BASE_URL = 'http://kissanime.com'
+ANIME_SEARCH_URL = ANIME_BASE_URL + '/Search/Anime?keyword=%s'
+
+# KissAsian
+ASIAN_BASE_URL = 'http://kissasian.com'
+ASIAN_SEARCH_URL = ASIAN_BASE_URL + '/Search/Drama?keyword=%s'
+
+# KissCartoon
+CARTOON_BASE_URL = 'http://kisscartoon.me'
+CARTOON_SEARCH_URL = CARTOON_BASE_URL + '/Search/Cartoon?keyword=%s'
+
+# KissManga
+MANGA_BASE_URL = 'http://kissmanga.com'
+MANGA_SEARCH_URL = BASE_URL + '/Search/Manga?keyword=%s'
 
 randomArt = random.randint(1, 8)
 ART = 'art-default_' + str(randomArt) + '.png'
@@ -31,13 +46,83 @@ def Start():
 
 @handler(PREFIX, TITLE, thumb=ICON, art=ART)
 def MainMenu():
-    oc = ObjectContainer(title2=TITLE)  #, view_group='List')
-    oc.add(DirectoryObject(key=Callback(AlphabetList), title='Alphabets'))
-    oc.add(DirectoryObject(key=Callback(GenreList), title='Genres'))
+    oc = ObjectContainer(title2=TITLE)
+    oc.add(DirectoryObject(
+        key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime'),
+        title='Anime'))
+    oc.add(DirectoryObject(
+        key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon'),
+        title='Cartoons'))
+    oc.add(DirectoryObject(
+        key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama'),
+        title='Drama'))
+    oc.add(DirectoryObject(
+        key=Callback(KissManga, url=MANGA_BASE_URL, title='Manga'),
+        title='Manga'))
     oc.add(DirectoryObject(key=Callback(Bookmarks, title='My Bookmarks'), title='My Bookmarks'))
     oc.add(PrefsObject(title='Preferences'))
+
+    return oc
+
+####################################################################################################
+# Create KissAnime site Menu
+
+@route(PREFIX + '/kissanime')
+def KissAnime(url, title):
+    oc = ObjectContainer(title2=TITLE)
+    oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
+    oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
-        key=Callback(Search),
+        key=Callback(Search, url=ANIME_SEARCH_URL, title=title),
+        title='Search',
+        summary='Search Kissanime',
+        prompt='Search for...'))
+
+    return oc
+
+####################################################################################################
+# Create KissAsian site Menu
+
+@route(PREFIX + '/kissasian')
+def KissAsian(url, title):
+    oc = ObjectContainer(title2=TITLE)
+    oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
+    oc.add(DirectoryObject(key=Callback(CountryList, url=url, title=title), title='Countries'))
+    oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    oc.add(InputDirectoryObject(
+        key=Callback(Search, url=ASIAN_SEARCH_URL, title=title),
+        title='Search',
+        summary='Search Kissasian',
+        prompt='Search for...'))
+
+    return oc
+
+####################################################################################################
+# Create KissCartoon site Menu
+
+@route(PREFIX + '/kisscartoon')
+def KissCartoon(url, title):
+    oc = ObjectContainer(title2=TITLE)
+    oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
+    oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    oc.add(InputDirectoryObject(
+        key=Callback(Search, url=CARTOON_SEARCH_URL, title=title),
+        title='Search',
+        summary='Search Kisscartoon',
+        prompt='Search for...'))
+
+    return oc
+
+####################################################################################################
+# Create KissManga site Menu
+
+@route(PREFIX + '/kissmanga')
+def KissManga(url, title):
+    oc = ObjectContainer(title2=TITLE)
+    oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
+    oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    oc.add(InputDirectoryObject(
+        key=Callback(Search, url=MANGA_SEARCH_URL, title=title),
         title='Search',
         summary='Search Kissmanga',
         prompt='Search for...'))
@@ -63,10 +148,10 @@ def ValidatePrefs():
     Dict.Save()
 
 ####################################################################################################
-# Loads bookmarked manga from Dict.
+# Crates Bookmark Menu
 
 @route(PREFIX + '/bookmarks')
-def Bookmarks(title):
+def BookmarksMain(title):
     oc = ObjectContainer(title1=title, no_cache=True)
 
     # check for 'Bookmarks' section in Dict
@@ -76,42 +161,81 @@ def Bookmarks(title):
             header=title,
             message='No Bookmarks yet. Get out there and start adding some!!!.',
             no_cache = True)
-    # create manga list from bookmarks info
+    # create boomark directory based on category
     else:
-        for bookmark in Dict['Bookmarks']:
-            manga = bookmark['manga']
-            title = bookmark['title']
-            cover = bookmark['cover']
-            summary = bookmark['summary']
-
-            oc.add(DirectoryObject(
-                key=Callback(MangaPage, manga=manga, title=title),
-                title=title,
-                summary=summary,
-                thumb=cover))
+        # Create sub Categories for Anime, Cartoon, Drama, and Manga
+        for category in Dict['Bookmarks']:
+            if category['Anime']:
+                oc.add(DirectoryObject(
+                    key=Callback(BookmarksSub, title='Anime', categorylist=category['Anime'])
+                    title='Anime',
+                    summary='Display Anime Bookmarks'))
+            elif category['Drama']:
+                oc.add(DirectoryObject(
+                    key=Callback(BookmarksSub, title='Drama', categorylist=category['Drama'])
+                    title='Drama',
+                    summary='Display Drama Bookmarks'))
+            elif category['Cartoon']:
+                oc.add(DirectoryObject(
+                    key=Callback(BookmarksSub, title='Cartoon', categorylist=category['Cartoon'])
+                    title='Cartoon',
+                    summary='Display Cartoon Bookmarks'))
+            elif category['Manga']:
+                oc.add(DirectoryObject(
+                    key=Callback(BookmarksSub, title='Manga', categorylist=category['Manga'])
+                    title='Manga',
+                    summary='Display Manga Bookmarks'))
 
         # add a way to clear the entire bookmarks list, i.e. start fresh
         oc.add(DirectoryObject(
-            key=Callback(ClearBookmarks),
+            key=Callback(ClearBookmarks, title='All'),
             title='Clear All Bookmarks',
             summary='CAUTION! This will clear your entire bookmark list!'))
 
         return oc
 
 ####################################################################################################
+# Loads bookmarked manga from Dict.
+
+@route(PREFIX + '/bookmarkssub')
+def BookmarksSub(title, categorylist):
+    oc = ObjectContainer(title1=title, no_cache=True)
+
+        for bookmark in categorylist:
+            item = bookmark['%s' % title]
+            item_title = bookmark['title']
+            cover = bookmark['cover']
+            summary = bookmark['summary']
+            url = bookmark['base_url']
+
+            oc.add(DirectoryObject(
+                key=Callback(ItemPage, item=item, item_title=item_title, title=title, url=url),
+                title=item_title,
+                summary=summary,
+                thumb=cover))
+
+        # add a way to clear this bookmark section and start fresh
+        oc.add(DirectoryObject(
+            key=Callback(ClearBookmarks, title=title),
+            title='Clear All \"%s\" Bookmarks' % title,
+            summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % title))
+
+####################################################################################################
 # Creates ABC directory
 
 @route(PREFIX + '/alphabets')
-def AlphabetList():
-    oc = ObjectContainer(title2='Manga By #, A-Z')  # , view_group='List')
+def AlphabetList(url, title):
+    oc = ObjectContainer(title2='%s By #, A-Z' % title)
 
     # Manually create the '#' Directory
-    oc.add(DirectoryObject(key=Callback(DirectoryList, page=1, pname='0', ntitle='#'), title='#'))
+    oc.add(DirectoryObject(key=Callback(DirectoryList, page=1, pname='0', category='#'), title='#'))
 
     # Create a list of Directories from A to Z
     for pname in map(chr, range(ord('A'), ord('Z')+1)):
         oc.add(DirectoryObject(
-            key=Callback(DirectoryList, page=1, pname=pname.lower(), ntitle=pname),
+            key=Callback(
+                DirectoryList, page=1, pname=pname.lower(),
+                category=pname, url=url, title=title),
             title=pname))
 
     Log('Built #, A-Z... Directories')
@@ -122,61 +246,87 @@ def AlphabetList():
 # Creates Genre directory
 
 @route(PREFIX + '/genres')
-def GenreList():
-    url = BASE_URL + '/MangaList'  # set url for populating genres array
-    html = HTML.ElementFromURL(url)  # formate url response into html for xpath
+def GenreList(url, title):
+    genre_url = url + '/%sList' % title
+    html = cfrepack.ElementFromURL(genre_url)
 
-    oc = ObjectContainer(title2='Manga By Genres')  # , view_group='List')
+    oc = ObjectContainer(title2='%s By Genres' % title)
 
     # For loop to pull out valid Genres
     for genre in html.xpath('//div[@class="barContent"]//a'):
         if "Genre" in genre.get('href'):
             pname = genre.get('href')  # name used internally
-            new_title = genre.text.replace('\n', '')  # name used for title2
+            category = genre.text.replace('\n', '')  # name used for title2
 
             oc.add(DirectoryObject(
-                key=Callback(DirectoryList, page=1, pname=pname, ntitle=new_title),
+                key=Callback(
+                    DirectoryList, page=1, pname=pname,
+                    category=category, url=url, title=title),
+                title=new_title,))
+
+    return oc
+
+####################################################################################################
+# Creates Country directory for KissAsian
+
+@route(PREFIX + '/countries')
+def CountryList(url):
+    country_url = url + '/DramaList'  # set url for populating genres array
+    html = cfrepack.ElementFromURL(country_url)  # formate url response into html for xpath
+
+    oc = ObjectContainer(title2='Drama By Country')
+
+    # For loop to pull out valid Genres
+    for country in html.xpath('//div[@class="barContent"]//a'):
+        if "Country" in country.get('href'):
+            pname = country.get('href')  # name used internally
+            category = country.text.replace('\n', '')  # name used for title2
+
+            oc.add(DirectoryObject(
+                key=Callback(
+                    DirectoryList, page=1, pname=pname,
+                    category=category, url=url, title='Drama'),
                 title=new_title,))
 
     return oc
 
 ####################################################################################################
 # GenreList, AlphabetList, and Search are sent here
-# Pulls out Manga names and creates directories for them
+# Pulls out Items name and creates directories for them
 # Plan to add section that detects if Genre is empty
 
 @route(PREFIX + '/directory')
-def DirectoryList(page, pname, ntitle):
+def DirectoryList(page, pname, category, url, title):
     # Define url based on genre, abc, or search
     if "Search" in pname:
-        url = SEARCH_URL % String.Quote(ntitle, usePlus=True)
+        pass
     # Sort order 'A-Z'
     elif Dict['s_opt'] == None:
-        if "Genre" in pname:
+        if "Genre" or "Country" in pname:
             # Genre Specific
-            url = BASE_URL + '%s?page=%s' %(pname, page)
+            item_url = url + '%s?page=%s' %(pname, page)
         else:
             # No Genre
-            url = BASE_URL + '/MangaList?c=%s&page=%s' %(pname, page)
+            item_url = url + '/%sList?c=%s&page=%s' %(title, pname, page)
     # Sort order for all options except 'A-Z'
-    elif "Genre" in pname:
+    elif "Genre" or "Country" in pname:
         # Genre Specific with Prefs
-        url = BASE_URL + '%s%s?page=%s' %(pname, Dict['s_opt'], page)
+        item_url = url + '%s%s?page=%s' %(pname, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
-        url = BASE_URL + '/MangaList%s?c=%s&page=%s' %(Dict['s_opt'], pname, page)
+        item_url = url + '/%sList%s?c=%s&page=%s' %(title, Dict['s_opt'], pname, page)
 
     Log(Dict['s_opt'])  # Log Pref being used
 
     # format url and set variables
-    html = HTML.ElementFromURL(url)
+    html = cfrepack.ElementFromURL(item_url)
     pages = "Last Page"
     nextpg_node = None
 
     # determine if 'next page' is used in directory page
     if "Search" in pname:
         # The Search result page returnes a long list with no 'next page' option
-        Log("Searching for %s" % ntitle)  # check to make sure its searching
+        Log("Searching for %s" % category)  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
         for node in html.xpath('///div[@class="pagination pagination-left"]//li/a'):
@@ -189,40 +339,40 @@ def DirectoryList(page, pname, ntitle):
     if not "Last" in pages:
         total_pages = Regex("page=(\d+)").search(pages).group(1)  # give last page number
         # set title2 ie main_title
-        main_title = '%s: Page %s of %s' % (str(ntitle), str(page), str(total_pages))
+        main_title = '%s: Page %s of %s' % (str(category), str(page), str(total_pages))
     elif "Search" in pname:
         # set title2 for search page
-        main_title = 'Search for: %s' % str(ntitle)
+        main_title = 'Search for: %s' % str(category)
     else:
         # set title2 for last page
-        main_title = '%s: Page %s, Last Page' % (str(ntitle), str(page))
+        main_title = '%s: Page %s, Last Page' % (str(category), str(page))
 
     oc = ObjectContainer(title2=main_title)  # , view_group='List')
 
     # parse url for each Manga and pull out its title, summary, and cover image
     # took some time to figure out how to get the javascript info
-    for manga in html.xpath('//table[@class="listing"]/tr'):
-        m = manga.xpath('./td')
+    for item in html.xpath('//table[@class="listing"]/tr'):
+        m = item.xpath('./td')
         if m:  # skip empty matches
             if m[0].get('title'):  # pull out the first 'td' since there are two
                 title_text = m[0].get('title')  # convert section to string for searching
                 # search for cover url and summary string
                 thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text).group(1).strip()
-                title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
-                manga_name = Regex('href=\"/Manga/([\S].*?)\"').search(title_text).group(1)
+                item_title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
+                name = Regex('href=\"/Manga/([\S].*?)\"').search(title_text).group(1)
         else:
             # if no 'title' section is found then sets values to 'None'
             # ensures the oc.add doesn't have problems
             thumb = None
             summary = None
             title = None
-            manga_name = None
+            name = None
 
-        if manga_name and title:  # ensure all the items are here before adding
+        if name and item_title:  # ensure all the items are here before adding
             oc.add(DirectoryObject(
-                key=Callback(MangaPage, manga=manga_name, title=title),
-                title=title,
+                key=Callback(ItemPage, item=name, item_title=item_title, title=title, url=url),
+                title=item_title,
                 summary=summary,
                 thumb=thumb))
 
@@ -230,7 +380,7 @@ def DirectoryList(page, pname, ntitle):
         nextpg = int(Regex("page=(\d+)").search(nextpg_node).group(1))
         Log.Debug('NextPage = %d' % nextpg)
         oc.add(NextPageObject(
-            key=Callback(DirectoryList, page=nextpg, pname=pname, ntitle=ntitle),
+            key=Callback(DirectoryList, page=nextpg, pname=pname, category=category, url=url, title=title),
             title='Next Page>>'))
 
     return oc
@@ -238,35 +388,44 @@ def DirectoryList(page, pname, ntitle):
 ####################################################################################################
 # Creates the Manga Page with a Chapter(s) section and a Bookmark option
 
-@route(PREFIX + '/manga')
-def MangaPage(manga, title):
-    oc = ObjectContainer(title2=title)
+@route(PREFIX + '/item')
+def ItemPage(item, item_title, title, url):
+    oc = ObjectContainer(title2=item_title)
 
-    url = BASE_URL + '/Manga/' + manga
-    html = HTML.ElementFromURL(url)
+    item_url = url + '/%s/' % title + item
+    html = cfrepack.ElementFromURL(itme_url)
 
-    # add the Chapter(s) section
-    oc.add(DirectoryObject(
-        key=Callback(ChaptersPage, manga=manga, title=title),
-        title='Chapter(s)',
-        summary='List all currently avalible chapter(s) for \"%s\"' % title))
+    if not 'Manga' in title:
+        # add the ItemSubPage section
+        oc.add(DirectoryObject(
+            key=Callback(ItemSubPage, item=item, item_title=item_title, title=title, url=url),
+            title='Episode(s) and/or Video(s)',
+            summary='List all currently avalible episode(s), movie(s) or video(s) for \"%s\"' % item_title))
+    else:
+        # add the Chapter(s) section
+        oc.add(DirectoryObject(
+            key=Callback(ChaptersPage, manga=item, manga_title=item_title, title=title, url=url),
+            title='Chapter(s)',
+            summary='List all currently avalible chapter(s) for \"%s\"' % item_title))
 
     # Test if the Dict has the 'Bookmarks' section yet
     if Dict['Bookmarks']:
-        match = False
-        for bookmark in Dict['Bookmarks']:
-            if manga in bookmark['manga']:
-                match = True
-                break  # Stop for loop if match found
+        for category in Dict['Bookmarks']:
+            if title in category:
+                match = False
+                for bookmark in category['%s' % title]:
+                    if item in bookmark['%s' % title]:
+                        match = True
+                        break  # Stop for loop if match found
 
         # If Manga found in 'Bookmarks'
         if match:
             # provide a way to remove manga from bookmarks list
             oc.add(DirectoryObject(
-                key = Callback(RemoveBookmark, manga=manga, title=title),
+                key = Callback(RemoveBookmark, item=item, item_title=item_title, title=title),
                 title = 'Remove Bookmark',
                 summary = 'Remove \"%s\" from your Bookmarks list.' % title))
-        # No Manga in 'Bookmarks' yet, so lets parse it for adding!
+        # Item not in 'Bookmarks' yet, so lets parse it for adding!
         else:
             cover = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
             summary = None
@@ -302,9 +461,11 @@ def MangaPage(manga, title):
 
             # provide a way to add manga to the bookmarks list
             oc.add(DirectoryObject(
-                key = Callback(AddBookmark, manga=manga, title=title, cover=cover, summary=summary),
+                key = Callback(
+                    AddBookmark, item=item, item_title=item_title,
+                    title=title, cover=cover, summary=summary),
                 title = 'Add Bookmark',
-                summary = 'Add \"%s\" to your Bookmarks list.' % title))
+                summary = 'Add \"%s\" to your Bookmarks list.' % item_title))
     # No 'Bookmarks' section in Dict yet, so don't look for Manga in 'Bookmarks'
     else:
         # Same stuff as above
@@ -341,14 +502,38 @@ def MangaPage(manga, title):
     return oc
 
 ####################################################################################################
+# Create the Item Sub Page with Seasons, Movies and Misc Video list
+
+@route(PREFIX + '/itemsubpage')
+def ItemSubPage(item, item_title, title, url):
+    oc = ObjectContainer(title2=item_title)
+
+    sub_url = url + '/%s' % title + item
+    html = cfrepack.ElementFromURL(sub_url)
+
+    # This is where the magic will happen for parsing videos into Seasons and Movies
+
+    # parse html for internal item name and public name
+    for video in html.xpath('//table[@class="listing"]/tr//a'):
+        video_page_url = url + video.get('href')  # url for Video page
+        Log('Video Page URL = %s' % item_url)
+        video_title = video.text.replace('\n', '')  # title for Video
+        Log('Video Title = %s' % item_title)
+
+        # Add Video. Service url gets the videos images for the Chapter
+        oc.add(VideoClipObject(title=video_title, summary=None, url=video_page_url))
+
+    return oc
+
+####################################################################################################
 # Create the Manga Page with it's chapters
 
 @route(PREFIX + '/chapters')
-def ChaptersPage(manga, title):
-    oc = ObjectContainer(title2=title)  #, view_group='List')
+def ChaptersPage(manga, manga_title, title, url):
+    oc = ObjectContainer(title2=manga_title)
 
-    url = BASE_URL + '/Manga/' + manga
-    html = HTML.ElementFromURL(url)
+    chp_url = url + '/%s/' % title + manga
+    html = cfrepack.ElementFromURL(chp_url)
 
     # parse html for internal chapter name and public name
     for chapter in html.xpath('//table[@class="listing"]/tr//a'):
@@ -358,34 +543,35 @@ def ChaptersPage(manga, title):
         Log('Chapter Title = %s' % title)
 
         # Add Photo Album. Service url gets the images for the Chapter
-        oc.add(PhotoAlbumObject(url=chapter_url, title=title))
+        oc.add(PhotoAlbumObject(url=chapter_url, title=manga_title))
 
     return oc
 
 ####################################################################################################
-# Search kissmanga for Manga. The results can return the Manga itself via a url redirect.
+# Search kiss(anime, asian, cartoon, manga) for Items
+# The results can return the Item itself via a url redirect.
 
 @route(PREFIX + '/search')
-def Search(query=''):
+def Search(query='', url, title):
     # format search query
-    # Check for "exact" matches and send them to MangaPage
+    # Check for "exact" matches and send them to ItemPage
     # If normal seach result then send to DirectoryList
-    url = SEARCH_URL % String.Quote(query, usePlus=True)
-    h = HTTP.Request(url)
+    search_url = url % String.Quote(query, usePlus=True)
+    h = cfrepack.Request(search_url)
     header = h.headers  # pull out headers in JSON format
     html = HTML.ElementFromString(h.content)  # convert page to html
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
-        # Test for "exact" match, if True then send to 'MangaPage'
+        # Test for "exact" match, if True then send to 'ItemPage'
         if 'transfer-encoding' in str(header):
             node = html.xpath('//head/link[@rel="alternate"]')[0]
-            title = node.get('title')  # name used for title2
-            manga = node.get('href').rsplit('/')[-1]  # name used internally
-            return MangaPage(manga, title)
+            item_title = node.get('title')  # name used for title2
+            item = node.get('href').rsplit('/')[-1]  # name used internally
+            return ItemPage(item, item_title, title, url)
         # Send results to 'DirectoryList'
         else:
-            return DirectoryList(1, 'Search', query)
+            return DirectoryList(1, 'Search', query, search_url, title)
     # No results found :( keep trying
     else:
         Log('Search returned no results.')
@@ -394,12 +580,14 @@ def Search(query=''):
             message='There are no search results for "%s".\r\nTry being less specific.' % query)
 
 ####################################################################################################
-# Adds manga to the bookmarks list
+# Adds Item to the bookmarks list
 
 @route(PREFIX + '/addbookmark')
-def AddBookmark(manga, title, cover, summary):
+def AddBookmark(item, item_title, title, cover, summary, url):
     # setup new bookmark json data
-    new_bookmark = {'manga': manga, 'title': title, 'cover': cover, 'summary': summary}
+    new_bookmark = {
+        '%s' % title: [{
+            '%s' % title: item, 'title': item_title, 'cover': cover, 'summary': summary, 'base_url': url}]}
 
     # Test if the Dict has the 'Bookmarks' section yet
     if not Dict['Bookmarks']:
@@ -411,76 +599,105 @@ def AddBookmark(manga, title, cover, summary):
 
         # Provide feedback that the Manga has been added to bookmarks
         return ObjectContainer(
-            header=title,
-            message='\"%s\" has been added to your bookmarks.' % title,
+            header=item_title,
+            message='\"%s\" has been added to your bookmarks.' % item_title,
             no_cache = True)
 
-    # Index the current manga and find if it's already in the 'Bookmarks' list
-    match = False
-    for bookmark in Dict['Bookmarks']:
-        if manga in bookmark['manga']:
-            match = True
-            break
-
-    # If Manga is already in 'Bookmarks' list then tell the user, and skip adding it
-    # this happens when the channel tries to added the same manga more than once
-    # can happen if the back button is used too
-    if match:
-        return ObjectContainer(
-            header=title,
-            message='\"%s\" is already in your bookmarks.' % title,
-            no_cache = True)
-    # Add Manga to 'Bookmarks' list in Dict
     else:
-        bookmarks = Dict['Bookmarks']
-        bookmarks.append(new_bookmark)
-        Log('\"%s\" added to Bookmark List' % title)
+        # Index the current manga and find if it's already in the 'Bookmarks' list
+        match = False
+        for category in Dict['Bookmarks']:
+            if category['%s' % title]:
+                for section in category['%s' % title]:
+                    if item in section['%s' % title]:
+                        match = True
+                        break
 
-        # Update Dict to include new Manga
-        Dict.Save()
+        # If Manga is already in 'Bookmarks' list then tell the user, and skip adding it
+        # this happens when the channel tries to added the same manga more than once
+        # can happen if the back button is used too
+        if match:
+            return ObjectContainer(
+                header=item_title,
+                message='\"%s\" is already in your bookmarks.' % item_title,
+                no_cache = True)
+        # Add Item to 'Bookmarks' list in Dict
+        else:
+            sub_new_bookmark = new_bookmark['%s' % title]
+            bookmarks = Dict['Bookmarks']
 
-        # Provide feedback that the Manga has been added to bookmarks
-        return ObjectContainer(
-            header=title,
-            message='\"%s\" has been added to your bookmarks.' % title,
-            no_cache = True)
+            for category in bookmarks:
+                if category['%s' % title]:
+                    category.append(sub_new_bookmark)
+                    break
+                else:
+                    bookmarks.append(new_bookmark)
+                    break
+
+            Log('\"%s\" added to Bookmark List' % item_title)
+
+            # Update Dict to include new Manga
+            Dict.Save()
+
+            # Provide feedback that the Manga has been added to bookmarks
+            return ObjectContainer(
+                header=item_title,
+                message='\"%s\" has been added to your bookmarks.' % item_title,
+                no_cache = True)
 
 ####################################################################################################
-# Removes manga from the bookmarks list using the manga as a key
+# Removes item from the bookmarks list using the item as a key
 
 @route(PREFIX + '/removebookmark')
-def RemoveBookmark(manga, title):
-    # index 'Bookmarks' list
-    for i in xrange(len(Dict['Bookmarks'])):
-        # remove Manga data from 'Bookmarks' list
-        if Dict['Bookmarks'][i]['manga'] == manga:
-            Dict['Bookmarks'].pop(i)
-            break
+def RemoveBookmark(item, item_title, title):
+    for category in Dict['Bookmarks']:
+        if title in category:
+            # index 'Bookmarks' list
+            for i in xrange(len(category['%s' % title])):
+                # remove Manga data from 'Bookmarks' list
+                if category['%s' % title][i]['%s' % title] == item:
+                    category['%s' % title].pop(i)
+                    break
 
     # update Dict, and debug log
     Dict.Save()
-    Log('\"%s\" has been removed from Bookmark List' % title)
+    Log('\"%s\" has been removed from Bookmark List' % item_title)
 
     # Provide feedback that the Manga has been removed from the 'Bookmarks' list
     return ObjectContainer(
         header=title,
-        message='\"%s\" has been removed from your bookmarks.' % title,
+        message='\"%s\" has been removed from your bookmarks.' % item_title,
         no_cache = True)
 
 ####################################################################################################
-# Remove 'Bookmarks' Section from Dict. Note: This removes all bookmarks
+# Remove 'Bookmarks' Section from Dict. Note: This removes all bookmarks in list
 
 @route(PREFIX + '/clearbookmarks')
-def ClearBookmarks():
-    # delet 'Bookmarks' section from Dict
-    del Dict['Bookmarks']
+def ClearBookmarks(title):
+    if 'All' in title:
+        # delete 'Bookmarks' section from Dict
+        del Dict['Bookmarks']
+    else:
+        for category in Dict['Bookmarks']:
+            if 'Anime' in category:
+                del category['Anime']
+                break
+            elif 'Cartoon' in category:
+                del category['Cartoon']
+                break
+            elif 'Drama' in category:
+                del category['Drama']
+                break
+            elif 'Manga' in category:
+                del category['Manga']
+                break
 
     # update Dict, and debug log
     Dict.Save()
     Log('Bookmarks section removed from Dict')
 
-    # Provide feedback that the 'Bookmarks' section is removed
+    # Provide feedback that the correct 'Bookmarks' section is removed
     return ObjectContainer(
         header="My Bookmarks",
-        message='Your bookmark list has been cleared.',
+        message='%s bookmarks have been cleared.' % title,
         no_cache = True)
