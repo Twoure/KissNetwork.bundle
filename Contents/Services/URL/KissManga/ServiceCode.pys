@@ -15,6 +15,7 @@ def MetadataObjectForURL(url):
     ject) and populate it with metadata from the given URL. Only the metadata should be
     added here - the object's key and rating_key properties will be synthesised based on the URL.
     """
+
     title = url.rsplit('?')[0].rsplit('/')[-1]
     return PhotoAlbumObject(key=Callback(GetPhotos, url=url), title=title)
 

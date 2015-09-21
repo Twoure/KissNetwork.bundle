@@ -2,13 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>URL</key>
-	<dict>
-		<key>Kissmanga</key>
+  <key>URL</key>
+  <dict>
+    <key>KissVideo</key>
+    <dict>
+      <key>URLPatterns</key>
+      <array>
+        <string>^http://(?:www\.|m\.|)kiss(?:anime\.(?:com|me)/Anime/|asian\.(?:com|me)/Drama/|cartoon\.(?:com|me)/Cartoon/).+(?:\?id=\d+)$</string>
+      </array>
+    </dict>
+    <key>KissManga</key>
 		<dict>
 			<key>URLPatterns</key>
 			<array>
-        <string>^http://(?:www.|m.|)kissmanga.com/Manga/.+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|m\.|)kissmanga\.(?:com|me)/Manga/.+(?:\?id=\d+)$</string>
 			</array>
     </dict>
 	</dict>

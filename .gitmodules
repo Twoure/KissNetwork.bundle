@@ -1,6 +1,3 @@
-[submodule "cloudflare-scrape"]
-	path = cloudflare-scrape
-	url = https://github.com/Anorov/cloudflare-scrape.git
 [submodule "Contents/Code/cloudflare-scrape"]
 	path = Contents/Code/cloudflare-scrape
 	url = https://github.com/Anorov/cloudflare-scrape.git

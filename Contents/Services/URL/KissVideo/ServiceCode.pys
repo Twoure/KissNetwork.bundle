@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+"""
+Kiss(anime, cartoon, and drama) Service code - Gather all image urls for a Chapter.
+"""
+
+import base64
+import cfrepack
+
+MediaObject.container = Container.MP4
+MediaObject.video_codec = VideoCodec.H264
+MediaObject.audio_codec = AudioCodec.AAC
+MediaObject.audio_channels = 2
+MediaObject.optimized_for_streaming = True  #if Client.Product != 'Plex Web' else False
+
+########################################################################################
+def NormalizeURL(url):
+    """
+    This function should return a 'normalised' version of the given URL.
+    Plex uses the URL
+    """
+
+    return url
+
+########################################################################################
+def MetadataObjectForURL(url):
+    """
+    This function should create and return a metadata object (for example, a
+    VideoClipObject) and populate it with metadata from the given URL.
+    Only the metadata should be added here, the object's key and rating_key properties
+    will be synthesised based on the URL.
+    """
+
+    html = cfrepack.get_cf_html(url)
+
+    title = html.xpath("//option[@selected='selected']/text()")[0].replace('\n', '')
+    summary = html.xpath("//meta[@name='description']/@content")[0].replace('\n', '')
+#    thumb = html.xpath("//meta[@property='og:image']/@content")[0]
+
+    return VideoClipObject(
+        title=title,
+        summary=description)  #,
+#        thumb=thumb)
+
+########################################################################################
+def MediaObjectsForURL(url):
+    """
+    This function should create and return a list of media objects
+    and part objects representing the media available at the given URL.
+    Callbacks may be used if obtaining the final media location requires
+    additional computation.
+    """
+
+    return [
+        MediaObject(
+            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt='1080p'))],
+            video_resolution=1080
+            ),
+        MediaObject(
+            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt='720p'))],
+            video_resolution=720
+            ),
+        MediaObject(
+            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt='360p'))],
+            video_resolution=360
+            )
+        ]
+
+########################################################################################
+def PlayVideo(url, fmt):
+
+    html = cfrepack.get_cf_html(url)
+
+    for node in reversed(html.xpath('//select[@id="selectQuality"]/option')):
+        if node.text == fmt:
+            video_url = node.get('value')
+            break
+        else:
+            video_url = node.get('value')
+
+    return Redirect(base64.b64decode(video_url))
