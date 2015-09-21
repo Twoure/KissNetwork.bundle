@@ -1,0 +1,12 @@
+[submodule "cloudflare-scrape"]
+	path = cloudflare-scrape
+	url = https://github.com/Anorov/cloudflare-scrape.git
+[submodule "Contents/Code/cloudflare-scrape"]
+	path = Contents/Code/cloudflare-scrape
+	url = https://github.com/Anorov/cloudflare-scrape.git
+[submodule "Contents/Code/requests"]
+	path = Contents/Code/requests
+	url = https://github.com/kennethreitz/requests.git
+[submodule "Contents/Code/PyExecJS"]
+	path = Contents/Code/PyExecJS
+	url = https://github.com/doloopwhile/PyExecJS.git
