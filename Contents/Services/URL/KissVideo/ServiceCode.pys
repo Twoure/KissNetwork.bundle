@@ -39,7 +39,7 @@ def MetadataObjectForURL(url):
 
     return VideoClipObject(
         title=title,
-        summary=description)  #,
+        summary=summary)  #,
 #        thumb=thumb)
 
 ########################################################################################
