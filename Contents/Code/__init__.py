@@ -4,11 +4,25 @@
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
-import random
-import cfrepack
+import random, os, sys
+
+# add custom modules to python path
+try:
+    path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules"
+    Log('try 1 %s' % path)
+except:
+    path = os.getcwd().split("Plug-in Support")[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules"
+    Log('try 2 %s' % path)
+
+if path not in sys.path:
+    sys.path.append(path)
+    Log('%s added to sys.path' % path)
+
+# import custom module cfscrape to load url's hosted on cloudflare
+import cfscrape
 
 # set global variables
-PREFIX = '/videos/kissnetwork'
+PREFIX = '/video/kissnetwork'
 TITLE = 'KissNetwork'
 
 # KissAnime
@@ -39,7 +53,7 @@ def Start():
     DirectoryObject.thumb = R(ICON)
 
 #    HTTP.CacheTime = CACHE_1DAY  # 1 day cache time  # once done editing will change back
-    HTTP.CacheTime = 0  # 0 sec cache time
+    HTTP.CacheTime = 300  # 0 sec cache time, 300 sec = 5 mins
 
 ####################################################################################################
 # Create the main menu
@@ -69,7 +83,7 @@ def MainMenu():
 
 @route(PREFIX + '/kissanime')
 def KissAnime(url, title):
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=title)
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
@@ -85,7 +99,7 @@ def KissAnime(url, title):
 
 @route(PREFIX + '/kissasian')
 def KissAsian(url, title):
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=title)
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(CountryList, url=url, title=title), title='Countries'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
@@ -102,7 +116,7 @@ def KissAsian(url, title):
 
 @route(PREFIX + '/kisscartoon')
 def KissCartoon(url, title):
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=title)
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
@@ -118,7 +132,7 @@ def KissCartoon(url, title):
 
 @route(PREFIX + '/kissmanga')
 def KissManga(url, title):
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=title)
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
@@ -231,7 +245,11 @@ def AlphabetList(url, title):
     oc = ObjectContainer(title2='%s By #, A-Z' % title)
 
     # Manually create the '#' Directory
-    oc.add(DirectoryObject(key=Callback(DirectoryList, page=1, pname='0', category='#', url=url, title=title), title='#'))
+    oc.add(DirectoryObject(
+        key=Callback(
+            DirectoryList, page=1, pname='0',
+            category='#', url=url, title=title),
+            title='#'))
 
     # Create a list of Directories from A to Z
     for pname in map(chr, range(ord('A'), ord('Z')+1)):
@@ -239,7 +257,7 @@ def AlphabetList(url, title):
             key=Callback(
                 DirectoryList, page=1, pname=pname.lower(),
                 category=pname, url=url, title=title),
-            title=pname))
+                title=pname))
 
     Log('Built #, A-Z... Directories')
 
@@ -251,7 +269,7 @@ def AlphabetList(url, title):
 @route(PREFIX + '/genres')
 def GenreList(url, title):
     genre_url = url + '/%sList' % title
-    html = cfrepack.ElementFromURL(genre_url)
+    html = ElementFromURL(genre_url)
 
     oc = ObjectContainer(title2='%s By Genres' % title)
 
@@ -259,13 +277,13 @@ def GenreList(url, title):
     for genre in html.xpath('//div[@class="barContent"]//a'):
         if "Genre" in genre.get('href'):
             pname = genre.get('href')  # name used internally
-            category = genre.text.replace('\n', '')  # name used for title2
+            category = genre.text.replace('\n', '').strip()  # name used for title2
 
             oc.add(DirectoryObject(
                 key=Callback(
                     DirectoryList, page=1, pname=pname,
                     category=category, url=url, title=title),
-                    title=category,))
+                    title=category))
 
     return oc
 
@@ -273,9 +291,9 @@ def GenreList(url, title):
 # Creates Country directory for KissAsian
 
 @route(PREFIX + '/countries')
-def CountryList(url):
+def CountryList(url, title):
     country_url = url + '/DramaList'  # set url for populating genres array
-    html = cfrepack.ElementFromURL(country_url)  # formate url response into html for xpath
+    html = ElementFromURL(country_url)  # formate url response into html for xpath
 
     oc = ObjectContainer(title2='Drama By Country')
 
@@ -283,13 +301,13 @@ def CountryList(url):
     for country in html.xpath('//div[@class="barContent"]//a'):
         if "Country" in country.get('href'):
             pname = country.get('href')  # name used internally
-            category = country.text.replace('\n', '')  # name used for title2
+            category = country.text.replace('\n', '').strip()  # name used for title2
 
             oc.add(DirectoryObject(
                 key=Callback(
                     DirectoryList, page=1, pname=pname,
-                    category=category, url=url, title='Drama'),
-                title=new_title,))
+                    category=category, url=url, title=title),
+                    title=category))
 
     return oc
 
@@ -305,24 +323,25 @@ def DirectoryList(page, pname, category, url, title):
         pass
     # Sort order 'A-Z'
     elif Dict['s_opt'] == None:
-        if "Genre" or "Country" in pname:
+        if "Genre" in pname or "Country" in pname:
             # Genre Specific
             item_url = url + '%s?page=%s' %(pname, page)
         else:
             # No Genre
             item_url = url + '/%sList?c=%s&page=%s' %(title, pname, page)
     # Sort order for all options except 'A-Z'
-    elif "Genre" or "Country" in pname:
+    elif "Genre" in pname or "Country" in pname:
         # Genre Specific with Prefs
         item_url = url + '%s%s?page=%s' %(pname, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
         item_url = url + '/%sList%s?c=%s&page=%s' %(title, Dict['s_opt'], pname, page)
 
-    Log(Dict['s_opt'])  # Log Pref being used
+    Log('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
+    Log('Category= %s | URL= %s' % (pname, item_url))
 
     # format url and set variables
-    html = cfrepack.ElementFromURL(item_url)
+    html = ElementFromURL(item_url)
     pages = "Last Page"
     nextpg_node = None
 
@@ -360,7 +379,10 @@ def DirectoryList(page, pname, category, url, title):
             if m[0].get('title'):  # pull out the first 'td' since there are two
                 title_text = m[0].get('title')  # convert section to string for searching
                 # search for cover url and summary string
-                thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
+                if title == 'Manga':
+                    thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
+                else:
+                    thumb = None
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text).group(1).strip()
                 item_title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
                 name = Regex('href=\"/(?:Anime|Drama|Cartoon|Manga)/([\S].*?)\"').search(title_text).group(1)
@@ -396,13 +418,13 @@ def ItemPage(item, item_title, title, url):
     oc = ObjectContainer(title2=item_title)
 
     item_url = url + '/%s/' % title + item
-    html = cfrepack.ElementFromURL(item_url)
+    html = ElementFromURL(item_url)
 
     if not 'Manga' in title:
         # add the ItemSubPage section
         oc.add(DirectoryObject(
             key=Callback(ItemSubPage, item=item, item_title=item_title, title=title, url=url),
-            title='Episode(s) and/or Video(s)',
+            title='Video(s)',
             summary='List all currently avalible episode(s), movie(s) or video(s) for \"%s\"' % item_title))
     else:
         # add the Chapter(s) section
@@ -411,18 +433,19 @@ def ItemPage(item, item_title, title, url):
             title='Chapter(s)',
             summary='List all currently avalible chapter(s) for \"%s\"' % item_title))
 
-    # Test if the Dict has the 'Bookmarks' section yet
+    # Test if the Dict does have the 'Bookmarks' section
+#    book_match = False
     if Dict['Bookmarks']:
+        book_match = False
         for category in Dict['Bookmarks']:
             if title in category:
-                match = False
                 for bookmark in category['%s' % title]:
                     if item in bookmark['%s' % title]:
-                        match = True
+                        book_match = True
                         break  # Stop for loop if match found
 
         # If Manga found in 'Bookmarks'
-        if match:
+        if book_match:
             # provide a way to remove manga from bookmarks list
             oc.add(DirectoryObject(
                 key = Callback(RemoveBookmark, item=item, item_title=item_title, title=title),
@@ -515,7 +538,7 @@ def ItemSubPage(item, item_title, title, url):
 
     sub_url = url + '/%s/' % title + item
     Log(sub_url)
-    html = cfrepack.ElementFromURL(sub_url)
+    html = ElementFromURL(sub_url)
 
     # This is where the magic will happen for parsing videos into Seasons and Movies
 
@@ -523,14 +546,27 @@ def ItemSubPage(item, item_title, title, url):
     for video in html.xpath('//table[@class="listing"]/tr//a'):
         video_page_url = url + video.get('href')  # url for Video page
         Log('Video Page URL = %s' % video_page_url)
-        video_title = video.text.replace('\n', '')  # title for Video
+        video_title = video.text.replace('\n', '').replace(item_title, '').replace('_', '').strip()  # title for Video
         Log('Video Title = %s' % video_title)
 
+#        oc.add(DirectoryObject(
+#            key=Callback(VideoDetail, title=video_title, url=video_page_url), title=video_title))
+
         # Add Video. Service url gets the videos images for the Chapter
-        oc.add(VideoClipObject(title=video_title, summary=None, url=video_page_url))
+        oc.add(VideoClipObject(title=video_title, url=video_page_url))
 
     return oc
+"""
+####################################################################################################
+# Create Video container
 
+@route(PREFIX + '/videodetail')
+def VideoDetail(title, url):
+    oc = ObjectContainer(title2=title)
+    oc.add(VideoClipObject(title=title, url=url))
+
+    return oc
+"""
 ####################################################################################################
 # Create the Manga Page with it's chapters
 
@@ -539,17 +575,17 @@ def ChaptersPage(manga, manga_title, title, url):
     oc = ObjectContainer(title2=manga_title)
 
     chp_url = url + '/%s/' % title + manga
-    html = cfrepack.ElementFromURL(chp_url)
+    html = ElementFromURL(chp_url)
 
     # parse html for internal chapter name and public name
     for chapter in html.xpath('//table[@class="listing"]/tr//a'):
         chapter_url = url + chapter.get('href')  # url for Photo Album
         Log('Chapter URL = %s' % chapter_url)
-        title = chapter.text.replace('\n', '')  # title for Chapter and Photo Album
+        chapter_title = chapter.text.replace('\n', '')  # title for Chapter and Photo Album
         Log('Chapter Title = %s' % title)
 
         # Add Photo Album. Service url gets the images for the Chapter
-        oc.add(PhotoAlbumObject(url=chapter_url, title=manga_title))
+        oc.add(PhotoAlbumObject(url=chapter_url, title=chapter_title))
 
     return oc
 
@@ -707,3 +743,26 @@ def ClearBookmarks(title):
         header="My Bookmarks",
         message='%s bookmarks have been cleared.' % title,
         no_cache = True)
+
+####################################################################################################
+def ElementFromURL(url):
+    """
+    Retrun url in html formate
+    """
+
+    scraper = cfscrape.create_scraper()
+    page = scraper.get(url)
+    myscrape = HTML.ElementFromString(page.text)
+
+    return myscrape
+
+####################################################################################################
+def Request(url):
+    """
+    Get url data so it can be manipulated for headers or content
+    """
+
+    scraper = cfscrape.create_scraper()
+    page = scraper.get(url)
+
+    return page
