@@ -4,15 +4,27 @@
 Kiss(anime, cartoon, and drama) Service code - Gather all image urls for a Chapter.
 """
 
-import base64
-import cfrepack
+import base64, os, sys
 
+try:
+    path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules"
+    Log('try 1 %s' % path)
+except:
+    path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules"
+    Log('try 2 %s' % path)
+
+if path not in sys.path:
+    sys.path.append(path)
+    Log('%s added to sys.path' % path)
+
+import cfscrape
+"""
 MediaObject.container = Container.MP4
 MediaObject.video_codec = VideoCodec.H264
 MediaObject.audio_codec = AudioCodec.AAC
 MediaObject.audio_channels = 2
 MediaObject.optimized_for_streaming = True  #if Client.Product != 'Plex Web' else False
-
+"""
 ########################################################################################
 def NormalizeURL(url):
     """
@@ -31,16 +43,14 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
-    html = cfrepack.get_cf_html(url)
+    html = ElementFromURL(url)
 
     title = html.xpath("//option[@selected='selected']/text()")[0].replace('\n', '')
     summary = html.xpath("//meta[@name='description']/@content")[0].replace('\n', '')
-#    thumb = html.xpath("//meta[@property='og:image']/@content")[0]
 
     return VideoClipObject(
         title=title,
-        summary=summary)  #,
-#        thumb=thumb)
+        summary=summary)
 
 ########################################################################################
 def MediaObjectsForURL(url):
@@ -51,25 +61,25 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
-    return [
-        MediaObject(
-            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt='1080p'))],
-            video_resolution=1080
-            ),
-        MediaObject(
-            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt='720p'))],
-            video_resolution=720
-            ),
-        MediaObject(
-            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt='360p'))],
-            video_resolution=360
-            )
-        ]
+    html = ElementFromURL(url)
+    mo = []
+
+    for node in html.xpath('//select[@id="selectQuality"]/option/text()'):
+        mo.append(MediaObject(
+            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt=node))],
+            video_resolution=node[:-1],
+            container=Container.MP4,
+            video_codec=VideoCodec.H264,
+            audio_codec=AudioCodec.AAC,
+            audio_channels=2,
+            optimized_for_streaming = True  if Client.Product != 'Plex Web' else False))
+
+    return mo
 
 ########################################################################################
 def PlayVideo(url, fmt):
 
-    html = cfrepack.get_cf_html(url)
+    html = ElementFromURL(url)
 
     for node in reversed(html.xpath('//select[@id="selectQuality"]/option')):
         if node.text == fmt:
@@ -79,3 +89,16 @@ def PlayVideo(url, fmt):
             video_url = node.get('value')
 
     return Redirect(base64.b64decode(video_url))
+
+########################################################################################
+def ElementFromURL(url):
+    """
+    Retrun url in html formate
+    """
+
+    scraper = cfscrape.create_scraper()
+    page = scraper.get(url)
+    myscrape = HTML.ElementFromString(page.text)
+
+    return myscrape
+
