@@ -84,6 +84,10 @@ def MainMenu():
 @route(PREFIX + '/kissanime')
 def KissAnime(url, title):
     oc = ObjectContainer(title2=title)
+    oc.add(DirectoryObject(
+        key=Callback(
+            DirectoryList,
+            page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
@@ -100,6 +104,10 @@ def KissAnime(url, title):
 @route(PREFIX + '/kissasian')
 def KissAsian(url, title):
     oc = ObjectContainer(title2=title)
+    oc.add(DirectoryObject(
+        key=Callback(
+            DirectoryList,
+            page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(CountryList, url=url, title=title), title='Countries'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
@@ -117,6 +125,10 @@ def KissAsian(url, title):
 @route(PREFIX + '/kisscartoon')
 def KissCartoon(url, title):
     oc = ObjectContainer(title2=title)
+    oc.add(DirectoryObject(
+        key=Callback(
+            DirectoryList,
+            page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
@@ -133,6 +145,10 @@ def KissCartoon(url, title):
 @route(PREFIX + '/kissmanga')
 def KissManga(url, title):
     oc = ObjectContainer(title2=title)
+    oc.add(DirectoryObject(
+        key=Callback(
+            DirectoryList,
+            page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
     oc.add(InputDirectoryObject(
@@ -320,22 +336,28 @@ def CountryList(url, title):
 def DirectoryList(page, pname, category, url, title):
     # Define url based on genre, abc, or search
     if "Search" in pname:
+        item_url = url
+        Log('Searching for \"%s\"' % category)
         pass
     # Sort order 'A-Z'
     elif Dict['s_opt'] == None:
         if "Genre" in pname or "Country" in pname:
             # Genre Specific
-            item_url = url + '%s?page=%s' %(pname, page)
+            item_url = url + '%s?page=%s' % (pname, page)
+        elif "All" in pname:
+            item_url = url + '/%sList?page=%s' % (title, page)
         else:
             # No Genre
-            item_url = url + '/%sList?c=%s&page=%s' %(title, pname, page)
+            item_url = url + '/%sList?c=%s&page=%s' % (title, pname, page)
     # Sort order for all options except 'A-Z'
     elif "Genre" in pname or "Country" in pname:
         # Genre Specific with Prefs
-        item_url = url + '%s%s?page=%s' %(pname, Dict['s_opt'], page)
+        item_url = url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
+    elif "All" in pname:
+        item_url = url + '/%sList/%s?page=%s' % (title, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
-        item_url = url + '/%sList%s?c=%s&page=%s' %(title, Dict['s_opt'], pname, page)
+        item_url = url + '/%sList%s?c=%s&page=%s' % (title, Dict['s_opt'], pname, page)
 
     Log('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
     Log('Category= %s | URL= %s' % (pname, item_url))
@@ -361,13 +383,13 @@ def DirectoryList(page, pname, category, url, title):
     if not "Last" in pages:
         total_pages = Regex("page=(\d+)").search(pages).group(1)  # give last page number
         # set title2 ie main_title
-        main_title = '%s: Page %s of %s' % (str(category), str(page), str(total_pages))
+        main_title = '%s | %s | Page %s of %s' % (title, str(category), str(page), str(total_pages))
     elif "Search" in pname:
         # set title2 for search page
-        main_title = 'Search for: %s' % str(category)
+        main_title = 'Search for: %s in %s' % (str(category), title)
     else:
         # set title2 for last page
-        main_title = '%s: Page %s, Last Page' % (str(category), str(page))
+        main_title = '%s | %s | Page %s, Last Page' % (title, str(category), str(page))
 
     oc = ObjectContainer(title2=main_title)  # , view_group='List')
 
@@ -415,7 +437,8 @@ def DirectoryList(page, pname, category, url, title):
 
 @route(PREFIX + '/item')
 def ItemPage(item, item_title, title, url):
-    oc = ObjectContainer(title2=item_title)
+    title2 = '%s | %s' % (title, item_title)
+    oc = ObjectContainer(title2=title2)
 
     item_url = url + '/%s/' % title + item
     html = ElementFromURL(item_url)
@@ -534,7 +557,8 @@ def ItemPage(item, item_title, title, url):
 
 @route(PREFIX + '/itemsubpage')
 def ItemSubPage(item, item_title, title, url):
-    oc = ObjectContainer(title2=item_title)
+    title2 = '%s | %s | Video(s)' % (title, item_title)
+    oc = ObjectContainer(title2=title2)
 
     sub_url = url + '/%s/' % title + item
     Log(sub_url)
@@ -549,14 +573,14 @@ def ItemSubPage(item, item_title, title, url):
         video_title = video.text.replace('\n', '').replace(item_title, '').replace('_', '').strip()  # title for Video
         Log('Video Title = %s' % video_title)
 
-#        oc.add(DirectoryObject(
-#            key=Callback(VideoDetail, title=video_title, url=video_page_url), title=video_title))
+        oc.add(DirectoryObject(
+            key=Callback(VideoDetail, title=video_title, url=video_page_url), title=video_title))
 
         # Add Video. Service url gets the videos images for the Chapter
-        oc.add(VideoClipObject(title=video_title, url=video_page_url))
+        #oc.add(VideoClipObject(title=video_title, url=video_page_url))
 
     return oc
-"""
+
 ####################################################################################################
 # Create Video container
 
@@ -566,13 +590,14 @@ def VideoDetail(title, url):
     oc.add(VideoClipObject(title=title, url=url))
 
     return oc
-"""
+
 ####################################################################################################
 # Create the Manga Page with it's chapters
 
 @route(PREFIX + '/chapters')
 def ChaptersPage(manga, manga_title, title, url):
-    oc = ObjectContainer(title2=manga_title)
+    title2 = '%s | %s | Chapter(s)' % (title, manga_title)
+    oc = ObjectContainer(title2=title2)
 
     chp_url = url + '/%s/' % title + manga
     html = ElementFromURL(chp_url)
@@ -599,13 +624,14 @@ def Search(title, url, query=''):
     # Check for "exact" matches and send them to ItemPage
     # If normal seach result then send to DirectoryList
     search_url = url % String.Quote(query, usePlus=True)
-    h = cfrepack.Request(search_url)
+    h = Request(search_url)
     header = h.headers  # pull out headers in JSON format
     html = HTML.ElementFromString(h.content)  # convert page to html
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
         # Test for "exact" match, if True then send to 'ItemPage'
+        """
         if 'transfer-encoding' in str(header):
             node = html.xpath('//head/link[@rel="alternate"]')[0]
             item_title = node.get('title')  # name used for title2
@@ -614,6 +640,8 @@ def Search(title, url, query=''):
         # Send results to 'DirectoryList'
         else:
             return DirectoryList(1, 'Search', query, search_url, title)
+        """
+        return DirectoryList(1, 'Search', query, search_url, title)
     # No results found :( keep trying
     else:
         Log('Search returned no results.')
@@ -745,6 +773,9 @@ def ClearBookmarks(title):
         no_cache = True)
 
 ####################################################################################################
+# No route needed, this is a function simplify cfscraper
+# Same as HTML.ElementFromURL() but for urls hosted on cloudflare
+
 def ElementFromURL(url):
     """
     Retrun url in html formate
@@ -757,6 +788,9 @@ def ElementFromURL(url):
     return myscrape
 
 ####################################################################################################
+# No route needed, this is a function simplify cfscraper
+# Same as HTTP.Request() but for url's hosted on cloudflare
+
 def Request(url):
     """
     Get url data so it can be manipulated for headers or content
