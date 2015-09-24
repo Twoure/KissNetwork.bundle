@@ -6,25 +6,21 @@ Kiss(anime, cartoon, and drama) Service code - Gather all image urls for a Chapt
 
 import base64, os, sys
 
-try:
-    path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules"
-    Log('try 1 %s' % path)
-except:
-    path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules"
-    Log('try 2 %s' % path)
+submodule_folders = ['cfscrape', 'execjs', 'requests']
+for folder in submodule_folders:
+    try:
+        path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
+        Log('try 1 %s' % path)
+    except:
+        path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
+        Log('try 2 %s' % path)
 
-if path not in sys.path:
-    sys.path.append(path)
-    Log('%s added to sys.path' % path)
+    if path not in sys.path:
+        sys.path.append(path)
+        Log('%s added to sys.path' % path)
 
 import cfscrape
-"""
-MediaObject.container = Container.MP4
-MediaObject.video_codec = VideoCodec.H264
-MediaObject.audio_codec = AudioCodec.AAC
-MediaObject.audio_channels = 2
-MediaObject.optimized_for_streaming = True  #if Client.Product != 'Plex Web' else False
-"""
+
 ########################################################################################
 def NormalizeURL(url):
     """
