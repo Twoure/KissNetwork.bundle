@@ -7,16 +7,18 @@
 import random, os, sys
 
 # add custom modules to python path
-try:
-    path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules"
-    Log('try 1 %s' % path)
-except:
-    path = os.getcwd().split("Plug-in Support")[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules"
-    Log('try 2 %s' % path)
+submodule_folders = ['cfscrape', 'execjs', 'requests']
+for folder in submodule_folders:
+    try:
+        path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
+        Log('try 1 %s' % path)
+    except:
+        path = os.getcwd().split("Plug-in Support")[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
+        Log('try 2 %s' % path)
 
-if path not in sys.path:
-    sys.path.append(path)
-    Log('%s added to sys.path' % path)
+    if path not in sys.path:
+        sys.path.append(path)
+        Log('%s added to sys.path' % path)
 
 # import custom module cfscrape to load url's hosted on cloudflare
 import cfscrape
@@ -193,28 +195,12 @@ def BookmarksMain(title):
             no_cache = True)
     # create boomark directory based on category
     else:
-        # Create sub Categories for Anime, Cartoon, Drama, and Manga
-        for category in Dict['Bookmarks']:
-            if category['Anime']:
-                oc.add(DirectoryObject(
-                    key=Callback(BookmarksSub, title='Anime', categorylist=category['Anime']),
-                    title='Anime',
-                    summary='Display Anime Bookmarks'))
-            elif category['Drama']:
-                oc.add(DirectoryObject(
-                    key=Callback(BookmarksSub, title='Drama', categorylist=category['Drama']),
-                    title='Drama',
-                    summary='Display Drama Bookmarks'))
-            elif category['Cartoon']:
-                oc.add(DirectoryObject(
-                    key=Callback(BookmarksSub, title='Cartoon', categorylist=category['Cartoon']),
-                    title='Cartoon',
-                    summary='Display Cartoon Bookmarks'))
-            elif category['Manga']:
-                oc.add(DirectoryObject(
-                    key=Callback(BookmarksSub, title='Manga', categorylist=category['Manga']),
-                    title='Manga',
-                    summary='Display Manga Bookmarks'))
+        for key in sorted(Dict['Bookmarks'].keys()):
+            # Create sub Categories for Anime, Cartoon, Drama, and Manga
+            oc.add(DirectoryObject(
+                key=Callback(BookmarksSub, key=key),
+                title=key,
+                summary='Display Anime Bookmarks'))
 
         # add a way to clear the entire bookmarks list, i.e. start fresh
         oc.add(DirectoryObject(
@@ -225,33 +211,35 @@ def BookmarksMain(title):
         return oc
 
 ####################################################################################################
-# Loads bookmarked manga from Dict.
+# Loads bookmarked items from Dict.
 
 @route(PREFIX + '/bookmarkssub')
-def BookmarksSub(title, categorylist):
-    oc = ObjectContainer(title1=title, no_cache=True)
+def BookmarksSub(key):
+    oc = ObjectContainer(title1=key, no_cache=True)
+    Log(key)
 
-    categorylist = JSON.ObjectFromString(categorylist)
-    Log(categorylist)
-
-    for bookmark in categorylist:
-        item = bookmark['%s' % title]
+    # Fill in DirectoryObject information from the bookmark list
+    for bookmark in Dict['Bookmarks'][key]:
+        item = bookmark[key]
         item_title = bookmark['title']
         cover = bookmark['cover']
         summary = bookmark['summary']
         url = bookmark['base_url']
 
+        # gotta send the bookmark somewhere
         oc.add(DirectoryObject(
-            key=Callback(ItemPage, item=item, item_title=item_title, title=title, url=url),
+            key=Callback(ItemPage, item=item, item_title=item_title, title=key, url=url),
             title=item_title,
             summary=summary,
             thumb=cover))
 
     # add a way to clear this bookmark section and start fresh
     oc.add(DirectoryObject(
-        key=Callback(ClearBookmarks, title=title),
-        title='Clear All \"%s\" Bookmarks' % title,
-        summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % title))
+        key=Callback(ClearBookmarks, title=key),
+        title='Clear All \"%s\" Bookmarks' % key,
+        summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % key))
+
+    return oc
 
 ####################################################################################################
 # Creates ABC directory
@@ -354,7 +342,7 @@ def DirectoryList(page, pname, category, url, title):
         # Genre Specific with Prefs
         item_url = url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
     elif "All" in pname:
-        item_url = url + '/%sList/%s?page=%s' % (title, Dict['s_opt'], page)
+        item_url = url + '/%sList%s?page=%s' % (title, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
         item_url = url + '/%sList%s?c=%s&page=%s' % (title, Dict['s_opt'], pname, page)
@@ -457,15 +445,13 @@ def ItemPage(item, item_title, title, url):
             summary='List all currently avalible chapter(s) for \"%s\"' % item_title))
 
     # Test if the Dict does have the 'Bookmarks' section
-#    book_match = False
     if Dict['Bookmarks']:
         book_match = False
-        for category in Dict['Bookmarks']:
-            if title in category:
-                for bookmark in category['%s' % title]:
-                    if item in bookmark['%s' % title]:
-                        book_match = True
-                        break  # Stop for loop if match found
+        if title in Dict['Bookmarks']:
+            for category in Dict['Bookmarks'][title]:
+                if item in category[title]:
+                    book_match = True
+                    break  # Stop for loop if match found
 
         # If Manga found in 'Bookmarks'
         if book_match:
@@ -480,8 +466,8 @@ def ItemPage(item, item_title, title, url):
             summary = None
 
             # enumerate array so we can find the Summary text
-            for i, item in enumerate(html.xpath('//div[@id="container"]//p')):
-                if "Summary:" in item.xpath('./span[@class="info"]/text()'):
+            for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
+                if "Summary:" in node.xpath('./span[@class="info"]/text()'):
                     match = int(i)
                     break
 
@@ -489,14 +475,14 @@ def ItemPage(item, item_title, title, url):
             # fix string encoding errors before they happen by converting to ascii
             #   and ignoring unknown charaters in summary string
             # wish the site was more consistant with its summary location... ugh
-            for i, item in enumerate(html.xpath('//div[@id="container"]//p')):
+            for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
                 if match + 1 == i:
                     # sometimes summary is inside a <span>
-                    if item.xpath('./span'):
-                        summary = item.xpath('./span/text()')[0].encode('ascii', 'ignore')
+                    if node.xpath('./span'):
+                        summary = node.xpath('./span/text()')[0].encode('ascii', 'ignore')
                         break
                     else:
-                        summary = item.xpath('./text()')[0].strip().encode('ascii', 'ignore')
+                        summary = node.xpath('./text()')[0].strip().encode('ascii', 'ignore')
                         break
 
             # some Summary text is not in the <p> but in it's own <div>
@@ -521,18 +507,18 @@ def ItemPage(item, item_title, title, url):
         cover = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
         summary = None
 
-        for i, item in enumerate(html.xpath('//div[@id="container"]//p')):
-            if "Summary:" in item.xpath('./span[@class="info"]/text()'):
+        for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
+            if "Summary:" in node.xpath('./span[@class="info"]/text()'):
                 match = int(i)
                 break
 
-        for i, item in enumerate(html.xpath('//div[@id="container"]//p')):
+        for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
             if match + 1 == i:
-                    if item.xpath('./span'):
-                        summary = item.xpath('./span/text()')[0].encode('ascii', 'ignore')
+                    if node.xpath('./span'):
+                        summary = node.xpath('./span/text()')[0].encode('ascii', 'ignore')
                         break
                     else:
-                        summary = item.xpath('./text()')[0].encode('ascii', 'ignore')
+                        summary = node.xpath('./text()')[0].encode('ascii', 'ignore')
                         break
 
         if not summary:
@@ -542,13 +528,13 @@ def ItemPage(item, item_title, title, url):
         else:
             summary = summary
 
-        # provide a way to add or remove from bookmarks list
+        # provide a way to add item to bookmarks list
         oc.add(DirectoryObject(
             key=Callback(
                 AddBookmark, item=item, item_title=item_title,
                 title=title, cover=cover, summary=summary, url=url),
             title='Add Bookmark',
-            summary='Add \"%s\" to your Bookmarks list.' % title))
+            summary='Add \"%s\" to your Bookmarks list.' % item_title))
 
     return oc
 
@@ -563,6 +549,7 @@ def ItemSubPage(item, item_title, title, url):
     sub_url = url + '/%s/' % title + item
     Log(sub_url)
     html = ElementFromURL(sub_url)
+    item_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', item_title)
 
     # This is where the magic will happen for parsing videos into Seasons and Movies
 
@@ -570,7 +557,9 @@ def ItemSubPage(item, item_title, title, url):
     for video in html.xpath('//table[@class="listing"]/tr//a'):
         video_page_url = url + video.get('href')  # url for Video page
         Log('Video Page URL = %s' % video_page_url)
-        video_title = video.text.replace('\n', '').replace(item_title, '').replace('_', '').strip()  # title for Video
+        raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', video.text).replace(item_title, '')
+        video_title = raw_title.replace('Watch Online', '').strip()
+#        video_title = video.text.replace('\n', '').replace(item_title, '').replace('_', '').strip()  # title for Video
         Log('Video Title = %s' % video_title)
 
         oc.add(DirectoryObject(
@@ -601,12 +590,14 @@ def ChaptersPage(manga, manga_title, title, url):
 
     chp_url = url + '/%s/' % title + manga
     html = ElementFromURL(chp_url)
+    manga_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', manga_title)
 
     # parse html for internal chapter name and public name
     for chapter in html.xpath('//table[@class="listing"]/tr//a'):
         chapter_url = url + chapter.get('href')  # url for Photo Album
         Log('Chapter URL = %s' % chapter_url)
-        chapter_title = chapter.text.replace('\n', '')  # title for Chapter and Photo Album
+        raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', chapter.text).replace(manga_title, '')
+        chapter_title = raw_title.replace('Read Online', '').strip()  # title for Chapter and Photo Album
         Log('Chapter Title = %s' % title)
 
         # Add Photo Album. Service url gets the images for the Chapter
@@ -654,15 +645,16 @@ def Search(title, url, query=''):
 
 @route(PREFIX + '/addbookmark')
 def AddBookmark(item, item_title, title, cover, summary, url):
-    # setup new bookmark json data
-    new_bookmark = {
-        '%s' % title: [{
-            '%s' % title: item, 'title': item_title, 'cover': cover, 'summary': summary, 'base_url': url}]}
+    # setup new bookmark json data to add to Dict
+    Log(item)
+    new_bookmark = {title: item, 'title': item_title, 'cover': cover, 'summary': summary, 'base_url': url}
+    Log('new bookmark to add\n%s' % new_bookmark)
 
     # Test if the Dict has the 'Bookmarks' section yet
     if not Dict['Bookmarks']:
         # Create new 'Bookmarks' section and fill with the first bookmark
-        Dict['Bookmarks'] = [new_bookmark]
+        Dict['Bookmarks'] = {title: [new_bookmark]}
+        Log('Inital bookmark list created\n%s' % Dict['Bookmarks'])
 
         # Update Dict to include new 'Bookmarks' section
         Dict.Save()
@@ -672,66 +664,53 @@ def AddBookmark(item, item_title, title, cover, summary, url):
             header=item_title,
             message='\"%s\" has been added to your bookmarks.' % item_title,
             no_cache = True)
+    # check if key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
+    # if so then append new bookmark to one of those categories
+    elif title in Dict['Bookmarks']:
+        temp = {}
+        temp.setdefault(title, Dict['Bookmarks'][title]).append(new_bookmark)
+        Dict['Bookmarks'][title] = temp[title]
+        Log('bookmark list after addition\n%s' % Dict['Bookmarks'])
 
+        # Update Dict to include new Manga
+        Dict.Save()
+
+        # Provide feedback that the Manga has been added to bookmarks
+        return ObjectContainer(
+            header=item_title,
+            message='\"%s\" has been added to your bookmarks.' % item_title,
+            no_cache = True)
+    # the category key does not exist yet so create it and fill with new bookmark
     else:
-        # Index the current manga and find if it's already in the 'Bookmarks' list
-        match = False
-        for category in Dict['Bookmarks']:
-            if category['%s' % title]:
-                for section in category['%s' % title]:
-                    if item in section['%s' % title]:
-                        match = True
-                        break
+        Dict['Bookmarks'].update({title: [new_bookmark]})
+        Log('bookmark list after addition of new section\n%s' % Dict['Bookmarks'])
 
-        # If Manga is already in 'Bookmarks' list then tell the user, and skip adding it
-        # this happens when the channel tries to added the same manga more than once
-        # can happen if the back button is used too
-        if match:
-            return ObjectContainer(
-                header=item_title,
-                message='\"%s\" is already in your bookmarks.' % item_title,
-                no_cache = True)
-        # Add Item to 'Bookmarks' list in Dict
-        else:
-            sub_new_bookmark = new_bookmark['%s' % title]
-            bookmarks = Dict['Bookmarks']
+        # Update Dict to include new Manga
+        Dict.Save()
 
-            for category in bookmarks:
-                if category['%s' % title]:
-                    category.append(sub_new_bookmark)
-                    break
-                else:
-                    bookmarks.append(new_bookmark)
-                    break
-
-            Log('\"%s\" added to Bookmark List' % item_title)
-
-            # Update Dict to include new Manga
-            Dict.Save()
-
-            # Provide feedback that the Manga has been added to bookmarks
-            return ObjectContainer(
-                header=item_title,
-                message='\"%s\" has been added to your bookmarks.' % item_title,
-                no_cache = True)
+        # Provide feedback that the Manga has been added to bookmarks
+        return ObjectContainer(
+            header=item_title,
+            message='\"%s\" has been added to your bookmarks.' % item_title,
+            no_cache = True)
 
 ####################################################################################################
 # Removes item from the bookmarks list using the item as a key
 
 @route(PREFIX + '/removebookmark')
 def RemoveBookmark(item, item_title, title):
-    for category in Dict['Bookmarks']:
-        if title in category:
-            # index 'Bookmarks' list
-            for i in xrange(len(category['%s' % title])):
-                # remove Manga data from 'Bookmarks' list
-                if category['%s' % title][i]['%s' % title] == item:
-                    category['%s' % title].pop(i)
-                    break
+    # index 'Bookmarks' list
+    bm = Dict['Bookmarks'][title]
+    for i in xrange(len(bm)):
+        # remove item's data from 'Bookmarks' list
+        if bm[i][title] == item:
+            bm.pop(i)
+            break
 
     # update Dict, and debug log
     Dict.Save()
     Log('\"%s\" has been removed from Bookmark List' % item_title)
+    Log('bookmark list after removal\n%s' % Dict['Bookmarks'])
 
     # Provide feedback that the Manga has been removed from the 'Bookmarks' list
     return ObjectContainer(
@@ -740,31 +719,22 @@ def RemoveBookmark(item, item_title, title):
         no_cache = True)
 
 ####################################################################################################
-# Remove 'Bookmarks' Section from Dict. Note: This removes all bookmarks in list
+# Remove 'Bookmarks' Section(s) from Dict. Note: This removes all bookmarks in list
 
 @route(PREFIX + '/clearbookmarks')
 def ClearBookmarks(title):
     if 'All' in title:
         # delete 'Bookmarks' section from Dict
         del Dict['Bookmarks']
+        Log('Bookmarks section cleared')
     else:
-        for category in Dict['Bookmarks']:
-            if 'Anime' in category:
-                del category['Anime']
-                break
-            elif 'Cartoon' in category:
-                del category['Cartoon']
-                break
-            elif 'Drama' in category:
-                del category['Drama']
-                break
-            elif 'Manga' in category:
-                del category['Manga']
-                break
+        # delete section 'Anime', 'Manga', 'Cartoon', or 'Drama' from bookmark list
+        del Dict['Bookmarks'][title]
+        Log('Bookmark section %s cleared' % title)
+        Log('bookmarks after deletion\n%s' % Dict['Bookmarks'])
 
     # update Dict, and debug log
     Dict.Save()
-    Log('Bookmarks section removed from Dict')
 
     # Provide feedback that the correct 'Bookmarks' section is removed
     return ObjectContainer(
@@ -773,8 +743,8 @@ def ClearBookmarks(title):
         no_cache = True)
 
 ####################################################################################################
-# No route needed, this is a function simplify cfscraper
-# Same as HTML.ElementFromURL() but for urls hosted on cloudflare
+# No route needed, this is a function to simplify cfscraper
+# Same as HTML.ElementFromURL() but for url's hosted on cloudflare
 
 def ElementFromURL(url):
     """
@@ -788,7 +758,7 @@ def ElementFromURL(url):
     return myscrape
 
 ####################################################################################################
-# No route needed, this is a function simplify cfscraper
+# No route needed, this is a function to simplify cfscraper
 # Same as HTTP.Request() but for url's hosted on cloudflare
 
 def Request(url):
