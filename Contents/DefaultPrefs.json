@@ -3,7 +3,7 @@
     "id": "sort_opt",
     "label": "Sorting Option",
     "type": "enum",
-    "values": ["Alphabetical", "Popularity", "Latest Update", "New Manga"],
+    "values": ["Alphabetical", "Popularity", "Latest Update", "Newest"],
     "default": "Alphabetical"
   }
 ]
