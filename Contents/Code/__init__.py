@@ -97,13 +97,6 @@ def KissAnime(url, title):
             page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
-    """
-    oc.add(InputDirectoryObject(
-        key=Callback(Search, title=title, url=ANIME_SEARCH_URL),
-        title='Search',
-        summary='Search Kissanime',
-        prompt='Search for...'))
-    """
 
     return oc
 
@@ -120,13 +113,6 @@ def KissAsian(url, title):
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(CountryList, url=url, title=title), title='Countries'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
-    """
-    oc.add(InputDirectoryObject(
-        key=Callback(Search, title=title, url=ASIAN_SEARCH_URL),
-        title='Search',
-        summary='Search Kissasian',
-        prompt='Search for...'))
-    """
 
     return oc
 
@@ -142,13 +128,6 @@ def KissCartoon(url, title):
             page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
-    """
-    oc.add(InputDirectoryObject(
-        key=Callback(Search, title=title, url=CARTOON_SEARCH_URL),
-        title='Search',
-        summary='Search Kisscartoon',
-        prompt='Search for...'))
-    """
 
     return oc
 
@@ -164,13 +143,6 @@ def KissManga(url, title):
             page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
-    """
-    oc.add(InputDirectoryObject(
-        key=Callback(Search, title=title, url=MANGA_SEARCH_URL),
-        title='Search',
-        summary='Search Kissmanga',
-        prompt='Search for...'))
-    """
 
     return oc
 
@@ -466,9 +438,9 @@ def ItemPage(item, item_title, title, url):
                     book_match = True
                     break  # Stop for loop if match found
 
-        # If Manga found in 'Bookmarks'
+        # If Item found in 'Bookmarks'
         if book_match:
-            # provide a way to remove manga from bookmarks list
+            # provide a way to remove Item from bookmarks list
             oc.add(DirectoryObject(
                 key = Callback(RemoveBookmark, item=item, item_title=item_title, title=title),
                 title = 'Remove Bookmark',
@@ -507,14 +479,14 @@ def ItemPage(item, item_title, title, url):
             else:
                 summary = summary
 
-            # provide a way to add manga to the bookmarks list
+            # provide a way to add Item to the bookmarks list
             oc.add(DirectoryObject(
                 key = Callback(
                     AddBookmark, item=item, item_title=item_title,
                     title=title, cover=cover, summary=summary, url=url),
                 title = 'Add Bookmark',
                 summary = 'Add \"%s\" to your Bookmarks list.' % item_title))
-    # No 'Bookmarks' section in Dict yet, so don't look for Manga in 'Bookmarks'
+    # No 'Bookmarks' section in Dict yet, so don't look for Item in 'Bookmarks'
     else:
         # Same stuff as above
         cover = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
@@ -541,7 +513,7 @@ def ItemPage(item, item_title, title, url):
         else:
             summary = summary
 
-        # provide a way to add item to bookmarks list
+        # provide a way to add Item to bookmarks list
         oc.add(DirectoryObject(
             key=Callback(
                 AddBookmark, item=item, item_title=item_title,
@@ -552,7 +524,7 @@ def ItemPage(item, item_title, title, url):
     return oc
 
 ####################################################################################################
-# Create the Item Sub Page with Seasons, Movies and Misc Video list
+# Create the Item Sub Page with Video list
 
 @route(PREFIX + '/itemsubpage')
 def ItemSubPage(item, item_title, title, url):
@@ -568,6 +540,7 @@ def ItemSubPage(item, item_title, title, url):
     for video in html.xpath('//table[@class="listing"]/tr//a'):
         video_page_url = url + video.get('href')  # url for Video page
         Log('Video Page URL = %s' % video_page_url)
+        # title for video, cleaned
         raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', video.text).replace(item_title, '')
         video_title = raw_title.replace('Watch Online', '').strip()
         Log('Video Title = %s' % video_title)
@@ -579,6 +552,8 @@ def ItemSubPage(item, item_title, title, url):
 
 ####################################################################################################
 # Create Video container
+# don't like that I need this, but if not the Service URL will parse all the videos
+#   and bog down the server respose time
 
 @route(PREFIX + '/videodetail')
 def VideoDetail(title, url):
@@ -617,8 +592,6 @@ def ChaptersPage(manga, manga_title, title, url):
 
 @route(PREFIX + '/search')
 def Search(query=''):
-    # format search query
-
     # set defaults
     title2 = 'Search for %s' % query
     search_match = []
@@ -633,6 +606,7 @@ def Search(query=''):
         search_url_filled = search_url % String.Quote(query, usePlus=True)
         base_url = search_url_filled.rsplit('Search', 1)[0][:-1]
         title = base_url.rsplit('/', 2)[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
+        # change kissasian urls to 'Drama' for title
         if title == 'Asian':
             title = 'Drama'
         Log('Search url=%s' % search_url_filled)
@@ -698,12 +672,12 @@ def AddBookmark(item, item_title, title, cover, summary, url):
         # Update Dict to include new 'Bookmarks' section
         Dict.Save()
 
-        # Provide feedback that the Manga has been added to bookmarks
+        # Provide feedback that the Item has been added to bookmarks
         return ObjectContainer(
             header=item_title,
             message='\"%s\" has been added to your bookmarks.' % item_title,
             no_cache = True)
-    # check if key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
+    # check if the category key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
     # if so then append new bookmark to one of those categories
     elif title in Dict['Bookmarks'].keys():
         # fail safe for when clients are out of sync and it trys to add
@@ -720,16 +694,17 @@ def AddBookmark(item, item_title, title, cover, summary, url):
                 header=item_title,
                 message='\"%s\" is already in your bookarks.' % item_title,
                 no_cache=True)
+        # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
         else:
             temp = {}
             temp.setdefault(title, Dict['Bookmarks'][title]).append(new_bookmark)
             Dict['Bookmarks'][title] = temp[title]
             Log('bookmark list after addition\n%s' % Dict['Bookmarks'])
 
-            # Update Dict to include new Manga
+            # Update Dict to include new Item
             Dict.Save()
 
-            # Provide feedback that the Manga has been added to bookmarks
+            # Provide feedback that the Item has been added to bookmarks
             return ObjectContainer(
                 header=item_title,
                 message='\"%s\" has been added to your bookmarks.' % item_title,
@@ -766,7 +741,7 @@ def RemoveBookmark(item, item_title, title):
     Log('\"%s\" has been removed from Bookmark List' % item_title)
     Log('bookmark list after removal\n%s' % Dict['Bookmarks'])
 
-    # Provide feedback that the Manga has been removed from the 'Bookmarks' list
+    # Provide feedback that the Item has been removed from the 'Bookmarks' list
     return ObjectContainer(
         header=title,
         message='\"%s\" has been removed from your bookmarks.' % item_title,
@@ -787,7 +762,7 @@ def ClearBookmarks(title):
         Log('Bookmark section %s cleared' % title)
         Log('bookmarks after deletion\n%s' % Dict['Bookmarks'])
 
-    # update Dict, and debug log
+    # update Dict
     Dict.Save()
 
     # Provide feedback that the correct 'Bookmarks' section is removed
