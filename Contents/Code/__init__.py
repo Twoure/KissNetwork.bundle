@@ -42,7 +42,7 @@ CARTOON_SEARCH_URL = CARTOON_BASE_URL + '/Search/Cartoon?keyword=%s'
 # KissManga
 MANGA_BASE_URL = 'http://kissmanga.com'
 MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
-
+#[ANIME_SEARCH_URL, ASIAN_SEARCH_URL, CARTOON_SEARCH_URL, MANGA_SEARCH_URL]
 randomArt = random.randint(1, 8)
 ART = 'art-default_' + str(randomArt) + '.png'
 ICON = 'icon-default.png'
@@ -77,6 +77,11 @@ def MainMenu():
         title='Manga'))
     oc.add(DirectoryObject(key=Callback(BookmarksMain, title='My Bookmarks'), title='My Bookmarks'))
     oc.add(PrefsObject(title='Preferences'))
+    oc.add(InputDirectoryObject(
+        key=Callback(Search),
+        title='Search',
+        summary='Search KissNetwork',
+        prompt='Search for...'))
 
     return oc
 
@@ -92,11 +97,13 @@ def KissAnime(url, title):
             page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    """
     oc.add(InputDirectoryObject(
         key=Callback(Search, title=title, url=ANIME_SEARCH_URL),
         title='Search',
         summary='Search Kissanime',
         prompt='Search for...'))
+    """
 
     return oc
 
@@ -113,11 +120,13 @@ def KissAsian(url, title):
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(CountryList, url=url, title=title), title='Countries'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    """
     oc.add(InputDirectoryObject(
         key=Callback(Search, title=title, url=ASIAN_SEARCH_URL),
         title='Search',
         summary='Search Kissasian',
         prompt='Search for...'))
+    """
 
     return oc
 
@@ -133,11 +142,13 @@ def KissCartoon(url, title):
             page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    """
     oc.add(InputDirectoryObject(
         key=Callback(Search, title=title, url=CARTOON_SEARCH_URL),
         title='Search',
         summary='Search Kisscartoon',
         prompt='Search for...'))
+    """
 
     return oc
 
@@ -153,11 +164,13 @@ def KissManga(url, title):
             page=1, pname='All', category='All', url=url, title=title), title='All'))
     oc.add(DirectoryObject(key=Callback(AlphabetList, url=url, title=title), title='Alphabets'))
     oc.add(DirectoryObject(key=Callback(GenreList, url=url, title=title), title='Genres'))
+    """
     oc.add(InputDirectoryObject(
         key=Callback(Search, title=title, url=MANGA_SEARCH_URL),
         title='Search',
         summary='Search Kissmanga',
         prompt='Search for...'))
+    """
 
     return oc
 
@@ -173,7 +186,7 @@ def ValidatePrefs():
         Dict['s_opt'] = '/MostPopular'
     elif Prefs['sort_opt'] == 'Latest Update':
         Dict['s_opt'] = '/LatestUpdate'
-    elif Prefs['sort_opt'] == 'New Manga':
+    elif Prefs['sort_opt'] == 'Newest':
         Dict['s_opt'] = '/Newest'
 
     # Update the Dict to latest prefs
@@ -184,7 +197,7 @@ def ValidatePrefs():
 
 @route(PREFIX + '/bookmarks')
 def BookmarksMain(title):
-    oc = ObjectContainer(title1=title, no_cache=True)
+    oc = ObjectContainer(title1=title)  #, no_cache=True)
 
     # check for 'Bookmarks' section in Dict
     if not Dict['Bookmarks']:
@@ -215,7 +228,7 @@ def BookmarksMain(title):
 
 @route(PREFIX + '/bookmarkssub')
 def BookmarksSub(key):
-    oc = ObjectContainer(title1=key, no_cache=True)
+    oc = ObjectContainer(title1='My Bookmarks | %s' % key)  #, no_cache=True)
     Log(key)
 
     # Fill in DirectoryObject information from the bookmark list
@@ -551,22 +564,16 @@ def ItemSubPage(item, item_title, title, url):
     html = ElementFromURL(sub_url)
     item_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', item_title)
 
-    # This is where the magic will happen for parsing videos into Seasons and Movies
-
     # parse html for internal item name and public name
     for video in html.xpath('//table[@class="listing"]/tr//a'):
         video_page_url = url + video.get('href')  # url for Video page
         Log('Video Page URL = %s' % video_page_url)
         raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', video.text).replace(item_title, '')
         video_title = raw_title.replace('Watch Online', '').strip()
-#        video_title = video.text.replace('\n', '').replace(item_title, '').replace('_', '').strip()  # title for Video
         Log('Video Title = %s' % video_title)
 
         oc.add(DirectoryObject(
             key=Callback(VideoDetail, title=video_title, url=video_page_url), title=video_title))
-
-        # Add Video. Service url gets the videos images for the Chapter
-        #oc.add(VideoClipObject(title=video_title, url=video_page_url))
 
     return oc
 
@@ -606,39 +613,71 @@ def ChaptersPage(manga, manga_title, title, url):
     return oc
 
 ####################################################################################################
-# Search kiss(anime, asian, cartoon, manga) for Items
-# The results can return the Item itself via a url redirect.
+# Set up Search for kiss(anime, asian, cartoon, manga)
 
 @route(PREFIX + '/search')
-def Search(title, url, query=''):
+def Search(query=''):
     # format search query
+
+    # set defaults
+    title2 = 'Search for %s' % query
+    search_match = []
+
+    oc = ObjectContainer(title2=title2)
+
+    all_search_urls = [ANIME_SEARCH_URL, ASIAN_SEARCH_URL, CARTOON_SEARCH_URL, MANGA_SEARCH_URL]
+
+    # format each search url and send to 'SearchPage'
+    # can't check each url here, would take too long since behind cloudflare and timeout the server
+    for search_url in all_search_urls:
+        search_url_filled = search_url % String.Quote(query, usePlus=True)
+        base_url = search_url_filled.rsplit('Search', 1)[0][:-1]
+        title = base_url.rsplit('/', 2)[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
+        if title == 'Asian':
+            title = 'Drama'
+        Log('Search url=%s' % search_url_filled)
+
+        oc.add(DirectoryObject(
+            key=Callback(SearchPage, title=title, search_url=search_url_filled),
+            title=title))
+
+    return oc
+
+####################################################################################################
+# Retrun searches for each kiss() page
+# The results can return the Item itself via a url redirect.
+
+@route(PREFIX + '/searchpage')
+def SearchPage(title, search_url):
     # Check for "exact" matches and send them to ItemPage
     # If normal seach result then send to DirectoryList
-    search_url = url % String.Quote(query, usePlus=True)
-    h = Request(search_url)
-    header = h.headers  # pull out headers in JSON format
-    html = HTML.ElementFromString(h.content)  # convert page to html
+
+    html = ElementFromURL(search_url)
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
         # Test for "exact" match, if True then send to 'ItemPage'
-        """
-        if 'transfer-encoding' in str(header):
-            node = html.xpath('//head/link[@rel="alternate"]')[0]
-            item_title = node.get('title')  # name used for title2
-            item = node.get('href').rsplit('/')[-1]  # name used internally
-            return ItemPage(item, item_title, title, url)
-        # Send results to 'DirectoryList'
+        node = html.xpath('//div[@id="headnav"]/script/text()')[0]
+        search_match = Regex('var\ path\ =\ (\'Search\')').search(node)
+        if not search_match:
+            base_url = search_url.rsplit('Search', 1)[0][:-1]
+            node = html.xpath('//div[@class="barContent"]/div/a')[0]
+            item = node.get('href').rsplit('/')[-1]
+            item_title = node.text
+            Log('\nitem_title=%s\nitem=%s\ntitle=%s\nurl=%s' % (item_title, item, title, base_url))
+
+            return ItemPage(item=item, item_title=item_title, title=title, url=base_url)
         else:
+            # Send results to 'DirectoryList'
+            query = search_url.rsplit('=')[-1]
             return DirectoryList(1, 'Search', query, search_url, title)
-        """
-        return DirectoryList(1, 'Search', query, search_url, title)
     # No results found :( keep trying
     else:
         Log('Search returned no results.')
+        query = search_url.rsplit('=')[-1]
         return ObjectContainer(
             header='Search',
-            message='There are no search results for "%s".\r\nTry being less specific.' % query)
+            message='There are no search results for \"%s\" in \"%s\" Category.\r\nTry being less specific.' % (query, title))
 
 ####################################################################################################
 # Adds Item to the bookmarks list
@@ -666,20 +705,35 @@ def AddBookmark(item, item_title, title, cover, summary, url):
             no_cache = True)
     # check if key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
     # if so then append new bookmark to one of those categories
-    elif title in Dict['Bookmarks']:
-        temp = {}
-        temp.setdefault(title, Dict['Bookmarks'][title]).append(new_bookmark)
-        Dict['Bookmarks'][title] = temp[title]
-        Log('bookmark list after addition\n%s' % Dict['Bookmarks'])
+    elif title in Dict['Bookmarks'].keys():
+        # fail safe for when clients are out of sync and it trys to add
+        # the bookmark in duplicate
+        for bookmark in Dict['Bookmarks'][title]:
+            if not bookmark[title] == new_bookmark[title]:
+                match = False
+            else:
+                match = True
+                break
 
-        # Update Dict to include new Manga
-        Dict.Save()
+        if match:
+            return ObjectContainer(
+                header=item_title,
+                message='\"%s\" is already in your bookarks.' % item_title,
+                no_cache=True)
+        else:
+            temp = {}
+            temp.setdefault(title, Dict['Bookmarks'][title]).append(new_bookmark)
+            Dict['Bookmarks'][title] = temp[title]
+            Log('bookmark list after addition\n%s' % Dict['Bookmarks'])
 
-        # Provide feedback that the Manga has been added to bookmarks
-        return ObjectContainer(
-            header=item_title,
-            message='\"%s\" has been added to your bookmarks.' % item_title,
-            no_cache = True)
+            # Update Dict to include new Manga
+            Dict.Save()
+
+            # Provide feedback that the Manga has been added to bookmarks
+            return ObjectContainer(
+                header=item_title,
+                message='\"%s\" has been added to your bookmarks.' % item_title,
+                no_cache=True)
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({title: [new_bookmark]})
@@ -692,7 +746,7 @@ def AddBookmark(item, item_title, title, cover, summary, url):
         return ObjectContainer(
             header=item_title,
             message='\"%s\" has been added to your bookmarks.' % item_title,
-            no_cache = True)
+            no_cache=True)
 
 ####################################################################################################
 # Removes item from the bookmarks list using the item as a key
@@ -716,7 +770,7 @@ def RemoveBookmark(item, item_title, title):
     return ObjectContainer(
         header=title,
         message='\"%s\" has been removed from your bookmarks.' % item_title,
-        no_cache = True)
+        no_cache=True)
 
 ####################################################################################################
 # Remove 'Bookmarks' Section(s) from Dict. Note: This removes all bookmarks in list
@@ -740,7 +794,7 @@ def ClearBookmarks(title):
     return ObjectContainer(
         header="My Bookmarks",
         message='%s bookmarks have been cleared.' % title,
-        no_cache = True)
+        no_cache=True)
 
 ####################################################################################################
 # No route needed, this is a function to simplify cfscraper
