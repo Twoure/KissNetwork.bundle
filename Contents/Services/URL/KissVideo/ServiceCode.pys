@@ -9,10 +9,10 @@ import base64, os, sys
 submodule_folders = ['cfscrape', 'execjs', 'requests']
 for folder in submodule_folders:
     try:
-        path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
+        path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
         Log('try 1 %s' % path)
     except:
-        path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
+        path = os.getcwd().split("Plug-in Support")[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
         Log('try 2 %s' % path)
 
     if path not in sys.path:
@@ -41,12 +41,13 @@ def MetadataObjectForURL(url):
 
     html = ElementFromURL(url)
 
-    title = html.xpath("//option[@selected='selected']/text()")[0].replace('\n', '')
-    summary = html.xpath("//meta[@name='description']/@content")[0].replace('\n', '')
+    title = html.xpath("//option[@selected='selected']/text()")[0]
+    title = title.replace('\n', '').strip()
 
-    return VideoClipObject(
-        title=title,
-        summary=summary)
+    summary = html.xpath("//meta[@name='description']/@content")[0]
+    summary = summary.replace('\n', '').strip()
+
+    return VideoClipObject(title=title, summary=summary)
 
 ########################################################################################
 def MediaObjectsForURL(url):
@@ -60,41 +61,35 @@ def MediaObjectsForURL(url):
     html = ElementFromURL(url)
     mo = []
 
-    for node in html.xpath('//select[@id="selectQuality"]/option/text()'):
+    for node in html.xpath('//select[@id="selectQuality"]/option'):
+        fmt = node.text
+        video_url = node.get('value')
+
         mo.append(MediaObject(
-            parts=[PartObject(key=Callback(PlayVideo, url=url, fmt=node))],
-            video_resolution=node[:-1],
+            parts=[PartObject(key=Callback(PlayVideo, url=video_url))],
+            video_resolution=fmt[:-1],
             container=Container.MP4,
             video_codec=VideoCodec.H264,
             audio_codec=AudioCodec.AAC,
             audio_channels=2,
-            optimized_for_streaming = True  if Client.Product != 'Plex Web' else False))
+            optimized_for_streaming = True))  # if Client.Product != 'Plex Web' else False))
 
     return mo
 
 ########################################################################################
-def PlayVideo(url, fmt):
+def PlayVideo(url):
+    """Log the url and return the decoded base64 url"""
 
-    html = ElementFromURL(url)
+    Log(url)
 
-    for node in reversed(html.xpath('//select[@id="selectQuality"]/option')):
-        if node.text == fmt:
-            video_url = node.get('value')
-            break
-        else:
-            video_url = node.get('value')
-
-    return Redirect(base64.b64decode(video_url))
+    return Redirect(base64.b64decode(url))
 
 ########################################################################################
 def ElementFromURL(url):
-    """
-    Retrun url in html formate
-    """
+    """Retrun cloudflare url in html format"""
 
     scraper = cfscrape.create_scraper()
     page = scraper.get(url)
     myscrape = HTML.ElementFromString(page.text)
 
     return myscrape
-

@@ -5,5 +5,11 @@
     "type": "enum",
     "values": ["Alphabetical", "Popularity", "Latest Update", "Newest"],
     "default": "Alphabetical"
+  },
+  {
+    "id": "debug",
+    "type": "bool",
+    "label": "Enable Debug Logging",
+    "default": "True"
   }
 ]
