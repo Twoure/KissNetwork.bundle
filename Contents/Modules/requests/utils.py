@@ -67,7 +67,7 @@ def super_len(o):
         return len(o.getvalue())
 
 
-def get_netrc_auth(url):
+def get_netrc_auth(url, raise_errors=False):
     """Returns the Requests tuple auth for a given url from netrc."""
 
     try:
@@ -105,8 +105,9 @@ def get_netrc_auth(url):
                 return (_netrc[login_i], _netrc[2])
         except (NetrcParseError, IOError):
             # If there was a parsing error or a permissions issue reading the file,
-            # we'll just skip netrc auth
-            pass
+            # we'll just skip netrc auth unless explicitly asked to raise errors.
+            if raise_errors:
+                raise
 
     # AppEngine hackiness.
     except (ImportError, AttributeError):
@@ -536,6 +537,18 @@ def get_environ_proxies(url):
     else:
         return getproxies()
 
+def select_proxy(url, proxies):
+    """Select a proxy for the url, if applicable.
+
+    :param url: The url being for the request
+    :param proxies: A dictionary of schemes or schemes and hosts to proxy URLs
+    """
+    proxies = proxies or {}
+    urlparts = urlparse(url)
+    proxy = proxies.get(urlparts.scheme+'://'+urlparts.hostname)
+    if proxy is None:
+        proxy = proxies.get(urlparts.scheme)
+    return proxy
 
 def default_user_agent(name="python-requests"):
     """Return a string representing the default user agent."""

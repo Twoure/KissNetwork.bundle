@@ -1,9 +1,0 @@
-[submodule "Contents/Modules/cfscrape"]
-	path = Contents/Modules/cfscrape
-	url = https://github.com/Anorov/cloudflare-scrape.git
-[submodule "Contents/Modules/execjs"]
-	path = Contents/Modules/execjs
-	url = https://github.com/doloopwhile/PyExecJS.git
-[submodule "Contents/Modules/requests"]
-	path = Contents/Modules/requests
-	url = https://github.com/kennethreitz/requests.git

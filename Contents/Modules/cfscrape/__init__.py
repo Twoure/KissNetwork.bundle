@@ -1,15 +1,5 @@
 import time
 import re
-import os
-import sys
-
-try:
-	path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0]+"Plug-ins/KissAnime.bundle/Contents/Code/Modules/KissAnime"
-except:
-	path = os.getcwd().split("Plug-in Support")[0]+"Plug-ins/KissAnime.bundle/Contents/Code/Modules/KissAnime"
-if path not in sys.path:
-	sys.path.append(path)
-
 import requests
 from requests.adapters import HTTPAdapter
 import execjs
@@ -19,8 +9,12 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
-DEFAULT_USER_AGENT = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36")
+DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
+JS_ENGINE = execjs.get().name
+
+if not ("Node" in JS_ENGINE or "V8" in JS_ENGINE):
+    raise EnvironmentError("Your Javascript runtime '%s' is not supported due to security concerns. "
+                           "Please use Node.js, V8, or PyV8." % JS_ENGINE)
 
 class CloudflareAdapter(HTTPAdapter):
     def send(self, request, **kwargs):
@@ -32,7 +26,8 @@ class CloudflareAdapter(HTTPAdapter):
             return resp
 
         # Check if Cloudflare anti-bot is on
-        if "a = document.getElementById('jschl-answer');" in resp.text:
+        if ( "URL=/cdn-cgi/" in resp.headers.get("Refresh", "") and
+             resp.headers.get("Server", "") == "cloudflare-nginx" ):
             return self.solve_cf_challenge(resp, request.headers, resp.cookies, **kwargs)
 
         # Otherwise, no Cloudflare anti-bot detected
@@ -44,8 +39,8 @@ class CloudflareAdapter(HTTPAdapter):
             request.headers["User-Agent"] = DEFAULT_USER_AGENT
 
     def format_js(self, js):
-        js = js.replace("\n", "")
-        if "Node" in execjs.get().name:
+        js = re.sub(r"[\n\\']", "", js)
+        if "Node" in JS_ENGINE:
             return "return require('vm').runInNewContext('%s');" % js
         return js.replace("parseInt", "return parseInt")
 
@@ -71,7 +66,7 @@ class CloudflareAdapter(HTTPAdapter):
             # Something is wrong with the page. This may indicate Cloudflare has changed their
             # anti-bot technique. If you see this and are running the latest version,
             # please open a GitHub issue so I can update the code accordingly.
-            print ("Unable to parse Cloudflare anti-bots page. Try upgrading cloudflare-scrape, or submit "
+            print ("[!] Unable to parse Cloudflare anti-bots page. Try upgrading cloudflare-scrape, or submit "
                    "a bug report if you are running the latest version. Please read "
                    "https://github.com/Anorov/cloudflare-scrape#updates before submitting a bug report.\n")
             raise
@@ -100,17 +95,25 @@ def create_scraper(session=None):
     sess.mount("https://", adapter)
     return sess
 
-def get_tokens(url):
+def get_tokens(url, user_agent=None):
     scraper = create_scraper()
-    resp = scraper.get(url)
-    if not resp.ok:
-        raise ValueError("'%s' returned error %d, could not collect tokens." % (url, resp.status_code))
+    user_agent = user_agent or DEFAULT_USER_AGENT
+    scraper.headers["User-Agent"] = user_agent
+    
+    try:
+        resp = scraper.get(url)
+        resp.raise_for_status()
+    except Exception:
+        print("'%s' returned error %d, could not collect tokens.\n" % (url, resp.status_code))
+        raise
 
-    return { 
-             "__cfduid": resp.cookies.get("__cfduid", ""),
-             "cf_clearance": scraper.cookies.get("cf_clearance", "")
-           }
+    return ( { 
+                 "__cfduid": resp.cookies.get("__cfduid", ""),
+                 "cf_clearance": scraper.cookies.get("cf_clearance", "")
+             },
+             user_agent
+           )
 
-def get_cookie_string(url):
-    tokens = get_tokens(url)
-    return "; ".join("=".join(pair) for pair in tokens.items())
+def get_cookie_string(url, user_agent=None):
+    tokens, user_agent = get_tokens(url, user_agent=user_agent)
+    return "; ".join("=".join(pair) for pair in tokens.items()), user_agent
