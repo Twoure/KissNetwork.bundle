@@ -7,6 +7,12 @@
     "default": "Alphabetical"
   },
   {
+    "id": "cache_covers",
+    "label": "Cache Bookmark Covers Locally",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "debug",
     "type": "bool",
     "label": "Enable Debug Logging",
