@@ -21,33 +21,44 @@ import cfscrape
 # set global variables
 PREFIX = '/video/kissnetwork'
 TITLE = 'KissNetwork'
-ICON_ADD_BOOKMARK = 'icon-add-bookmark.png'
-ICON_REMOVE_BOOKMARK = 'icon-remove-bookmark.png'
 LIST_VIEW_CLIENTS = ['Android', 'iOS']
 
 # KissAnime
 ANIME_BASE_URL = 'http://kissanime.com'
 ANIME_SEARCH_URL = ANIME_BASE_URL + '/Search/Anime?keyword=%s'
 ANIME_ART = 'art-anime.png'
+ANIME_ICON = 'icon-anime.png'
 
 # KissAsian
 ASIAN_BASE_URL = 'http://kissasian.com'
 ASIAN_SEARCH_URL = ASIAN_BASE_URL + '/Search/Drama?keyword=%s'
 ASIAN_ART = 'art-drama.png'
+ASIAN_ICON = 'icon-drama.png'
 
 # KissCartoon
 CARTOON_BASE_URL = 'http://kisscartoon.me'
 CARTOON_SEARCH_URL = CARTOON_BASE_URL + '/Search/Cartoon?keyword=%s'
 CARTOON_ART = 'art-cartoon.png'
+CARTOON_ICON = 'icon-cartoon.png'
 
 # KissManga
 MANGA_BASE_URL = 'http://kissmanga.com'
 MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
 MANGA_ART = 'art-manga.png'
+MANGA_ICON = 'icon-manga.png'
 
 # set background art and icon defaults
 MAIN_ART = 'art-main.png'
-ICON = 'icon-default.png'
+MAIN_ICON = 'icon-default.png'
+NEXT_ICON = 'icon-next.png'
+CATEGORY_VIDEO_ICON = 'icon-video.png'
+CATEGORY_PICTURE_ICON = 'icon-pictures.png'
+BOOKMARK_ICON = 'icon-bookmark.png'
+BOOKMARK_ADD_ICON = 'icon-add-bookmark.png'
+BOOKMARK_REMOVE_ICON = 'icon-remove-bookmark.png'
+BOOKMARK_CLEAR_ICON = 'icon-clear-bookmarks.png'
+SEARCH_ICON = 'icon-search.png'
+PREFS_ICON = 'icon-prefs.png'
 
 ####################################################################################################
 
@@ -55,9 +66,7 @@ def Start():
     ObjectContainer.art = R(MAIN_ART)
     ObjectContainer.title1 = TITLE
 
-    DirectoryObject.thumb = R(ICON)
-
-    Plugin.AddViewGroup('List', viewMode='List', mediaType='items')
+    DirectoryObject.thumb = R(MAIN_ICON)
 
 #    HTTP.CacheTime = CACHE_1DAY  # 1 day cache time  # once done editing will change back
     HTTP.CacheTime = 300  # 0 sec cache time, 300 sec = 5 mins
@@ -71,22 +80,36 @@ def MainMenu():
 
     # set thumbs based on client
     if Client.Platform in LIST_VIEW_CLIENTS:
+        anime_thumb = None
+        cartoon_thumb = None
+        drama_thumb = None
+        manga_thumb = None
+        bookmark_thumb = None
         prefs_thumb = None
         search_thumb = None
     else:
-        prefs_thumb = 'icon-prefs.png'
-        search_thumb = 'icon-search.png'
+        anime_thumb = ANIME_ICON
+        cartoon_thumb = CARTOON_ICON
+        drama_thumb = ASIAN_ICON
+        manga_thumb = MANGA_ICON
+        bookmark_thumb = BOOKMARK_ICON
+        prefs_thumb = PREFS_ICON
+        search_thumb = SEARCH_ICON
 
     oc.add(DirectoryObject(
-        key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART), title='Anime'))
+        key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
+        title='Anime', thumb=R(anime_thumb)))
     oc.add(DirectoryObject(
-        key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART), title='Cartoons'))
+        key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART),
+        title='Cartoons', thumb=R(cartoon_thumb)))
     oc.add(DirectoryObject(
-        key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART), title='Drama'))
+        key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART),
+        title='Drama', thumb=R(drama_thumb)))
     oc.add(DirectoryObject(
-        key=Callback(KissManga, url=MANGA_BASE_URL, title='Manga', art=MANGA_ART), title='Manga'))
+        key=Callback(KissManga, url=MANGA_BASE_URL, title='Manga', art=MANGA_ART),
+        title='Manga', thumb=R(manga_thumb)))
     oc.add(DirectoryObject(
-        key=Callback(BookmarksMain, title='My Bookmarks'), title='My Bookmarks'))
+        key=Callback(BookmarksMain, title='My Bookmarks'), title='My Bookmarks', thumb=R(bookmark_thumb)))
     oc.add(PrefsObject(title='Preferences', thumb=R(prefs_thumb)))
     oc.add(InputDirectoryObject(
         key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
@@ -210,19 +233,21 @@ def BookmarksMain(title):
         for key in sorted(Dict['Bookmarks'].keys()):
             if not key == 'Drama':
                 art = 'art-%s.png' % key.lower()
+                thumb = 'icon-%s.png' % key.lower()
             else:
-                art = 'art-asian.png'
+                art = 'art-drama.png'
+                thumb = 'icon-drama.png'
             Logger(art)
             # Create sub Categories for Anime, Cartoon, Drama, and Manga
             oc.add(DirectoryObject(
                 key=Callback(BookmarksSub, key=key, art=art),
-                title=key, summary='Display %s Bookmarks' % key))
+                title=key, thumb=R(thumb), summary='Display %s Bookmarks' % key))
 
         # add a way to clear the entire bookmarks list, i.e. start fresh
         oc.add(DirectoryObject(
             key=Callback(ClearBookmarks, title='All'),
             title='Clear All Bookmarks',
-            thumb=R('icon-clear-bookmarks.png') if not Client.Platform in LIST_VIEW_CLIENTS else None,
+            thumb=R(BOOKMARK_CLEAR_ICON),
             summary='CAUTION! This will clear your entire bookmark list!'))
 
         return oc
@@ -259,11 +284,16 @@ def BookmarksSub(key, art):
             title=item_title.decode('unicode_escape'), summary=summary.decode('unicode_escape'),
             thumb=cover))
 
+    if Client.Platform in LIST_VIEW_CLIENTS and not cover:
+        bm_clr_icon = None
+    else:
+        bm_clr_icon = R(BOOKMARK_CLEAR_ICON)
+
     # add a way to clear this bookmark section and start fresh
     oc.add(DirectoryObject(
         key=Callback(ClearBookmarks, title=key),
         title='Clear All \"%s\" Bookmarks' % key,
-        thumb=R('icon-clear-bookmarks.png') if not Client.Platform in LIST_VIEW_CLIENTS else None,
+        thumb=bm_clr_icon,
         summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % key))
 
     return oc
@@ -457,7 +487,7 @@ def DirectoryList(page, pname, category, url, title, art):
         oc.add(NextPageObject(
             key=Callback(DirectoryList,
                 page=nextpg, pname=pname, category=category, url=url, title=title, art=art),
-            title='Next Page>>'))
+            title='Next Page>>', thumb=R(NEXT_ICON) if not Client.Platform in LIST_VIEW_CLIENTS else None))
 
     return oc
 
@@ -474,10 +504,10 @@ def ItemPage(item, item_title, title, url, art):
 
     # page category stings depending on media
     if not 'Manga' in title:
-        category_thumb = 'icon-video.png'
+        category_thumb = CATEGORY_VIDEO_ICON
         page_category = 'Video(s)'
     else:
-        category_thumb = 'icon-pictures.png'
+        category_thumb = CATEGORY_PICTURE_ICON
         page_category = 'Chapter(s)'
 
     # format item_url for parsing
@@ -510,7 +540,7 @@ def ItemPage(item, item_title, title, url, art):
             oc.add(DirectoryObject(
                 key=Callback(RemoveBookmark,
                     item=item, item_title=item_title, title=title),
-                title='Remove Bookmark', thumb=R(ICON_REMOVE_BOOKMARK),
+                title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
                 summary = 'Remove \"%s\" from your Bookmarks list.' % title))
         # Item not in 'Bookmarks' yet, so lets parse it for adding!
         else:
@@ -551,7 +581,7 @@ def ItemPage(item, item_title, title, url, art):
                 key = Callback(AddBookmark,
                     item=item, item_title=item_title, title=title,
                     cover=cover, summary=summary, url=url),
-                title = 'Add Bookmark', thumb=R(ICON_ADD_BOOKMARK),
+                title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
                 summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
     # No 'Bookmarks' section in Dict yet, so don't look for Item in 'Bookmarks'
     else:
@@ -585,7 +615,7 @@ def ItemPage(item, item_title, title, url, art):
             key=Callback(AddBookmark,
                 item=item, item_title=item_title, title=title,
                 cover=cover, summary=summary, url=url),
-            title='Add Bookmark', thumb=R(ICON_ADD_BOOKMARK),
+            title='Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
             summary='Add \"%s\" to your Bookmarks list.' % item_title_decode))
 
     return oc
@@ -668,7 +698,7 @@ def VideoDetail(title, url, art):
 @route(PREFIX + '/search')
 def Search(query=''):
     # set defaults
-    title2 = 'Search for %s' % query
+    title2 = 'Search for \"%s\" in...' % query
 
     oc = ObjectContainer(title2=title2)
     # create list of search URL's
@@ -684,13 +714,15 @@ def Search(query=''):
         if title == 'Asian':
             title = 'Drama'
             art = ASIAN_ART
+            thumb = ASIAN_ICON
         else:
             art = '%s_ART' % title.upper()
+            thumb = 'icon-%s.png' % title.lower()
         Logger('Search url=%s' % search_url_filled)
 
         oc.add(DirectoryObject(
             key=Callback(SearchPage, title=title, search_url=search_url_filled, art=art),
-            title=title))
+            title=title, thumb=R(thumb)))
 
     return oc
 
@@ -871,6 +903,7 @@ def ClearBookmarks(title):
         message='%s bookmarks have been cleared.' % title, no_cache=True)
 
 ####################################################################################################
+# Setup logging options based on prefs, indirect because it has no return
 
 @indirect
 @route(PREFIX + '/logger')
@@ -881,7 +914,7 @@ def Logger(message, force=False):
         pass
 
 ####################################################################################################
-# Get Plug-in Support/Data/com.plexapp.plugins.kissnetwork path
+# Get Plug-in Bundle path
 
 @route(PREFIX + '/bundlepath')
 def GetBundlePath():
@@ -891,14 +924,14 @@ def GetBundlePath():
     return path
 
 ####################################################################################################
-# Get image directory
+# Get image directory, for now it's Contents/Resources
 
 @route(PREFIX + '/cover-imagepath')
 def GetCoverImagePath():
     return Core.storage.join_path(GetBundlePath(), 'Contents', 'Resources')
 
 ####################################################################################################
-# Save image to Resources directory and return the file name
+# Save image to Cover Image Path and return the file name
 
 @route(PREFIX + '/save-cover-image')
 def SaveCoverImage(image_url):
