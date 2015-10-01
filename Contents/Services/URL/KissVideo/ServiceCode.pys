@@ -3,22 +3,22 @@
 """
 Kiss(anime, cartoon, and drama) Service code - Gather all image urls for a Chapter.
 """
-
+# import local modules
 import base64, os, sys
 
-submodule_folders = ['cfscrape', 'execjs', 'requests']
-for folder in submodule_folders:
-    try:
-        path = os.getcwd().split("?\\")[1].split('Plug-in Support')[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
-        Log('try 1 %s' % path)
-    except:
-        path = os.getcwd().split("Plug-in Support")[0] + "Plug-ins/KissNetwork.bundle/Contents/Modules/" + folder
-        Log('try 2 %s' % path)
+modules_path = 'Plug-ins/KissNetwork.bundle/Contents/Modules'
+try:
+    path = os.getcwd().split('?\\')[1].split('Plug-in Support')[0] + modules_path
+    Log('try 1 %s' % path)
+except:
+    path = os.getcwd().split('Plug-in Support')[0] + modules_path
+    Log('try 2 %s' % path)
 
-    if path not in sys.path:
-        sys.path.append(path)
-        Log('%s added to sys.path' % path)
+if path not in sys.path:
+    sys.path.append(path)
+    Log('%s added to sys.path' % path)
 
+# import custom modules
 import cfscrape
 
 ########################################################################################
@@ -39,6 +39,8 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
+    url = url.decode('unicode_escape')
+    Log('MetadataObjectForURL url=%s' %url)
     html = ElementFromURL(url)
 
     title = html.xpath("//option[@selected='selected']/text()")[0]
@@ -58,6 +60,8 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
+    url = url.decode('unicode_escape')
+    Log('MediaObjectsForURL url =%s' %url)
     html = ElementFromURL(url)
     mo = []
 
@@ -80,7 +84,7 @@ def MediaObjectsForURL(url):
 def PlayVideo(url):
     """Log the url and return the decoded base64 url"""
 
-    Log(url)
+    Log('PlayVideo url=%s' %url)
 
     return Redirect(base64.b64decode(url))
 
