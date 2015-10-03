@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
-"""
-Kiss(anime, cartoon, and drama) Service code - Gather all image urls for a Chapter.
-"""
+"""Kiss(anime, cartoon, and drama) Service code"""
+
 # import local modules
 import base64, os, sys
 
@@ -39,13 +38,16 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
+    # decode url for parsing
     url = url.decode('unicode_escape')
     Log('MetadataObjectForURL url=%s' %url)
     html = ElementFromURL(url)
 
+    # set the video title
     title = html.xpath("//option[@selected='selected']/text()")[0]
     title = title.replace('\n', '').strip()
 
+    # set the video summary
     summary = html.xpath("//meta[@name='description']/@content")[0]
     summary = summary.replace('\n', '').strip()
 
@@ -60,11 +62,13 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
+    # decode url for parsing
     url = url.decode('unicode_escape')
     Log('MediaObjectsForURL url =%s' %url)
     html = ElementFromURL(url)
     mo = []
 
+    # create media objects for each video quality
     for node in html.xpath('//select[@id="selectQuality"]/option'):
         fmt = node.text
         video_url = node.get('value')

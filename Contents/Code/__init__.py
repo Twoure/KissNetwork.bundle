@@ -184,7 +184,7 @@ def KissManga(url, title, art):
     return oc
 
 ####################################################################################################
-# Set the sorting options for displaying all Manga lists
+# Set the sorting options for displaying all lists
 
 @route(PREFIX + '/validateprefs')
 def ValidatePrefs():
@@ -217,7 +217,7 @@ def ValidatePrefs():
     Dict.Save()
 
 ####################################################################################################
-# Crates Bookmark Menu
+# Create Bookmark Main Menu
 
 @route(PREFIX + '/bookmarks')
 def BookmarksMain(title):
@@ -369,7 +369,7 @@ def CountryList(url, title, art):
     return oc
 
 ####################################################################################################
-# GenreList, AlphabetList, and Search are sent here
+# GenreList, AlphabetList, CountryList, and Search are sent here
 # Pulls out Items name and creates directories for them
 # Plan to add section that detects if Genre is empty
 
@@ -436,7 +436,7 @@ def DirectoryList(page, pname, category, url, title, art):
 
     oc = ObjectContainer(title2=main_title, art=R(art))
 
-    # parse url for each Manga and pull out its title, summary, and cover image
+    # parse url for each Item and pull out its title, summary, and cover image
     # took some time to figure out how to get the javascript info
     for item in html.xpath('//table[@class="listing"]/tr'):
         m = item.xpath('./td')
@@ -836,10 +836,10 @@ def AddBookmark(item, item_title, title, cover, summary, url):
         Dict['Bookmarks'].update({title: [new_bookmark]})
         Logger('bookmark list after addition of new section\n%s' % Dict['Bookmarks'])
 
-        # Update Dict to include new Manga
+        # Update Dict to include new Item
         Dict.Save()
 
-        # Provide feedback that the Manga has been added to bookmarks
+        # Provide feedback that the Item has been added to bookmarks
         return ObjectContainer(header=item_title_decode,
             message='\"%s\" has been added to your bookmarks.' % item_title, no_cache=True)
 

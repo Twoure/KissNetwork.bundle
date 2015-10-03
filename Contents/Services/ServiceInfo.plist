@@ -6,18 +6,22 @@
   <dict>
     <key>KissVideo</key>
     <dict>
+      <key>Identifier</key>
+      <string>com.plexapp.plugins.kissnetwork</string>
       <key>URLPatterns</key>
       <array>
         <string>^http://(?:www\.|m\.|)kiss(?:anime\.(?:com|me)/Anime/|asian\.(?:com|me)/Drama/|cartoon\.(?:com|me)/Cartoon/).+(?:\?id=\d+)$</string>
       </array>
     </dict>
     <key>KissManga</key>
-		<dict>
-			<key>URLPatterns</key>
-			<array>
+    <dict>
+      <key>Identifier</key>
+      <string>com.plexapp.plugins.kissnetwork</string>
+      <key>URLPatterns</key>
+      <array>
         <string>^http://(?:www\.|m\.|)kissmanga\.(?:com|me)/Manga/.+(?:\?id=\d+)$</string>
-			</array>
+      </array>
     </dict>
-	</dict>
+  </dict>
 </dict>
 </plist>
