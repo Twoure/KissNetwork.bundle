@@ -20,15 +20,17 @@ System Requirements
 
   - Tested Working:
     - Linux
-      - PMS version 0.9.12.12 and up (sorry I don't have time to install and test for earlier versions)
+      - PMS version 0.9.12.13
       - [Ubuntu 14.04 x86_64 Linux 3.13.0-63-generic](http://i.imgur.com/ZiO7htR.png)
         - Installation of a Javascript runtime may be required
           - `sudo apt-get install nodejs` (installs nodejs)
+    - Windows 10
+      - PMS version 0.9.12.13
 
 - **Plex Clients:**
 
   - Tested Working:
-    - Plex Media Center / Home Theater (Ubuntu, same as above)
+    - Plex Media Center / Home Theater (Ubuntu & Windows 10, same as above)
     - Android (4.4.2)
     - Plex/Web (2.4.23)
     - Chromecast (Videos)
