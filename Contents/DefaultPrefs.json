@@ -1,5 +1,29 @@
 [
   {
+    "id": "kissanime",
+    "label": "View Content from Kissanime.com (Anime)",
+    "type": "bool",
+    "default": "True"
+  },
+  {
+    "id": "kissasian",
+    "label": "View Content from Kissasian.com (Drama)",
+    "type": "bool",
+    "default": "True"
+  },
+  {
+    "id": "kisscartoon",
+    "label": "View Content from Kisscartoon.me (Cartoon)",
+    "type": "bool",
+    "default": "True"
+  },
+  {
+    "id": "kissmanga",
+    "label": "View Content from Kissmanga.com (Manga)",
+    "type": "bool",
+    "default": "True"
+  },
+  {
     "id": "sort_opt",
     "label": "Sorting Option",
     "type": "enum",

@@ -9,6 +9,7 @@ Features
 --------
 
 - Watch video content across all Kiss sites (quality ranges from 360p to 1080p)
+- Choose which Kiss sites to view content, hide others
 - Read manga from Kissmanga
 - Create custom Bookmarks
 - Search all Kiss sites for videos/manga

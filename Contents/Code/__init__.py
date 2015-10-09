@@ -1,6 +1,6 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v0.01                                  #
+#                               KissNetwork Plex Channel -- v0.02                                  #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
@@ -96,18 +96,26 @@ def MainMenu():
         prefs_thumb = PREFS_ICON
         search_thumb = SEARCH_ICON
 
-    oc.add(DirectoryObject(
-        key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
-        title='Anime', thumb=R(anime_thumb)))
-    oc.add(DirectoryObject(
-        key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART),
-        title='Cartoons', thumb=R(cartoon_thumb)))
-    oc.add(DirectoryObject(
-        key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART),
-        title='Drama', thumb=R(drama_thumb)))
-    oc.add(DirectoryObject(
-        key=Callback(KissManga, url=MANGA_BASE_URL, title='Manga', art=MANGA_ART),
-        title='Manga', thumb=R(manga_thumb)))
+    if Prefs['kissanime']:
+        oc.add(DirectoryObject(
+            key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
+            title='Anime', thumb=R(anime_thumb)))
+
+    if Prefs['kisscartoon']:
+        oc.add(DirectoryObject(
+            key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART),
+            title='Cartoons', thumb=R(cartoon_thumb)))
+
+    if Prefs['kissasian']:
+        oc.add(DirectoryObject(
+            key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART),
+            title='Drama', thumb=R(drama_thumb)))
+
+    if Prefs['kissmanga']:
+        oc.add(DirectoryObject(
+            key=Callback(KissManga, url=MANGA_BASE_URL, title='Manga', art=MANGA_ART),
+            title='Manga', thumb=R(manga_thumb)))
+
     oc.add(DirectoryObject(
         key=Callback(BookmarksMain, title='My Bookmarks'), title='My Bookmarks', thumb=R(bookmark_thumb)))
     oc.add(PrefsObject(title='Preferences', thumb=R(prefs_thumb)))
@@ -227,30 +235,38 @@ def BookmarksMain(title):
     if not Dict['Bookmarks']:
         # if no 'Bookmarks' section the return pop up
         return ObjectContainer(header=title,
-            message='No Bookmarks yet. Get out there and start adding some!!!.', no_cache = True)
+            message='No Bookmarks yet. Get out there and start adding some!!!.', no_cache=True)
     # create boomark directory based on category
     else:
         for key in sorted(Dict['Bookmarks'].keys()):
             if not key == 'Drama':
-                art = 'art-%s.png' % key.lower()
-                thumb = 'icon-%s.png' % key.lower()
+                art = 'art-%s.png' %key.lower()
+                thumb = 'icon-%s.png' %key.lower()
+                prefs_name = 'kiss%s' %key.lower()
             else:
                 art = 'art-drama.png'
                 thumb = 'icon-drama.png'
+                prefs_name = 'kissasian'
             Logger(art)
-            # Create sub Categories for Anime, Cartoon, Drama, and Manga
+            if Prefs[prefs_name]:
+                # Create sub Categories for Anime, Cartoon, Drama, and Manga
+                oc.add(DirectoryObject(
+                    key=Callback(BookmarksSub, key=key, art=art),
+                    title=key, thumb=R(thumb), summary='Display %s Bookmarks' % key))
+
+        if len(oc) > 0:
+            # add a way to clear the entire bookmarks list, i.e. start fresh
             oc.add(DirectoryObject(
-                key=Callback(BookmarksSub, key=key, art=art),
-                title=key, thumb=R(thumb), summary='Display %s Bookmarks' % key))
+                key=Callback(ClearBookmarks, title='All'),
+                title='Clear All Bookmarks',
+                thumb=R(BOOKMARK_CLEAR_ICON),
+                summary='CAUTION! This will clear your entire bookmark list, even those hidden!'))
 
-        # add a way to clear the entire bookmarks list, i.e. start fresh
-        oc.add(DirectoryObject(
-            key=Callback(ClearBookmarks, title='All'),
-            title='Clear All Bookmarks',
-            thumb=R(BOOKMARK_CLEAR_ICON),
-            summary='CAUTION! This will clear your entire bookmark list!'))
-
-        return oc
+            return oc
+        else:
+            return ObjectContainer(header=title,
+                message='At least one source must be selected in Preferences to view Bookmarks',
+                no_cache=True)
 
 ####################################################################################################
 # Loads bookmarked items from Dict.
@@ -715,16 +731,25 @@ def Search(query=''):
             title = 'Drama'
             art = ASIAN_ART
             thumb = ASIAN_ICON
+            prefs_name = 'kissasian'
         else:
             art = '%s_ART' % title.upper()
             thumb = 'icon-%s.png' % title.lower()
-        Logger('Search url=%s' % search_url_filled)
+            prefs_name = 'kiss%s' %title.lower()
 
-        oc.add(DirectoryObject(
-            key=Callback(SearchPage, title=title, search_url=search_url_filled, art=art),
-            title=title, thumb=R(thumb)))
+        if Prefs[prefs_name]:
+            Logger('Search url=%s' % search_url_filled)
 
-    return oc
+            oc.add(DirectoryObject(
+                key=Callback(SearchPage, title=title, search_url=search_url_filled, art=art),
+                title=title, thumb=R(thumb)))
+
+    if len(oc) > 0:
+        return oc
+    else:
+        return ObjectContainer(header='Search',
+            message='At least one source must be selected in Preferences to view Search results',
+            no_cache=True)
 
 ####################################################################################################
 # Retrun searches for each kiss() page
