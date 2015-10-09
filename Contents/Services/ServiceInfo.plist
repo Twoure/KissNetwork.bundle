@@ -10,7 +10,15 @@
       <string>com.plexapp.plugins.kissnetwork</string>
       <key>URLPatterns</key>
       <array>
-        <string>^http://(?:www\.|m\.|)kiss(?:anime\.(?:com|me)/Anime/|asian\.(?:com|me)/Drama/|cartoon\.(?:com|me)/Cartoon/).+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|)kissanime\.(?:com|me)/Anime/.+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|)kissasian\.(?:com|me)/Drama/.+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|)kisscartoon\.(:?com|me)/Cartoon/.+(?:\?id=\d+)$</string>
+      </array>
+      <key>TestURLs</key>
+      <array>
+        <string>http://kissanime.com/Anime/Naruto-Shippuuden/Episode-001?id=100311</string>
+        <string>http://kissasian.com/Drama/Death-Note-2015/Episode-1?id=7780</string>
+        <string>http://kisscartoon.me/Cartoon/Steven-Universe/Episode-000-Pilot?id=44288</string>
       </array>
     </dict>
     <key>KissManga</key>
@@ -19,7 +27,11 @@
       <string>com.plexapp.plugins.kissnetwork</string>
       <key>URLPatterns</key>
       <array>
-        <string>^http://(?:www\.|m\.|)kissmanga\.(?:com|me)/Manga/.+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|)kissmanga\.(?:com|me)/Manga/.+(?:\?id=\d+)$</string>
+      </array>
+      <key>TestURLs</key>
+      <array>
+        <string>http://kissmanga.com/Manga/Naruto/001-007?id=80552</string>
       </array>
     </dict>
   </dict>
