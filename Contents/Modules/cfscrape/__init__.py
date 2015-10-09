@@ -9,12 +9,13 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
-DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
+DEFAULT_USER_AGENT = ("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
+    "Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36")
 JS_ENGINE = execjs.get().name
 
-if not ("Node" in JS_ENGINE or "V8" in JS_ENGINE):
-    raise EnvironmentError("Your Javascript runtime '%s' is not supported due to security concerns. "
-                           "Please use Node.js, V8, or PyV8." % JS_ENGINE)
+#if not ("Node" in JS_ENGINE or "V8" in JS_ENGINE):
+#    raise EnvironmentError("Your Javascript runtime '%s' is not supported due to security concerns. "
+#                           "Please use Node.js, V8, or PyV8." % JS_ENGINE)
 
 class CloudflareAdapter(HTTPAdapter):
     def send(self, request, **kwargs):
@@ -99,7 +100,7 @@ def get_tokens(url, user_agent=None):
     scraper = create_scraper()
     user_agent = user_agent or DEFAULT_USER_AGENT
     scraper.headers["User-Agent"] = user_agent
-    
+
     try:
         resp = scraper.get(url)
         resp.raise_for_status()
@@ -107,7 +108,7 @@ def get_tokens(url, user_agent=None):
         print("'%s' returned error %d, could not collect tokens.\n" % (url, resp.status_code))
         raise
 
-    return ( { 
+    return ( {
                  "__cfduid": resp.cookies.get("__cfduid", ""),
                  "cf_clearance": scraper.cookies.get("cf_clearance", "")
              },
