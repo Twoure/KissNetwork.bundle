@@ -68,8 +68,30 @@ def Start():
 
     DirectoryObject.thumb = R(MAIN_ICON)
 
-#    HTTP.CacheTime = CACHE_1DAY  # 1 day cache time  # once done editing will change back
-    HTTP.CacheTime = 300  # 0 sec cache time, 300 sec = 5 mins
+    HTTP.CacheTime = 0  # 0 sec cache time, 300 sec = 5 mins
+    HTTP.Headers['User-Agent'] = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36')
+
+    # setup urls with titles for setting cookies
+    url_list = [('Drama', ASIAN_BASE_URL), ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
+
+    # set cookie for first url, so we can update the Dict later
+    cookie = cfscrape.get_cookie_string(url=ANIME_BASE_URL, user_agent=HTTP.Headers['User-Agent'])
+
+    # set initial Dict up for Cookies
+    Dict['Cookies'] = {'Anime': {'cookie': cookie[0], 'user-agent': cookie[1]}}
+
+    # Now get cookies for the other urls and save to Dict for future use.
+    for url in url_list:
+        cookie = cfscrape.get_cookie_string(url=url[1], user_agent=HTTP.Headers['User-Agent'])
+        Dict['Cookies'].update({url[0]: {'cookie': cookie[0], 'user-agent': cookie[1]}})
+        Log('cookies for %s = %s' %(url[0], Dict['Cookies'][url[0]]['cookie']))
+
+    # check to make sure each section/url has cookies now
+    Log('all cookies? =%s' %(Dict['Cookies']))
+
+    # Save the Dict just in case pms did not already
+    Dict.Save()
 
 ####################################################################################################
 # Create the main menu
@@ -96,6 +118,7 @@ def MainMenu():
         prefs_thumb = PREFS_ICON
         search_thumb = SEARCH_ICON
 
+    # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
         oc.add(DirectoryObject(
             key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
@@ -247,13 +270,15 @@ def BookmarksMain(title):
                 art = 'art-drama.png'
                 thumb = 'icon-drama.png'
                 prefs_name = 'kissasian'
+
             Logger(art)
+            # if site in Prefs then add its bookmark section
             if Prefs[prefs_name]:
                 # Create sub Categories for Anime, Cartoon, Drama, and Manga
                 oc.add(DirectoryObject(
                     key=Callback(BookmarksSub, key=key, art=art),
                     title=key, thumb=R(thumb), summary='Display %s Bookmarks' % key))
-
+        # test if no sites are picked in the Prefs
         if len(oc) > 0:
             # add a way to clear the entire bookmarks list, i.e. start fresh
             oc.add(DirectoryObject(
@@ -264,6 +289,7 @@ def BookmarksMain(title):
 
             return oc
         else:
+            # Give error message
             return ObjectContainer(header=title,
                 message='At least one source must be selected in Preferences to view Bookmarks',
                 no_cache=True)
@@ -273,6 +299,16 @@ def BookmarksMain(title):
 
 @route(PREFIX + '/bookmarkssub')
 def BookmarksSub(key, art):
+    if key == 'Drama':
+        r_url = ASIAN_BASE_URL
+    elif key == 'Cartoon':
+        r_url = CARTOON_BASE_URL
+    else:
+        r_url = 'http://kiss%s.com' %key.lower()
+
+    # set headers for url
+    LoadHeadersForURL(r_url)
+
     oc = ObjectContainer(title2='My Bookmarks | %s' % key, art=R(art))
     Logger('category %s' %key)
 
@@ -299,7 +335,7 @@ def BookmarksSub(key, art):
             key=Callback(ItemPage, item=item, item_title=item_title, title=key, url=url, art=art),
             title=item_title.decode('unicode_escape'), summary=summary.decode('unicode_escape'),
             thumb=cover))
-
+    # setup icons depending on platform
     if Client.Platform in LIST_VIEW_CLIENTS and not cover:
         bm_clr_icon = None
     else:
@@ -344,7 +380,10 @@ def AlphabetList(url, title, art):
 @route(PREFIX + '/genres')
 def GenreList(url, title, art):
     genre_url = url + '/%sList' % title
-    html = ElementFromURL(genre_url)
+
+    # set headers for url
+    LoadHeadersForURL(url)
+    html = HTML.ElementFromURL(genre_url)
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
@@ -367,7 +406,8 @@ def GenreList(url, title, art):
 @route(PREFIX + '/countries')
 def CountryList(url, title, art):
     country_url = url + '/DramaList'  # set url for populating genres array
-    html = ElementFromURL(country_url)  # formate url response into html for xpath
+    LoadHeadersForURL(url)  # set headers for url
+    html = HTML.ElementFromURL(country_url)  # formate url response into html for xpath
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
 
@@ -419,8 +459,12 @@ def DirectoryList(page, pname, category, url, title, art):
     Logger('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
     Logger('Category= %s | URL= %s' % (pname, item_url))
 
+    # set headers for url
+    LoadHeadersForURL(url)
+    Log('checking http settings\n%s' %HTTP.Headers)
+
     # format url and set variables
-    html = ElementFromURL(item_url)
+    html = HTML.ElementFromURL(item_url)
     pages = "Last Page"
     nextpg_node = None
 
@@ -461,12 +505,11 @@ def DirectoryList(page, pname, category, url, title, art):
                 title_text = m[0].get('title')  # convert section to string for searching
                 # search for cover url and summary string
                 if title == 'Manga':
-                    thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
                     category = 'Chapter'
                 else:
-                    thumb = None
                     category = 'Episode'
 
+                thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text)
                 summary = summary.group(1).strip().encode('ascii', 'ignore')
                 item_title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
@@ -526,9 +569,12 @@ def ItemPage(item, item_title, title, url, art):
         category_thumb = CATEGORY_PICTURE_ICON
         page_category = 'Chapter(s)'
 
+    # set headers for url
+    LoadHeadersForURL(url)
+
     # format item_url for parsing
     item_url = url + '/%s/' % title + item
-    html = ElementFromURL(item_url)
+    html = HTML.ElementFromURL(item_url)
     Logger('item_url = %s' % item_url)
 
     # add video(s)/chapter(s) container
@@ -652,10 +698,13 @@ def ItemSubPage(item, item_title, title, url, page_category, art):
 
     oc = ObjectContainer(title2=title2, art=R(art))
 
+    # set headers for url
+    LoadHeadersForURL(url)
+
     # setup url for parsing
     sub_url = url + '/%s/' % title + item
-    Logger(sub_url)
-    html = ElementFromURL(sub_url)
+    Logger('item sub page url = %s' %sub_url)
+    html = HTML.ElementFromURL(sub_url)
 
     # parse html for media url, title and date added
     a = []
@@ -718,7 +767,7 @@ def Search(query=''):
 
     oc = ObjectContainer(title2=title2)
     # create list of search URL's
-    all_search_urls = [ANIME_SEARCH_URL, ASIAN_SEARCH_URL, CARTOON_SEARCH_URL, MANGA_SEARCH_URL]
+    all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
 
     # format each search url and send to 'SearchPage'
     # can't check each url here, would take too long since behind cloudflare and timeout the server
@@ -739,6 +788,7 @@ def Search(query=''):
 
         if Prefs[prefs_name]:
             Logger('Search url=%s' % search_url_filled)
+            Logger('title = %s' %title)
 
             oc.add(DirectoryObject(
                 key=Callback(SearchPage, title=title, search_url=search_url_filled, art=art),
@@ -760,7 +810,10 @@ def SearchPage(title, search_url, art):
     # Check for "exact" matches and send them to ItemPage
     # If normal seach result then send to DirectoryList
 
-    html = ElementFromURL(search_url)
+    # set headers for url
+    LoadHeadersForURL(search_url)
+
+    html = HTML.ElementFromURL(search_url)
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
@@ -1001,17 +1054,22 @@ def CoverImageFileExist(image_file):
         return False
 
 ####################################################################################################
-# Same as HTML.ElementFromURL() but for url's hosted on cloudflare
+# set headers for url
 
-@route(PREFIX + '/cfscrape-html')
-def ElementFromURL(url):
-    return HTML.ElementFromString(Request(url).text)
+@indirect
+@route(PREFIX + '/load-headers')
+def LoadHeadersForURL(url):
 
-####################################################################################################
-# Same as HTTP.Request() but for url's hosted on cloudflare
+    # decode url for parsing
+    url = url.decode('unicode_escape')
+    # get base url for headers
+    base_url = 'http://' + url.rsplit('/')[2]
+    # get title for headers
+    title = base_url.rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct title for Dict
+    if title == 'Asian':
+        title = 'Drama'
 
-@route(PREFIX + '/cfscrape-http')
-def Request(url):
-    scraper = cfscrape.create_scraper()
-
-    return scraper.get(url)
+    HTTP.Headers['Referer'] = base_url
+    HTTP.Headers['User-Agent'] = Dict['Cookies'][title]['user-agent']
+    HTTP.Headers['Cookie'] = Dict['Cookies'][title]['cookie']

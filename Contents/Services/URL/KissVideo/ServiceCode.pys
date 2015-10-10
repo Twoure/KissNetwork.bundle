@@ -2,23 +2,28 @@
 
 """Kiss(anime, cartoon, and drama) Service code"""
 
-# import local modules
-import base64, os, sys
+# import system modules
+import base64, os, pickle, io
 
-modules_path = 'Plug-ins/KissNetwork.bundle/Contents/Modules'
-try:
-    path = os.getcwd().split('?\\')[1].split('Plug-in Support')[0] + modules_path
-    Log('try 1 %s' % path)
-except:
-    path = os.getcwd().split('Plug-in Support')[0] + modules_path
-    Log('try 2 %s' % path)
+########################################################################################
+# Load Dict, for some reason Dict is not defaulty loaded for service URLs
 
-if path not in sys.path:
-    sys.path.append(path)
-    Log('%s added to sys.path' % path)
+global Dict
+global savedDict
 
-# import custom modules
-import cfscrape
+Dict_file = os.path.join(
+    os.getcwd().rsplit('Data')[0],
+    'Data', 'com.plexapp.plugins.kissnetwork', 'Dict')
+
+Log('Dict file path = %s' %Dict_file)
+
+f = io.open(Dict_file, 'r')
+savedDict = pickle.load(f)
+f.close()
+
+Dict = savedDict.copy()
+
+Log('testing Dict, anime cookies = %s' %Dict['Cookies']['Anime']['cookie'])
 
 ########################################################################################
 def NormalizeURL(url):
@@ -38,10 +43,15 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
+    #setup headers from dict
+    LoadHeaders(url)
+
+    Log('user-agent = %s | cookies = %s' %(HTTP.Headers['User-Agent'], HTTP.Headers['Cookie']))
+
     # decode url for parsing
     url = url.decode('unicode_escape')
     Log('MetadataObjectForURL url=%s' %url)
-    html = ElementFromURL(url)
+    html = HTML.ElementFromURL(url)
 
     # set the video title
     title = html.xpath("//option[@selected='selected']/text()")[0]
@@ -62,10 +72,15 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
+    #setup headers from dict
+    LoadHeaders(url)
+
+    Log('user-agent = %s | cookies = %s' %(HTTP.Headers['User-Agent'], HTTP.Headers['Cookie']))
+
     # decode url for parsing
     url = url.decode('unicode_escape')
     Log('MediaObjectsForURL url =%s' %url)
-    html = ElementFromURL(url)
+    html = HTML.ElementFromURL(url)
     mo = []
 
     # create media objects for each video quality
@@ -93,11 +108,21 @@ def PlayVideo(url):
     return Redirect(base64.b64decode(url))
 
 ########################################################################################
-def ElementFromURL(url):
-    """Retrun cloudflare url in html format"""
+def LoadHeaders(url):
+    """Set Headers"""
 
-    scraper = cfscrape.create_scraper()
-    page = scraper.get(url)
-    myscrape = HTML.ElementFromString(page.text)
+    # decode url for parsing
+    url = url.decode('unicode_escape')
+    # get base url for headers
+    base_url = 'http://' + url.rsplit('/')[2]
+    # get title for headers
+    title = base_url.rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct title for Dict
+    if title == 'Asian':
+        title = 'Drama'
 
-    return myscrape
+    HTTP.Headers['Referer'] = base_url
+    HTTP.Headers['User-Agent'] = Dict['Cookies'][title]['user-agent']
+    HTTP.Headers['Cookie'] = Dict['Cookies'][title]['cookie']
+
+    Log('base url = %s | cookies = %s' %(base_url, HTTP.Headers['Cookie']))
