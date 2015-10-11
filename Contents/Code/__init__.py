@@ -68,11 +68,10 @@ def Start():
 
     DirectoryObject.thumb = R(MAIN_ICON)
 
-    HTTP.CacheTime = 0  # 0 sec cache time, 300 sec = 5 mins
+    HTTP.CacheTime = 0
     HTTP.Headers['User-Agent'] = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
         'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36')
 
-    # setup headers for each url, even if it's not selected in prefs
     # ceck to make sure the auto cache is not already running
     cache_headers_running = False
 
@@ -366,7 +365,7 @@ def GenreList(url, title, art):
         html = HTML.ElementFromURL(genre_url)
     except:
         return ObjectContainer(header=title,
-            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
@@ -396,7 +395,7 @@ def CountryList(url, title, art):
         html = HTML.ElementFromURL(country_url)  # formate url response into html for xpath
     except:
         return ObjectContainer(header=title,
-            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
@@ -458,7 +457,7 @@ def DirectoryList(page, pname, category, url, title, art):
         html = HTML.ElementFromURL(item_url)
     except:
         return ObjectContainer(header=title,
-            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     pages = "Last Page"
@@ -577,7 +576,7 @@ def ItemPage(item, item_title, title, url, art):
         html = HTML.ElementFromURL(item_url)
     except:
         return ObjectContainer(header=title,
-            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     # add video(s)/chapter(s) container
@@ -717,7 +716,7 @@ def ItemSubPage(item, item_title, title, url, page_category, art):
         html = HTML.ElementFromURL(sub_url)
     except:
         return ObjectContainer(header=title,
-            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     # parse html for media url, title and date added
@@ -831,7 +830,7 @@ def SearchPage(title, search_url, art):
         html = HTML.ElementFromURL(search_url)
     except:
         return ObjectContainer(header=title,
-            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     # Check for results if none then give a pop up window saying so
@@ -1124,7 +1123,7 @@ def LoadHeadersForURL(url):
 ####################################################################################################
 # auto cache headers
 
-@route(PREFIX + '/audo-cache')
+@route(PREFIX + '/auto-cache')
 def BackgroundAutoCache():
     while True:
         Logger("Running Background Auto-Cache.", force=True)
