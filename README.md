@@ -1,7 +1,7 @@
 KissNetwork
-===============
+===========
 
-This is a plugin that creates a new channel in Plex Media Server to view content from these websites [Kissanime.com](http://kissanime.com/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), and [Kissmanga.com](http://kissmanga.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if it not!) please let me know.
+This is a plugin that creates a new channel in Plex Media Server to view content from these websites: [Kissanime.com](http://kissanime.com/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), and [Kissmanga.com](http://kissmanga.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 **Note:** the author of this plugin has no affiliation with the Kiss sites or the owners of the content that they hosts.
 
@@ -42,7 +42,7 @@ System Requirements
 How To Install
 --------------
 
-- [Download](http://github.com/Twoure/KissNetwork.bundle/zipball/master) and install it by following the Plex [instruction](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
+- [Download](http://github.com/Twoure/KissNetwork.bundle/zipball/master) and install it by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
 
 - Unzip and rename the folder to "KissNetwork.bundle"
 - Copy KissNetwork.bundle into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
@@ -51,23 +51,51 @@ How To Install
 Known Issues
 ------------
 
-- Kiss(anime, asian, cartoon) are all hosted behind Cloudflare so added [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
-  - 5 second wait every time it calls a page
-  - need to cache cookies properly to avoid 5 sec delay each time, that way it would only have a 5 sec delay once per cache time
-    - [coder-alpha](https://github.com/coder-alpha) has done this with his [Rainierland.bundle](https://github.com/coder-alpha/Rainierland.bundle).  I will start working on this in my __dev__ branch.
-  - added local caching option of cover images for bookmarks of video sites to work around cloudflare, not good option. Need to make cookies work better
-  - Searching these sites can sometimes timeout the Plex/Web and PHT due to the 5 sec wait time
+- General
+  - Sometimes the headers are not set before Plex Framework tries to scrape the site.  This returns an error since the cookies need to be set before polling the site. I've added a pop-up message that says to wait about a second then try again.  Need to work on either threading with this issue, add a sleep function, or some kind of check that the headers are set before polling the site with the Plex Framework.
 
-- Chromecast doesn't work for Photo Albums but does for Videos, don't know why yet.  Assuming it has to do with how the Photo Albums are created.
+- Kiss(anime, asian, cartoon) are all hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
+  - Cover art does not load for Videos
+    - Plex Framework does not allow me to set hearders for directory object tumbs, still looking into this issue
+    - I have added a local caching option for video bookmarks to work around cloudflare
+
+- Chromecast does not work for Photo Albums but does for Videos, don't know why yet.  Assuming it has to do with how the Photo Albums are created.
 
 - Kissmanga
-  - for now Kissmanga isn't behind the anit-bot rules, so it works
+  - For now Kissmanga is not behind the anit-bot rules, so it works
   - Sometimes the Cover Image do not display in the directory even though it has the image URL.
   - This is not a useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
 
 - Plex Home Theater
   - thumbs don't show up on the left column but do for the buttons
-  - The video directories will sometimes show up as empty at first, just wait it will refreash and load them.  Has to do with the 5 sec wait time.
+
+Plans
+-----
+
+- General
+  - Add preference to display __Sub__, __Dub__, or __Sub & Dub__ for videos
+  - Might look into grouping seasons of the same show for the directory list
+  - Try and display cover art for video items.  Not a thumb of the video, kiss sites don't include that data.
+  - Implement some kind of Password protection for choosing which sites to display
+
+- Bookmarks
+  - Add option to add all seasons at once for a show
+  - Group seasons into one show
+  - Create separate directories for TV and Movies
+
+- Search
+  - Might try and restructure search setup to be faster and check for empty results before returning anything for the user
+
+ChangeLog
+---------
+
+**0.03** - 10/11/15 - Major overhaul of headers.  No more 5 second wait time for each directory.
+
+**0.02** - 10/09/15 - Fixed Windows 10 not displaying channel [issue](https://github.com/Twoure/KissNetwork.bundle/issues/1), and added site selection in channel preferences.
+
+**0.01** - 10/03/15 - Initial version
+
+**0.00** - 09/21/15 - First push of local code to GitHub
 
 About/Notes
 -----------
@@ -78,4 +106,4 @@ Little backgroud to this project.  I decided it was time I start learning some P
 
 [Mangahere.bundle](https://github.com/Twoure/Mangahere.bundle) (based off of [Mangafox.bundle](https://github.com/hojel/Mangafox.bundle)) was my first attempt at creating a new channel.  I soon realized that the service url could not handle pulling consecutive page images, so I set out to find a site that presented all the album images on one page per chapter.  Thus KissManga.bundle was born.  Once I got the basics down for Kissmanga I noticed that the other Kiss sites were created similarly and would take some tweaking of my code to crawl each site.
 
-This prompted me to make [KissNewtork.bundle](https://github.com/Twoure/KissNetwork.bundle).  I've tried to use Plex's built in framework as much as possible in hopes of maximizing cross platform compatibility.  It has been a fun project so far and has gotten me more comfortable with Python.  Have fun with it and let me know of any other issues or suggestions of how to make this faster and more user friendly.
+This prompted me to make [KissNetwork.bundle](https://github.com/Twoure/KissNetwork.bundle).  I've tried to use Plex's built in framework as much as possible in hopes of maximizing cross platform compatibility.  It has been a fun project so far and has gotten me more comfortable with Python.  Have fun with it and let me know of any other issues or suggestions of how to make this faster and more user friendly.
