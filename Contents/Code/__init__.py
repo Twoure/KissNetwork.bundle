@@ -4,7 +4,7 @@
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
-import sys, shutil, io
+import sys, shutil, io, time
 
 # add custom modules to python path
 path = Core.storage.join_path(
@@ -16,7 +16,7 @@ if path not in sys.path:
     Log.Debug('%s added to sys.path' % path)
 
 # import custom module cfscrape to load url's hosted on cloudflare
-import cfscrape
+import cfscrape, requests
 
 # set global variables
 PREFIX = '/video/kissnetwork'
@@ -72,26 +72,14 @@ def Start():
     HTTP.Headers['User-Agent'] = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
         'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36')
 
-    # setup urls with titles for setting cookies
-    url_list = [('Drama', ASIAN_BASE_URL), ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
+    # setup headers for each url, even if it's not selected in prefs
+    # ceck to make sure the auto cache is not already running
+    cache_headers_running = False
 
-    # set cookie for first url, so we can update the Dict later
-    cookie = cfscrape.get_cookie_string(url=ANIME_BASE_URL, user_agent=HTTP.Headers['User-Agent'])
-
-    # set initial Dict up for Cookies
-    Dict['Cookies'] = {'Anime': {'cookie': cookie[0], 'user-agent': cookie[1]}}
-
-    # Now get cookies for the other urls and save to Dict for future use.
-    for url in url_list:
-        cookie = cfscrape.get_cookie_string(url=url[1], user_agent=HTTP.Headers['User-Agent'])
-        Dict['Cookies'].update({url[0]: {'cookie': cookie[0], 'user-agent': cookie[1]}})
-        Log('cookies for %s = %s' %(url[0], Dict['Cookies'][url[0]]['cookie']))
-
-    # check to make sure each section/url has cookies now
-    Log('all cookies? =%s' %(Dict['Cookies']))
-
-    # Save the Dict just in case pms did not already
-    Dict.Save()
+    if not cache_headers_running:
+        cache_headers_running = True
+        # created as Thread so it will run in the background
+        Thread.Create(BackgroundAutoCache)
 
 ####################################################################################################
 # Create the main menu
@@ -231,18 +219,8 @@ def ValidatePrefs():
 
     # Check bookmark cache image opt
     # if not cache images then remove any old ones
-    if not Prefs['cache_covers']:
-        if Dict['Bookmarks']:
-            for key in Dict['Bookmarks'].keys():
-                if not key == 'Manga':
-                    for bm in Dict['Bookmarks'][key]:
-                        RemoveCoverImage(bm['cover_file'])
-    else:
-        if Dict['Bookmarks']:
-            for key in Dict['Bookmarks'].keys():
-                if not key == 'Manga':
-                    for bm in Dict['Bookmarks'][key]:
-                        SaveCoverImage(bm['cover_url'])
+    # created as Thread so it will run in the background
+    Thread.Create(CacheBookmarkCovers)
 
     # Update the Dict to latest prefs
     Dict.Save()
@@ -383,7 +361,13 @@ def GenreList(url, title, art):
 
     # set headers for url
     LoadHeadersForURL(url)
-    html = HTML.ElementFromURL(genre_url)
+    # add exception for when the cookies are being refreshed
+    try:
+        html = HTML.ElementFromURL(genre_url)
+    except:
+        return ObjectContainer(header=title,
+            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            no_cache=True)
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
@@ -405,13 +389,19 @@ def GenreList(url, title, art):
 
 @route(PREFIX + '/countries')
 def CountryList(url, title, art):
-    country_url = url + '/DramaList'  # set url for populating genres array
+    country_url = url + '/DramaList'  # setup url for finding current Country list
     LoadHeadersForURL(url)  # set headers for url
-    html = HTML.ElementFromURL(country_url)  # formate url response into html for xpath
+
+    try:
+        html = HTML.ElementFromURL(country_url)  # formate url response into html for xpath
+    except:
+        return ObjectContainer(header=title,
+            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            no_cache=True)
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
 
-    # For loop to pull out valid Genres
+    # For loop to pull out valid Countries
     for country in html.xpath('//div[@class="barContent"]//a'):
         if "Country" in country.get('href'):
             pname = country.get('href')  # name used internally
@@ -461,10 +451,16 @@ def DirectoryList(page, pname, category, url, title, art):
 
     # set headers for url
     LoadHeadersForURL(url)
-    Log('checking http settings\n%s' %HTTP.Headers)
+    Logger('checking http settings for url = %s\n%s' %(url, HTTP.Headers), force=True)
 
-    # format url and set variables
-    html = HTML.ElementFromURL(item_url)
+    try:
+        # format url and set variables
+        html = HTML.ElementFromURL(item_url)
+    except:
+        return ObjectContainer(header=title,
+            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            no_cache=True)
+
     pages = "Last Page"
     nextpg_node = None
 
@@ -506,10 +502,11 @@ def DirectoryList(page, pname, category, url, title, art):
                 # search for cover url and summary string
                 if title == 'Manga':
                     category = 'Chapter'
+                    thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
                 else:
                     category = 'Episode'
+                    thumb = None
 
-                thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text)
                 summary = summary.group(1).strip().encode('ascii', 'ignore')
                 item_title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
@@ -574,8 +571,14 @@ def ItemPage(item, item_title, title, url, art):
 
     # format item_url for parsing
     item_url = url + '/%s/' % title + item
-    html = HTML.ElementFromURL(item_url)
     Logger('item_url = %s' % item_url)
+
+    try:
+        html = HTML.ElementFromURL(item_url)
+    except:
+        return ObjectContainer(header=title,
+            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            no_cache=True)
 
     # add video(s)/chapter(s) container
     oc.add(DirectoryObject(
@@ -629,11 +632,16 @@ def ItemPage(item, item_title, title, url, art):
                         summary = node.xpath('./text()')[0].strip().encode('unicode_escape')
                         break
 
-            # some Summary text is not in the <p> but in it's own <div>
+            # some Summary text is not in the <p> but in it's own <div> or within a <table>
             if not summary:
-                summary = html.xpath(
-                    '//div[@id="container"]//div[@class="barContent"]/div/div/text()'
-                    )[0].strip().encode('unicode_escape')
+                try:
+                    summary = html.xpath(
+                        '//div[@id="container"]//div[@class="barContent"]/div/div/text()'
+                        )[0].strip().encode('unicode_escape')
+                except:
+                    summary = html.xpath(
+                        '//div[@id="container"]//table//td/text()'
+                        )[0].strip().encode('unicode_escape')
             # in event summary isn't found set to 'None'
             else:
                 summary = summary
@@ -704,7 +712,13 @@ def ItemSubPage(item, item_title, title, url, page_category, art):
     # setup url for parsing
     sub_url = url + '/%s/' % title + item
     Logger('item sub page url = %s' %sub_url)
-    html = HTML.ElementFromURL(sub_url)
+
+    try:
+        html = HTML.ElementFromURL(sub_url)
+    except:
+        return ObjectContainer(header=title,
+            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            no_cache=True)
 
     # parse html for media url, title and date added
     a = []
@@ -813,7 +827,12 @@ def SearchPage(title, search_url, art):
     # set headers for url
     LoadHeadersForURL(search_url)
 
-    html = HTML.ElementFromURL(search_url)
+    try:
+        html = HTML.ElementFromURL(search_url)
+    except:
+        return ObjectContainer(header=title,
+            message='Please wait 5 to 10 seconds while the url Headers are set, then try again',
+            no_cache=True)
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
@@ -1014,26 +1033,53 @@ def GetCoverImagePath():
 @route(PREFIX + '/save-cover-image')
 def SaveCoverImage(image_url):
     image_file = image_url.rsplit('/')[-1]
+    title = image_url.rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct title for Dict
+    if title == 'Asian':
+        title = 'Drama'
+
     path = Core.storage.join_path(GetCoverImagePath(), image_file)
+    Logger('image file path = %s' %path)
 
     if not Core.storage.file_exists(path):
-        scraper = cfscrape.create_scraper()
-        r = scraper.get(image_url, stream=True)
+        r = requests.get(image_url, headers=Dict['Cookies'][title], stream=True)
+        Logger('status code for image url = %s' %r.status_code)
 
         if r.status_code == 200:
             with io.open(path, 'wb') as f:
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
-            Logger('saved image %s' %path)
+            Logger('saved image %s in path %s' %(image_file, path))
     else:
         Logger('file %s already exists' %image_file)
 
     return image_file
 
 ####################################################################################################
+# Cache bookmark covers depending on prefs settings
+
+@route(PREFIX + '/cache-bookmark-covers')
+def CacheBookmarkCovers():
+    if Prefs['cache_covers']:
+        Logger('Caching Bookmark covers locally')
+        if Dict['Bookmarks']:
+            for key in Dict['Bookmarks'].keys():
+                if not key == 'Manga':
+                    for bm in Dict['Bookmarks'][key]:
+                        SaveCoverImage(bm['cover_url'])
+    else:
+        Logger('Removing Cached Bookmark Covers')
+        if Dict['Bookmarks']:
+            for key in Dict['Bookmarks'].keys():
+                if not key == 'Manga':
+                    for bm in Dict['Bookmarks'][key]:
+                        RemoveCoverImage(bm['cover_file'])
+
+                    Logger('Finished Removing Cached Bookmark Covers')
+
+####################################################################################################
 # Remove Cover Image
 
-@indirect
 @route(PREFIX + '/remove-cover-image')
 def RemoveCoverImage(image_file):
     path = Core.storage.join_path(GetCoverImagePath(), image_file)
@@ -1056,7 +1102,6 @@ def CoverImageFileExist(image_file):
 ####################################################################################################
 # set headers for url
 
-@indirect
 @route(PREFIX + '/load-headers')
 def LoadHeadersForURL(url):
 
@@ -1073,3 +1118,63 @@ def LoadHeadersForURL(url):
     HTTP.Headers['Referer'] = base_url
     HTTP.Headers['User-Agent'] = Dict['Cookies'][title]['user-agent']
     HTTP.Headers['Cookie'] = Dict['Cookies'][title]['cookie']
+
+    Logger('Headers set for url = %s' %url)
+
+####################################################################################################
+# auto cache headers
+
+@route(PREFIX + '/audo-cache')
+def BackgroundAutoCache():
+    while True:
+        Logger("Running Background Auto-Cache.", force=True)
+
+        if Dict['Cookies']:
+            Logger('Cookies dictionary already found, writing new cookies to old Dict')
+            # setup urls with titles for setting cookies
+            url_list = [('Anime', ANIME_BASE_URL), ('Drama', ASIAN_BASE_URL),
+                ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
+
+            # get cookies for each url and save to Dict
+            for url in url_list:
+                cookie = cfscrape.get_cookie_string(url=url[1], user_agent=HTTP.Headers['User-Agent'])
+                Dict['Cookies'].update({url[0]: {'cookie': cookie[0], 'user-agent': cookie[1]}})
+                Logger('cookies for %s = %s' %(url[0], Dict['Cookies'][url[0]]['cookie']))
+
+        else:
+            Logger('Cookies dictionary not crated yet. Creating new Cookies Dict and filling it')
+            # set initial Dict up for Cookies
+            # set cookie for first url, so we can update the Dict later
+            cookie = cfscrape.get_cookie_string(url=ANIME_BASE_URL, user_agent=HTTP.Headers['User-Agent'])
+            Dict['Cookies'] = {'Anime': {'cookie': cookie[0], 'user-agent': cookie[1]}}
+            Logger('cookies for Anime = %s' %Dict['Cookies']['Anime']['cookie'])
+
+            url_list = [('Drama', ASIAN_BASE_URL), ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
+            # Now get cookies for the other urls and save to Dict for future use.
+            for url in url_list:
+                cookie = cfscrape.get_cookie_string(url=url[1], user_agent=HTTP.Headers['User-Agent'])
+                Dict['Cookies'].update({url[0]: {'cookie': cookie[0], 'user-agent': cookie[1]}})
+                Logger('cookies for %s = %s' %(url[0], Dict['Cookies'][url[0]]['cookie']))
+
+        # check to make sure each section/url has cookies now
+        Logger('all cookies =%s' %(Dict['Cookies']), force=True)
+
+        # Save the Dict just in case pms did not already
+        Dict.Save()
+
+        # check for updates every 24hours... give or take 30 minutes to avoid hammering GitHub
+        sleep_time = 24*60*60 + (Util.RandomInt(-30, 30))*60
+        hours, minutes = divmod(sleep_time/60, 60)
+        Logger("Auto-Cache will run again in %d hours and %d minutes" % (hours, minutes), force=True)
+
+        while sleep_time > 0:
+            remainder = sleep_time % (3600)
+            if remainder > 0:
+                time.sleep(remainder)
+                sleep_time = sleep_time - remainder
+
+            Logger("Time until next auto-cache = %d hours" % (int(sleep_time)/3600))
+            sleep_time = sleep_time - 3600
+            time.sleep(3600)
+
+    return
