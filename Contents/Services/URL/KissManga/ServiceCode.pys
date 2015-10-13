@@ -2,6 +2,29 @@
 
 """Kissmanga Service code - Gather all image urls for a Chapter."""
 
+# import system modules
+import os, pickle, io
+
+########################################################################################
+# Load Dict, for some reason Dict is not defaulty loaded for Service URLs
+
+global Dict
+global savedDict
+
+Dict_file = os.path.join(
+    os.getcwd().rsplit('Plug-in Support')[0],
+    'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork', 'Dict')
+
+Log('Dict file path = %s' %Dict_file)
+
+f = io.open(Dict_file, 'r')
+savedDict = pickle.load(f)
+f.close()
+
+Dict = savedDict.copy()
+
+Log('testing Dict, anime cookies = %s' %Dict['Cookies']['Anime']['cookie'])
+
 ####################################################################################################
 def NormalizeURL(url):
     """This function should return a 'normalised' version of the given URL. Plex uses the URL"""
@@ -27,11 +50,7 @@ def MediaObjectsForURL(url):
     location requires additional computation.
     """
 
-    return [
-        MediaObject(
-            parts=Callback(GetPhotos, url=url)
-        )
-    ]
+    return [MediaObject(parts=Callback(GetPhotos, url=url))]
 
 ####################################################################################################
 def GetPhotos(url):
@@ -42,8 +61,8 @@ def GetPhotos(url):
 
     oc = ObjectContainer()
 
-    # first get the relevant javascript block
-    html = HTML.ElementFromURL(url)
+    # get relevant javascript block
+    html = HTML.ElementFromURL(url, headers=Dict['Cookies']['Manga'])
 
     for java in html.xpath('//script[@type="text/javascript"]'):
         javatext = java.text
