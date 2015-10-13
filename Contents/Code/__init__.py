@@ -85,7 +85,7 @@ def Start():
 
 @handler(PREFIX, TITLE, thumb='icon-default.png', art='art-main.png')
 def MainMenu():
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=TITLE, no_cache=True)
 
     # set thumbs based on client
     if Client.Platform in LIST_VIEW_CLIENTS:
@@ -104,6 +104,19 @@ def MainMenu():
         bookmark_thumb = BOOKMARK_ICON
         prefs_thumb = PREFS_ICON
         search_thumb = SEARCH_ICON
+
+    # set status for bookmark sub menu
+    if Dict['Bookmark_Deleted']:
+        if Dict['Bookmark_Deleted']['bool']:
+            Dict['Bookmark_Deleted'].update({'bool': False, 'type_title': None})
+            Dict.Save()
+        else:
+            pass
+    else:
+        Dict['Bookmark_Deleted'] = {'bool': False, 'type_title': None}
+        Dict.Save()
+
+    status = Dict['Bookmark_Deleted']
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
@@ -127,7 +140,7 @@ def MainMenu():
             title='Manga', thumb=R(manga_thumb)))
 
     oc.add(DirectoryObject(
-        key=Callback(BookmarksMain, title='My Bookmarks'), title='My Bookmarks', thumb=R(bookmark_thumb)))
+        key=Callback(BookmarksMain, title='My Bookmarks', status=status), title='My Bookmarks', thumb=R(bookmark_thumb)))
     oc.add(PrefsObject(title='Preferences', thumb=R(prefs_thumb)))
     oc.add(InputDirectoryObject(
         key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
@@ -143,7 +156,7 @@ def KissAnime(url, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
-            page=1, pname='All', category='All', url=url, title=title, art=art), title='All'))
+            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
     oc.add(DirectoryObject(
         key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
     oc.add(DirectoryObject(
@@ -159,7 +172,7 @@ def KissAsian(url, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
-            page=1, pname='All', category='All', url=url, title=title, art=art), title='All'))
+            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
     oc.add(DirectoryObject(
         key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
     oc.add(DirectoryObject(
@@ -177,7 +190,7 @@ def KissCartoon(url, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
-            page=1, pname='All', category='All', url=url, title=title, art=art), title='All'))
+            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
     oc.add(DirectoryObject(
         key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
     oc.add(DirectoryObject(
@@ -193,7 +206,7 @@ def KissManga(url, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
-            page=1, pname='All', category='All', url=url, title=title, art=art), title='All'))
+            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
     oc.add(DirectoryObject(
         key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
     oc.add(DirectoryObject(
@@ -227,9 +240,13 @@ def ValidatePrefs():
 ####################################################################################################
 # Create Bookmark Main Menu
 
-@route(PREFIX + '/bookmarks')
-def BookmarksMain(title):
-    oc = ObjectContainer(title2=title)
+@route(PREFIX + '/bookmarks', status=dict)
+def BookmarksMain(title, status):
+    if status['bool']:
+        oc = ObjectContainer(title2=title, header="My Bookmarks",
+            message='%s bookmarks have been cleared.' % status['type_title'], no_cache=True)
+    else:
+        oc = ObjectContainer(title2=title, no_cache=True)
 
     # check for 'Bookmarks' section in Dict
     if not Dict['Bookmarks']:
@@ -253,13 +270,13 @@ def BookmarksMain(title):
             if Prefs[prefs_name]:
                 # Create sub Categories for Anime, Cartoon, Drama, and Manga
                 oc.add(DirectoryObject(
-                    key=Callback(BookmarksSub, key=key, art=art),
+                    key=Callback(BookmarksSub, type_title=key, art=art),
                     title=key, thumb=R(thumb), summary='Display %s Bookmarks' % key))
         # test if no sites are picked in the Prefs
         if len(oc) > 0:
             # add a way to clear the entire bookmarks list, i.e. start fresh
             oc.add(DirectoryObject(
-                key=Callback(ClearBookmarks, title='All'),
+                key=Callback(ClearBookmarks, type_title='All'),
                 title='Clear All Bookmarks',
                 thumb=R(BOOKMARK_CLEAR_ICON),
                 summary='CAUTION! This will clear your entire bookmark list, even those hidden!'))
@@ -275,28 +292,29 @@ def BookmarksMain(title):
 # Loads bookmarked items from Dict.
 
 @route(PREFIX + '/bookmarkssub')
-def BookmarksSub(key, art):
-    if key == 'Drama':
-        r_url = ASIAN_BASE_URL
-    elif key == 'Cartoon':
-        r_url = CARTOON_BASE_URL
+def BookmarksSub(type_title, art):
+    if type_title == 'Drama':
+        base_url = ASIAN_BASE_URL
+    elif type_title == 'Cartoon':
+        base_url = CARTOON_BASE_URL
     else:
-        r_url = 'http://kiss%s.com' %key.lower()
+        base_url = 'http://kiss%s.com' %type_title.lower()
 
-    # set headers for url
-    LoadHeadersForURL(r_url)
-
-    oc = ObjectContainer(title2='My Bookmarks | %s' % key, art=R(art))
-    Logger('category %s' %key)
+    oc = ObjectContainer(title2='My Bookmarks | %s' % type_title, art=R(art))
+    Logger('category %s' %type_title)
 
     # Fill in DirectoryObject information from the bookmark list
-    for bookmark in sorted(Dict['Bookmarks'][key]):
-        item = bookmark[key]
-        item_title = bookmark['title']
+    for bookmark in sorted(Dict['Bookmarks'][type_title]):
+        item_sys_name = bookmark[type_title]
+        item_title = bookmark['item_title']
         summary = bookmark['summary']
-        url = bookmark['base_url']
 
-        if key == 'Manga':
+        if summary:
+            summary = summary.decode('unicode_escape')
+
+        page_url = bookmark['page_url']
+
+        if type_title == 'Manga':
             cover = bookmark['cover_url']
         elif Prefs['cache_covers']:
             cover = bookmark['cover_file']
@@ -309,9 +327,8 @@ def BookmarksSub(key, art):
 
         # gotta send the bookmark somewhere
         oc.add(DirectoryObject(
-            key=Callback(ItemPage, item=item, item_title=item_title, title=key, url=url, art=art),
-            title=item_title.decode('unicode_escape'), summary=summary.decode('unicode_escape'),
-            thumb=cover))
+            key=Callback(ItemPage, item_sys_name=item_sys_name, item_title=item_title, type_title=type_title, page_url=page_url, art=art),
+            title=item_title.decode('unicode_escape'), summary=summary, thumb=cover))
     # setup icons depending on platform
     if Client.Platform in LIST_VIEW_CLIENTS and not cover:
         bm_clr_icon = None
@@ -320,12 +337,17 @@ def BookmarksSub(key, art):
 
     # add a way to clear this bookmark section and start fresh
     oc.add(DirectoryObject(
-        key=Callback(ClearBookmarks, title=key),
-        title='Clear All \"%s\" Bookmarks' % key,
+        key=Callback(ClearBookmarks, type_title=type_title),
+        title='Clear All \"%s\" Bookmarks' % type_title,
         thumb=bm_clr_icon,
-        summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % key))
+        summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % type_title))
 
-    return oc
+    if Dict['Bookmarks'][type_title]:
+        return oc
+    else:
+        return ObjectContainer(header='Error',
+                message='Bookmarks list is dirty, add bookmarks to this list or start over',
+                no_cache=True)
 
 ####################################################################################################
 # Creates ABC directory
@@ -337,14 +359,14 @@ def AlphabetList(url, title, art):
     # Manually create the '#' Directory
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
-            page=1, pname='0', category='#', url=url, title=title, art=art),
+            page=1, pname='0', category='#', base_url=url, type_title=title, art=art),
         title='#'))
 
     # Create a list of Directories from A to Z
     for pname in map(chr, range(ord('A'), ord('Z')+1)):
         oc.add(DirectoryObject(
             key=Callback(DirectoryList,
-                page=1, pname=pname.lower(), category=pname, url=url, title=title, art=art),
+                page=1, pname=pname.lower(), category=pname, base_url=url, type_title=title, art=art),
             title=pname))
 
     Logger('Built #, A-Z... Directories')
@@ -356,13 +378,12 @@ def AlphabetList(url, title, art):
 
 @route(PREFIX + '/genres')
 def GenreList(url, title, art):
-    genre_url = url + '/%sList' % title
+    genre_url = url + '/%sList' % title  # setup url for finding current Genre list
 
-    # set headers for url
-    LoadHeadersForURL(url)
-    # add exception for when the cookies are being refreshed
+    # add exception in case the cookies are being refreshed
     try:
-        html = HTML.ElementFromURL(genre_url)
+        # formate url response into html for xpath
+        html = HTML.ElementFromURL(genre_url, headers=Dict['Cookies'][title])
     except:
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -378,7 +399,7 @@ def GenreList(url, title, art):
 
             oc.add(DirectoryObject(
                 key=Callback(DirectoryList,
-                    page=1, pname=pname, category=category, url=url, title=title, art=art),
+                    page=1, pname=pname, category=category, base_url=url, type_title=title, art=art),
                 title=category))
 
     return oc
@@ -389,10 +410,9 @@ def GenreList(url, title, art):
 @route(PREFIX + '/countries')
 def CountryList(url, title, art):
     country_url = url + '/DramaList'  # setup url for finding current Country list
-    LoadHeadersForURL(url)  # set headers for url
 
     try:
-        html = HTML.ElementFromURL(country_url)  # formate url response into html for xpath
+        html = HTML.ElementFromURL(country_url, headers=Dict['Cookies'][title])
     except:
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -408,7 +428,7 @@ def CountryList(url, title, art):
 
             oc.add(DirectoryObject(
                 key=Callback(DirectoryList,
-                    page=1, pname=pname, category=category, url=url, title=title, art=art),
+                    page=1, pname=pname, category=category, base_url=url, type_title=title, art=art),
                 title=category))
 
     return oc
@@ -419,44 +439,40 @@ def CountryList(url, title, art):
 # Plan to add section that detects if Genre is empty
 
 @route(PREFIX + '/directory')
-def DirectoryList(page, pname, category, url, title, art):
+def DirectoryList(page, pname, category, base_url, type_title, art):
     # Define url based on genre, abc, or search
     if "Search" in pname:
-        item_url = url
+        item_url = base_url
         Logger('Searching for \"%s\"' % category)
         pass
     # Sort order 'A-Z'
     elif Dict['s_opt'] == None:
         if "Genre" in pname or "Country" in pname:
             # Genre Specific
-            item_url = url + '%s?page=%s' % (pname, page)
+            item_url = base_url + '%s?page=%s' % (pname, page)
         elif "All" in pname:
-            item_url = url + '/%sList?page=%s' % (title, page)
+            item_url = base_url + '/%sList?page=%s' % (type_title, page)
         else:
             # No Genre
-            item_url = url + '/%sList?c=%s&page=%s' % (title, pname, page)
+            item_url = base_url + '/%sList?c=%s&page=%s' % (type_title, pname, page)
     # Sort order for all options except 'A-Z'
     elif "Genre" in pname or "Country" in pname:
         # Genre Specific with Prefs
-        item_url = url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
+        item_url = base_url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
     elif "All" in pname:
-        item_url = url + '/%sList%s?page=%s' % (title, Dict['s_opt'], page)
+        item_url = base_url + '/%sList%s?page=%s' % (type_title, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
-        item_url = url + '/%sList%s?c=%s&page=%s' % (title, Dict['s_opt'], pname, page)
+        item_url = base_url + '/%sList%s?c=%s&page=%s' % (type_title, Dict['s_opt'], pname, page)
 
     Logger('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
     Logger('Category= %s | URL= %s' % (pname, item_url))
 
-    # set headers for url
-    LoadHeadersForURL(url)
-    Logger('checking http settings for url = %s\n%s' %(url, HTTP.Headers), force=True)
-
     try:
         # format url and set variables
-        html = HTML.ElementFromURL(item_url)
+        html = HTML.ElementFromURL(item_url, headers=Dict['Cookies'][type_title])
     except:
-        return ObjectContainer(header=title,
+        return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
@@ -467,7 +483,7 @@ def DirectoryList(page, pname, category, url, title, art):
     if "Search" in pname:
         # The Search result page returnes a long list with no 'next page' option
         # set url back to base url
-        url = item_url.rsplit('Search', 1)[0][:-1]
+        base_url = item_url.rsplit('Search', 1)[0][:-1]
         Logger("Searching for %s" % category)  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
@@ -481,13 +497,13 @@ def DirectoryList(page, pname, category, url, title, art):
     if not "Last" in pages:
         total_pages = Regex("page=(\d+)").search(pages).group(1)  # give last page number
         # set title2 ie main_title
-        main_title = '%s | %s | Page %s of %s' % (title, str(category), str(page), str(total_pages))
+        main_title = '%s | %s | Page %s of %s' % (type_title, str(category), str(page), str(total_pages))
     elif "Search" in pname:
         # set title2 for search page
-        main_title = 'Search for: %s in %s' % (str(category), title)
+        main_title = 'Search for: %s in %s' % (str(category), type_title)
     else:
         # set title2 for last page
-        main_title = '%s | %s | Page %s, Last Page' % (title, str(category), str(page))
+        main_title = '%s | %s | Page %s, Last Page' % (type_title, str(category), str(page))
 
     oc = ObjectContainer(title2=main_title, art=R(art))
 
@@ -499,7 +515,7 @@ def DirectoryList(page, pname, category, url, title, art):
             if m[0].get('title'):  # pull out the first 'td' since there are two
                 title_text = m[0].get('title')  # convert section to string for searching
                 # search for cover url and summary string
-                if title == 'Manga':
+                if type_title == 'Manga':
                     category = 'Chapter'
                     thumb = Regex('src=\"([\S].*?)\"').search(title_text).group(1)
                 else:
@@ -508,9 +524,14 @@ def DirectoryList(page, pname, category, url, title, art):
 
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text)
                 summary = summary.group(1).strip().encode('ascii', 'ignore')
-                item_title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
+                #item_title = Regex('\">([\S].*?)</a>').search(title_text).group(1)
+                item_url_base = m[0].xpath('./a/@href')[0]
+                item_sys_name = item_url_base.rsplit('/')[-1].strip().encode('unicode_escape')
+                item_url_final = base_url + String.Quote(item_url_base)
+                #item_title = item_url_base.rsplit('/')[-1]
+                item_title = m[0].xpath('./a/text()')[0].strip()
 
-                Logger('item_title = %s' % item_title)
+                Logger('item_title = %s | item_url = %s | item_url_final = %s' %(item_title, item_url, item_url_final))
 
                 if m[1].xpath('./a'):
                     item_title_cleaned = Regex('[^a-zA-Z0-9 \n]').sub('', item_title)
@@ -518,30 +539,30 @@ def DirectoryList(page, pname, category, url, title, art):
                     latest = latest.replace('Read Online', '').replace('Watch Online', '').strip()
                     title2 = '%s | Latest %s %s' % (item_title, category, latest)
                 else:
-                    title2 = '%s | %s Completed' % (item_title, title)
-
-                name = Regex('href=\"/(?:Anime|Drama|Cartoon|Manga)/([\S].*?)\"').search(title_text).group(1)
+                    title2 = '%s | %s Completed' % (item_title, type_title)
         else:
             # if no 'title' section is found then sets values to 'None'
             # ensures the oc.add doesn't have problems
             thumb = None
             summary = None
             item_title = None
-            name = None
+            item_sys_name = None
 
-        if name and item_title:  # ensure all the items are here before adding
+        if item_sys_name and item_title:  # ensure all the items are here before adding
             oc.add(DirectoryObject(
                 key=Callback(ItemPage,
-                    item=name, item_title=item_title.encode('unicode_escape'),
-                    title=title, url=url, art=art),
+                    item_sys_name=item_sys_name, item_title=item_title.encode('unicode_escape'),
+                    type_title=type_title, page_url=item_url_final, art=art),
                 title=title2, summary=summary, thumb=thumb))
 
     if nextpg_node:  # if not 'None' then find the next page and create a button
         nextpg = int(Regex("page=(\d+)").search(nextpg_node).group(1))
         Logger('NextPage = %d' % nextpg)
+        #base_url = 'http://' + item_url_final.rsplit('/')[2]
+        Logger('base url = %s' %base_url)
         oc.add(NextPageObject(
             key=Callback(DirectoryList,
-                page=nextpg, pname=pname, category=category, url=url, title=title, art=art),
+                page=nextpg, pname=pname, category=category, base_url=base_url, type_title=type_title, art=art),
             title='Next Page>>', thumb=R(NEXT_ICON) if not Client.Platform in LIST_VIEW_CLIENTS else None))
 
     return oc
@@ -550,40 +571,40 @@ def DirectoryList(page, pname, category, url, title, art):
 # Creates the Media Page with the Video(s)/Chapter(s) section and a Bookmark option Add/Remove
 
 @route(PREFIX + '/item')
-def ItemPage(item, item_title, title, url, art):
-    # decode item_title if need be
+def ItemPage(item_sys_name, item_title, type_title, page_url, art):
+    # decode unicode string(s)
     item_title_decode = item_title.decode('unicode_escape')
+
     # setup new title2 for container
-    title2 = '%s | %s' % (title, item_title_decode)
+    title2 = '%s | %s' % (type_title, item_title_decode)
+
     oc = ObjectContainer(title2=title2, art=R(art))
 
     # page category stings depending on media
-    if not 'Manga' in title:
+    if not 'Manga' in type_title:
         category_thumb = CATEGORY_VIDEO_ICON
         page_category = 'Video(s)'
     else:
         category_thumb = CATEGORY_PICTURE_ICON
         page_category = 'Chapter(s)'
 
-    # set headers for url
-    LoadHeadersForURL(url)
+    base_url = 'http://' + page_url.rsplit('/')[2]
 
     # format item_url for parsing
-    item_url = url + '/%s/' % title + item
-    Logger('item_url = %s' % item_url)
+    Logger('page url = %s | base url = %s' %(page_url, base_url))
 
     try:
-        html = HTML.ElementFromURL(item_url)
+        html = HTML.ElementFromURL(page_url, headers=Dict['Cookies'][type_title])
     except:
-        return ObjectContainer(header=title,
+        return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
     # add video(s)/chapter(s) container
     oc.add(DirectoryObject(
         key=Callback(ItemSubPage,
-            item=item, item_title=item_title, title=title,
-            url=url, page_category=page_category, art=art),
+            item_sys_name=item_sys_name, item_title=item_title, type_title=type_title,
+            page_url=page_url, page_category=page_category, art=art),
         title=page_category,
         thumb=R(category_thumb),
         summary='List all currently avalible %s for \"%s\"' %
@@ -592,9 +613,9 @@ def ItemPage(item, item_title, title, url, art):
     # Test if the Dict does have the 'Bookmarks' section
     if Dict['Bookmarks']:
         book_match = False
-        if title in Dict['Bookmarks']:
-            for category in Dict['Bookmarks'][title]:
-                if item in category[title]:
+        if type_title in Dict['Bookmarks']:
+            for category in Dict['Bookmarks'][type_title]:
+                if item_sys_name == category[type_title]:
                     book_match = True
                     break  # Stop for loop if match found
 
@@ -603,17 +624,18 @@ def ItemPage(item, item_title, title, url, art):
             # provide a way to remove Item from bookmarks list
             oc.add(DirectoryObject(
                 key=Callback(RemoveBookmark,
-                    item=item, item_title=item_title, title=title),
+                    item_sys_name=item_sys_name, item_title=item_title, type_title=type_title),
                 title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
-                summary = 'Remove \"%s\" from your Bookmarks list.' % title))
+                summary = 'Remove \"%s\" from your Bookmarks list.' % item_title_decode))
         # Item not in 'Bookmarks' yet, so lets parse it for adding!
         else:
-            cover = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
+            cover_url = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
             summary = None
+            match = None
 
             # enumerate array so we can find the Summary text
             for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-                if "Summary:" in node.xpath('./span[@class="info"]/text()'):
+                if node.xpath('./span[@class="info"][text()="Summary:"]'):
                     match = int(i)
                     break
 
@@ -622,68 +644,73 @@ def ItemPage(item, item_title, title, url, art):
             #   and ignoring unknown charaters in summary string
             # wish the site was more consistant with its summary location... ugh
             for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-                if match + 1 == i:
+                if match and match + 1 == i:
                     # sometimes summary is inside a <span>
                     if node.xpath('./span'):
-                        summary = node.xpath('./span/text()')[0].encode('unicode_escape')
+                        summary = node.xpath('./span/text()')[0]
                         break
                     else:
-                        summary = node.xpath('./text()')[0].strip().encode('unicode_escape')
+                        summary = node.xpath('./text()')[0].strip()
                         break
 
             # some Summary text is not in the <p> but in it's own <div> or within a <table>
-            if not summary:
-                try:
-                    summary = html.xpath(
-                        '//div[@id="container"]//div[@class="barContent"]/div/div/text()'
-                        )[0].strip().encode('unicode_escape')
-                except:
-                    summary = html.xpath(
-                        '//div[@id="container"]//table//td/text()'
-                        )[0].strip().encode('unicode_escape')
-            # in event summary isn't found set to 'None'
-            else:
-                summary = summary
+            summary_div = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div/text()')
+            summary_table = html.xpath('//div[@id="container"]//table//td/text()')
+            if not summary and summary_div:
+                summary = summary_div[0].strip()
+            elif not summary and summary_table:
+                summary = summary_table[0].strip()
+
+            if summary:
+                summary = summary.encode('unicode_escape')
+
+            Log('summary = %s' %summary)
 
             # provide a way to add Item to the bookmarks list
             oc.add(DirectoryObject(
                 key = Callback(AddBookmark,
-                    item=item, item_title=item_title, title=title,
-                    cover=cover, summary=summary, url=url),
+                    item_sys_name=item_sys_name, item_title=item_title, type_title=type_title,
+                    cover_url=cover_url, summary=summary, page_url=page_url),
                 title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
                 summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
     # No 'Bookmarks' section in Dict yet, so don't look for Item in 'Bookmarks'
     else:
         # Same stuff as above
-        cover = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
+        cover_url = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
         summary = None
+        match = None
 
         for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-            if "Summary:" in node.xpath('./span[@class="info"]/text()'):
+            if node.xpath('./span[@class="info"][text()="Summary:"]'):
                 match = int(i)
                 break
 
         for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-            if match + 1 == i:
+            if match and match + 1 == i:
                     if node.xpath('./span'):
-                        summary = node.xpath('./span/text()')[0].encode('unicode_escape')
+                        summary = node.xpath('./span/text()')[0]
                         break
                     else:
-                        summary = node.xpath('./text()')[0].encode('unicode_escape')
+                        summary = node.xpath('./text()')[0]
                         break
 
-        if not summary:
-            summary = html.xpath(
-                '//div[@id="container"]//div[@class="barContent"]/div/div/text()'
-                )[0].strip().encode('unicode_escape')
-        else:
-            summary = summary
+        summary_div = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div/text()')
+        summary_table = html.xpath('//div[@id="container"]//table//td/text()')
+        if not summary and summary_div:
+            summary = summary_div[0].strip()
+        elif not summary and summary_table:
+            summary = summary_table[0].strip()
+
+        if summary:
+            summary = summary.encode('unicode_escape')
+
+        Log('summary = %s' %summary)
 
         # provide a way to add Item to bookmarks list
         oc.add(DirectoryObject(
             key=Callback(AddBookmark,
-                item=item, item_title=item_title, title=title,
-                cover=cover, summary=summary, url=url),
+                item_sys_name=item_sys_name, item_title=item_title, type_title=type_title,
+                cover_url=cover_url, summary=summary, page_url=page_url),
             title='Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
             summary='Add \"%s\" to your Bookmarks list.' % item_title_decode))
 
@@ -693,29 +720,30 @@ def ItemPage(item, item_title, title, url, art):
 # Create the Item Sub Page with Video or Chapter list
 
 @route(PREFIX + '/itemsubpage')
-def ItemSubPage(item, item_title, title, url, page_category, art):
-    # decode item_title
+def ItemSubPage(item_sys_name, item_title, type_title, page_url, page_category, art):
+    # decode unicode string(s)
     item_title_decode = item_title.decode('unicode_escape')
+
     # setup title2 for container
-    title2 = '%s | %s | %s' % (title, item_title_decode, page_category.lower())
+    title2 = '%s | %s | %s' % (type_title, item_title_decode, page_category.lower())
+
     # remove special charaters from item_title for matching later
     item_title_decode = Regex('[^a-zA-Z0-9 \n\.]').sub('', item_title_decode)
+
     # remove '(s)' from page_category string for logs
     s_removed_page_category = page_category.rsplit('(')[0]
 
     oc = ObjectContainer(title2=title2, art=R(art))
 
-    # set headers for url
-    LoadHeadersForURL(url)
-
-    # setup url for parsing
-    sub_url = url + '/%s/' % title + item
-    Logger('item sub page url = %s' %sub_url)
+    # get base url from url
+    base_url = 'http://' + page_url.rsplit('/')[2]
+    Logger('item sub page url = %s' %page_url)
 
     try:
-        html = HTML.ElementFromURL(sub_url)
+        # setup html for parsing
+        html = HTML.ElementFromURL(page_url, headers=Dict['Cookies'][type_title])
     except:
-        return ObjectContainer(header=title,
+        return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
@@ -728,12 +756,12 @@ def ItemSubPage(item, item_title, title, url, page_category, art):
             node = media.xpath('./a')
 
             # url for Video/Chapter
-            media_page_url = url + node[0].get('href')
+            media_page_url = page_url + '/' + node[0].get('href').rsplit('/')[-1]
             Logger('%s Page URL = %s' % (s_removed_page_category, media_page_url))
 
             # title for Video/Chapter, cleaned
             raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_decode, '')
-            if not 'Manga' in title:
+            if not 'Manga' in type_title:
                 media_title = raw_title.replace('Watch Online', '').strip()
             else:
                 media_title = raw_title.replace('Read Online', '').strip()
@@ -747,7 +775,7 @@ def ItemSubPage(item, item_title, title, url, page_category, art):
             b.append(date)
 
     # setup photo/video objects, Service URL's will do the rest
-    if not 'Manga' in title:
+    if not 'Manga' in type_title:
         for x, y in map(None, a, b):
             oc.add(DirectoryObject(
                 key=Callback(VideoDetail, title=x[1].encode('unicode_escape'), url=x[0], art=art),
@@ -766,7 +794,8 @@ def ItemSubPage(item, item_title, title, url, page_category, art):
 @route(PREFIX + '/videodetail')
 def VideoDetail(title, url, art):
     oc = ObjectContainer(title2=title.decode('unicode_escape'), art=R(art))
-    oc.add(VideoClipObject(title=title, url=url.encode('unicode_escape')))
+    Logger('vido url in video detail section = %s' %url)
+    oc.add(VideoClipObject(title=title, url=url, art=R(art)))
 
     return oc
 
@@ -786,32 +815,37 @@ def Search(query=''):
     # can't check each url here, would take too long since behind cloudflare and timeout the server
     for search_url in all_search_urls:
         search_url_filled = search_url % String.Quote(query, usePlus=True)
-        base_url = search_url_filled.rsplit('Search', 1)[0][:-1]
-        title = base_url.rsplit('/', 2)[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
-        # change kissasian urls to 'Drama' for title
-        if title == 'Asian':
-            title = 'Drama'
+        type_title = search_url.rsplit('/')[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
+        # change kissasian urls to 'Drama' for type title
+        if type_title == 'Asian':
+            type_title = 'Drama'
             art = ASIAN_ART
             thumb = ASIAN_ICON
             prefs_name = 'kissasian'
         else:
-            art = '%s_ART' % title.upper()
-            thumb = 'icon-%s.png' % title.lower()
-            prefs_name = 'kiss%s' %title.lower()
+            art = '%s_ART' % type_title.upper()
+            thumb = 'icon-%s.png' % type_title.lower()
+            prefs_name = 'kiss%s' %type_title.lower()
 
         if Prefs[prefs_name]:
             Logger('Search url=%s' % search_url_filled)
-            Logger('title = %s' %title)
+            Logger('type title = %s' %type_title)
 
-            oc.add(DirectoryObject(
-                key=Callback(SearchPage, title=title, search_url=search_url_filled, art=art),
-                title=title, thumb=R(thumb)))
+            html = HTML.ElementFromURL(search_url_filled, headers=Dict['Cookies'][type_title])
+            if html.xpath('//table[@class="listing"]'):
+                oc.add(DirectoryObject(
+                    key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
+                    title=type_title, thumb=R(thumb)))
 
     if len(oc) > 0:
         return oc
     else:
         return ObjectContainer(header='Search',
-            message='At least one source must be selected in Preferences to view Search results',
+            message=
+                """
+                There are no search results for \"%s\". Try being less specific or make sure
+                at least one source is selected in the Preferences.
+                """ %query,
             no_cache=True)
 
 ####################################################################################################
@@ -819,17 +853,14 @@ def Search(query=''):
 # The results can return the Item itself via a url redirect.
 
 @route(PREFIX + '/searchpage')
-def SearchPage(title, search_url, art):
+def SearchPage(type_title, search_url, art):
     # Check for "exact" matches and send them to ItemPage
     # If normal seach result then send to DirectoryList
 
-    # set headers for url
-    LoadHeadersForURL(search_url)
-
     try:
-        html = HTML.ElementFromURL(search_url)
+        html = HTML.ElementFromURL(search_url, headers=Dict['Cookies'][type_title])
     except:
-        return ObjectContainer(header=title,
+        return ObjectContainer(header=type_title + ' Search',
             message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
 
@@ -840,57 +871,59 @@ def SearchPage(title, search_url, art):
         search_match = Regex('var\ path\ =\ (\'Search\')').search(node)
         if not search_match:
             # Send url to 'ItemPage'
-            base_url = search_url.rsplit('Search', 1)[0][:-1]
+            base_url = 'http://' + search_url.rsplit('/')[2]
             node = html.xpath('//div[@class="barContent"]/div/a')[0]
-            item = node.get('href').rsplit('/')[-1]
-            item_title = node.text
-            Logger('\nitem_title=%s\nitem=%s\ntitle=%s\nurl=%s' % (item_title, item, title, base_url))
+            item_url = base_url + '/' + type_title + '/' + String.Quote(node.get('href').rsplit('/')[-1].strip())
+            item_sys_name = node.get('href').rsplit('/')[-1].encode('unicode_escape')
+            item_title = node.text.encode('unicode_escape')
+            Logger('\nitem_title=%s\nitem=%s\ntype_title=%s\nbase_url=%s\nitem_url=%s'
+                % (item_title, item_sys_name, type_title, base_url, item_url))
 
-            return ItemPage(
-                item=item, item_title=item_title.encode('unicode_escape'),
-                title=title, url=base_url, art=art)
+            return ItemPage(item_sys_name=item_sys_name, item_title=item_title, type_title=type_title, page_url=item_url, art=art)
         else:
             # Send results to 'DirectoryList'
             query = search_url.rsplit('=')[-1]
-            return DirectoryList(1, 'Search', query, search_url, title, art)
+            return DirectoryList(1, 'Search', query, search_url, type_title, art)
     # No results found :( keep trying
     else:
         Logger('Search returned no results.')
         query = search_url.rsplit('=')[-1]
         return ObjectContainer(header='Search',
-            message='There are no search results for \"%s\" in \"%s\" Category.\r\nTry being less specific.' %(query, title))
+            message=
+                'There are no search results for \"%s\" in \"%s\" Category.\r\nTry being less specific.'
+                %(query, type_title))
 
 ####################################################################################################
 # Adds Item to the bookmarks list
 
 @route(PREFIX + '/addbookmark')
-def AddBookmark(item, item_title, title, cover, summary, url):
+def AddBookmark(item_sys_name, item_title, type_title, cover_url, summary, page_url):
     item_title_decode = item_title.decode('unicode_escape')
-    Logger(item)
+    Logger('item = %s' %item_sys_name)
 
     # setup new bookmark json data to add to Dict
     # Manga cover urls are accessible so no need to store images locally
-    if title == 'Manga':
+    if type_title == 'Manga':
         new_bookmark = {
-            title: item, 'title': item_title,
-            'cover_url': cover, 'summary': summary, 'base_url': url}
+            type_title: item_sys_name, 'item_title': item_title,
+            'cover_url': cover_url, 'summary': summary, 'page_url': page_url}
     # Need to store covers locally as files
     else:
         if Prefs['cache_covers']:
-            image_file = SaveCoverImage(cover)
+            image_file = SaveCoverImage(cover_url)
         else:
-            image_file = cover.rsplit('/')[-1]
+            image_file = cover_url.rsplit('/')[-1]
 
         new_bookmark = {
-            title: item, 'title': item_title, 'cover_file': image_file,
-            'cover_url': cover, 'summary': summary, 'base_url': url}
+            type_title: item_sys_name, 'item_title': item_title, 'cover_file': image_file,
+            'cover_url': cover_url, 'summary': summary, 'page_url': page_url}
 
     Logger('new bookmark to add\n%s' % new_bookmark)
 
     # Test if the Dict has the 'Bookmarks' section yet
     if not Dict['Bookmarks']:
         # Create new 'Bookmarks' section and fill with the first bookmark
-        Dict['Bookmarks'] = {title: [new_bookmark]}
+        Dict['Bookmarks'] = {type_title: [new_bookmark]}
         Logger('Inital bookmark list created\n%s' % Dict['Bookmarks'])
 
         # Update Dict to include new 'Bookmarks' section
@@ -901,11 +934,11 @@ def AddBookmark(item, item_title, title, cover, summary, url):
             message='\"%s\" has been added to your bookmarks.' % item_title_decode, no_cache = True)
     # check if the category key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
     # if so then append new bookmark to one of those categories
-    elif title in Dict['Bookmarks'].keys():
+    elif type_title in Dict['Bookmarks'].keys():
         # fail safe for when clients are out of sync and it trys to add
         # the bookmark in duplicate
-        for bookmark in Dict['Bookmarks'][title]:
-            if not bookmark[title] == new_bookmark[title]:
+        for bookmark in Dict['Bookmarks'][type_title]:
+            if not bookmark[type_title] == new_bookmark[type_title]:
                 match = False
             else:
                 match = True
@@ -917,8 +950,8 @@ def AddBookmark(item, item_title, title, cover, summary, url):
         # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
         else:
             temp = {}
-            temp.setdefault(title, Dict['Bookmarks'][title]).append(new_bookmark)
-            Dict['Bookmarks'][title] = temp[title]
+            temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
+            Dict['Bookmarks'][type_title] = temp[type_title]
             Logger('bookmark list after addition\n%s' % Dict['Bookmarks'])
 
             # Update Dict to include new Item
@@ -929,7 +962,7 @@ def AddBookmark(item, item_title, title, cover, summary, url):
                 message='\"%s\" has been added to your bookmarks.' % item_title_decode, no_cache=True)
     # the category key does not exist yet so create it and fill with new bookmark
     else:
-        Dict['Bookmarks'].update({title: [new_bookmark]})
+        Dict['Bookmarks'].update({type_title: [new_bookmark]})
         Logger('bookmark list after addition of new section\n%s' % Dict['Bookmarks'])
 
         # Update Dict to include new Item
@@ -943,35 +976,43 @@ def AddBookmark(item, item_title, title, cover, summary, url):
 # Removes item from the bookmarks list using the item as a key
 
 @route(PREFIX + '/removebookmark')
-def RemoveBookmark(item, item_title, title):
+def RemoveBookmark(item_sys_name, item_title, type_title):
     item_title_decode = item_title.decode('unicode_escape')
     # index 'Bookmarks' list
-    bm = Dict['Bookmarks'][title]
+    bm = Dict['Bookmarks'][type_title]
+    Log('boomarks = %s' %bm)
+    Log('bookmark lenght = %s' %len(bm))
     for i in xrange(len(bm)):
         # remove item's data from 'Bookmarks' list
-        if bm[i][title] == item:
-            if item == 'Manga' or not Prefs['cache_covers']:
+        if bm[i][type_title] == item_sys_name:
+            if type_title == 'Manga' or not Prefs['cache_covers']:
                 bm.pop(i)
             else:
                 RemoveCoverImage(bm[i]['cover_file'])
                 bm.pop(i)
+
             break
 
     # update Dict, and debug log
     Dict.Save()
-    Logger('\"%s\" has been removed from Bookmark List' % item_title)
+    Logger('\"%s\" has been removed from Bookmark List' % item_title_decode)
     Logger('bookmark list after removal\n%s' % Dict['Bookmarks'])
 
-    # Provide feedback that the Item has been removed from the 'Bookmarks' list
-    return ObjectContainer(header=title,
-        message='\"%s\" has been removed from your bookmarks.' % item_title_decode, no_cache=True)
+    if len(bm) == 0:
+        # if the last bookmark was removed then clear it's bookmark section
+        Logger('%s bookmarks was the last, so removed %s bookmark section' %(item_title_decode, type_title), force=True)
+        return ClearBookmarks(type_title)
+    else:
+        # Provide feedback that the Item has been removed from the 'Bookmarks' list
+        return ObjectContainer(header=type_title,
+            message='\"%s\" has been removed from your bookmarks.' % item_title_decode, no_cache=True)
 
 ####################################################################################################
 # Remove 'Bookmarks' Section(s) from Dict. Note: This removes all bookmarks in list
 
 @route(PREFIX + '/clearbookmarks')
-def ClearBookmarks(title):
-    if 'All' in title:
+def ClearBookmarks(type_title):
+    if 'All' in type_title:
         if Prefs['cache_covers']:
             for key in Dict['Bookmarks'].keys():
                 if not key == 'Manga':
@@ -982,26 +1023,28 @@ def ClearBookmarks(title):
         del Dict['Bookmarks']
         Logger('Bookmarks section cleared')
     else:
-        if not title == 'Manga' and Prefs['cache_covers']:
-            for bookmark in Dict['Bookmarks'][title]:
+        if not type_title == 'Manga' and Prefs['cache_covers']:
+            for bookmark in Dict['Bookmarks'][type_title]:
                 RemoveCoverImage(bookmark['cover_file'])
 
         # delete section 'Anime', 'Manga', 'Cartoon', or 'Drama' from bookmark list
-        del Dict['Bookmarks'][title]
-        Logger('Bookmark section %s cleared' % title)
+        del Dict['Bookmarks'][type_title]
+        Logger('Bookmark section %s cleared' % type_title)
         Logger('bookmarks after deletion\n%s' % Dict['Bookmarks'])
+
+    Dict['Bookmark_Deleted'] = {'bool': True, 'type_title': type_title}
+    status = Dict['Bookmark_Deleted']
 
     # update Dict
     Dict.Save()
 
     # Provide feedback that the correct 'Bookmarks' section is removed
-    return ObjectContainer(header="My Bookmarks",
-        message='%s bookmarks have been cleared.' % title, no_cache=True)
+    #   and send back to Bookmark Main Menu
+    return BookmarksMain(title='My Bookmarks', status=status)
 
 ####################################################################################################
 # Setup logging options based on prefs, indirect because it has no return
 
-@indirect
 @route(PREFIX + '/logger')
 def Logger(message, force=False):
     if force or Prefs['debug']:
@@ -1032,16 +1075,13 @@ def GetCoverImagePath():
 @route(PREFIX + '/save-cover-image')
 def SaveCoverImage(image_url):
     image_file = image_url.rsplit('/')[-1]
-    title = image_url.rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct title for Dict
-    if title == 'Asian':
-        title = 'Drama'
+    type_title = GetTypeTitle(image_url)
 
     path = Core.storage.join_path(GetCoverImagePath(), image_file)
     Logger('image file path = %s' %path)
 
     if not Core.storage.file_exists(path):
-        r = requests.get(image_url, headers=Dict['Cookies'][title], stream=True)
+        r = requests.get(image_url, headers=Dict['Cookies'][type_title], stream=True)
         Logger('status code for image url = %s' %r.status_code)
 
         if r.status_code == 200:
@@ -1099,24 +1139,32 @@ def CoverImageFileExist(image_file):
         return False
 
 ####################################################################################################
+# get type title from url
+
+@route(PREFIX + 'get-type-title')
+def GetTypeTitle(url):
+    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct title for Dict
+    if type_title == 'Asian':
+        type_title = 'Drama'
+
+    return type_title
+
+####################################################################################################
 # set headers for url
+# this is old code, leaving just in case I need it later, but it's not in use currenlty
 
 @route(PREFIX + '/load-headers')
 def LoadHeadersForURL(url):
 
-    # decode url for parsing
-    url = url.decode('unicode_escape')
     # get base url for headers
     base_url = 'http://' + url.rsplit('/')[2]
     # get title for headers
-    title = base_url.rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct title for Dict
-    if title == 'Asian':
-        title = 'Drama'
+    type_title = GetTypeTitle(url)
 
     HTTP.Headers['Referer'] = base_url
-    HTTP.Headers['User-Agent'] = Dict['Cookies'][title]['user-agent']
-    HTTP.Headers['Cookie'] = Dict['Cookies'][title]['cookie']
+    HTTP.Headers['User-Agent'] = Dict['Cookies'][type_title]['user-agent']
+    HTTP.Headers['Cookie'] = Dict['Cookies'][type_title]['cookie']
 
     Logger('Headers set for url = %s' %url)
 
