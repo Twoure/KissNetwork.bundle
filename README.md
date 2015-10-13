@@ -52,7 +52,7 @@ Known Issues
 ------------
 
 - General
-  - Sometimes the headers are not set before Plex Framework tries to scrape the site.  This returns an error since the cookies need to be set before polling the site. I've added a pop-up message that says to wait about a second then try again.  Need to work on either threading with this issue, add a sleep function, or some kind of check that the headers are set before polling the site with the Plex Framework.
+  - Sometimes the headers are not set before Plex Framework tries to scrape the site.  This returns an error since the cookies need to be set before polling the site. I've added a pop-up message that says to wait about a second then try again.  Need to work on either threading with this issue, add a sleep function, or some kind of check that the headers are set before polling the site with the Plex Framework.  __May be fixed, but left in check just in case__
 
 - Kiss(anime, asian, cartoon) are all hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
   - Cover art does not load for Videos
@@ -68,28 +68,28 @@ Known Issues
 
 - Plex Home Theater
   - thumbs don't show up on the left column but do for the buttons
+  - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
 
 Plans
 -----
 
 - General
-  - Add preference to display __Sub__, __Dub__, or __Sub & Dub__ for videos
+  - Add preference to display __Sub__, __Dub__, or __Sub & Dub__ for videos (those without the label would still be displayed)
   - Might look into grouping seasons of the same show for the directory list
   - Try and display cover art for video items.  Not a thumb of the video, kiss sites don't include that data.
   - Implement some kind of Password protection for choosing which sites to display
+  - May seperate out TV and Movies for video sections
+  - May move Sorting Preferences out and make it into directories instead, or maybe make it an option
 
 - Bookmarks
   - Add option to add all seasons at once for a show
   - Group seasons into one show
   - Create separate directories for TV and Movies
 
-- Search
-  - Might try and restructure search setup to be faster and check for empty results before returning anything for the user
-
 ChangeLog
 ---------
 
-**0.03** - 10/11/15 - Major overhaul of headers.  No more 5 second wait time for each directory.
+**0.03** - 10/13/15 - Major overhaul of headers.  No more 5 second wait time for each directory.  Improved Bookmarking and Search.
 
 **0.02** - 10/09/15 - Fixed Windows 10 not displaying channel [issue](https://github.com/Twoure/KissNetwork.bundle/issues/1), and added site selection in channel preferences.
 
