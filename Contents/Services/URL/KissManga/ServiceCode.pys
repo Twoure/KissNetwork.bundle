@@ -61,6 +61,12 @@ def GetPhotos(url):
 
     oc = ObjectContainer()
 
+    # setup type title for getting cookies from Dict
+    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct type title for Dict
+    if type_title == 'Asian':
+        type_title = 'Drama'
+
     temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
         'user-agent': Dict['Cookies'][type_title]['user-agent']}
 
