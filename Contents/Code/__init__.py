@@ -1201,8 +1201,8 @@ def GetHeadersForURL(url):
     current_datetime = Datetime.Now()
     # cookie time constants for each site.
     time_constants = {
-        'Anime': Datetime.Delta(days=7, hours=1), 'Cartoon': Datetime.Delta(days=16, hours=1),
-        'Drama': Datetime.Delta(hours=1, minutes=30), 'Manga': Datetime.Delta(days=365)}
+        'Anime': Datetime.Delta(days=7), 'Cartoon': Datetime.Delta(days=16),
+        'Drama': Datetime.Delta(minutes=30), 'Manga': Datetime.Delta(days=364)}
 
     Logger('current datetime = %s' %current_datetime)
 
