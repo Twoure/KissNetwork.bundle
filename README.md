@@ -89,7 +89,7 @@ Plans
 ChangeLog
 ---------
 
-**0.03** - 10/13/15 - Major overhaul of headers.  No more 5 second wait time for each directory.  Improved Bookmarking and Search.
+**0.03** - 10/13/15 - Major overhaul of headers.  No more 5 second wait time for each directory.  Improved Bookmarking, Search, and cookie cache time.
 
 **0.02** - 10/09/15 - Fixed Windows 10 not displaying channel [issue](https://github.com/Twoure/KissNetwork.bundle/issues/1), and added site selection in channel preferences.
 
