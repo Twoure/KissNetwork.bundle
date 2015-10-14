@@ -239,10 +239,6 @@ def ValidatePrefs():
     # created as Thread so it will run in the background
     Thread.Create(CacheBookmarkCovers)
 
-    if Prefs['cache_headers_now']:
-        Logger('caching cookies')
-        Thread.Create(BackgroundAutoCache)
-
     # Update the Dict to latest prefs
     Dict.Save()
 
@@ -1231,7 +1227,7 @@ def GetHeadersForURL(url):
             # update Dict
             Dict.Save()
         else:
-            Logger('Time left untile %s cookies need to be udated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
+            Logger('Time left until %s cookies need to be udated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
             pass
     else:
         # Cookies Dict not yet setup, so create it and fill in the data
