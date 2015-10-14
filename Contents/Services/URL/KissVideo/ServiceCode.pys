@@ -51,8 +51,11 @@ def MetadataObjectForURL(url):
     if type_title == 'Asian':
         type_title = 'Drama'
 
+    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
+        'user-agent': Dict['Cookies'][type_title]['user-agent']}
+
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Dict['Cookies'][type_title])
+    html = HTML.ElementFromURL(url, headers=temp_headers)
 
     # set the video title
     title = html.xpath("//option[@selected='selected']/text()")[0]
@@ -81,8 +84,11 @@ def MediaObjectsForURL(url):
     if type_title == 'Asian':
         type_title = 'Drama'
 
+    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
+        'user-agent': Dict['Cookies'][type_title]['user-agent']}
+
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Dict['Cookies'][type_title])
+    html = HTML.ElementFromURL(url, headers=temp_headers)
     mo = []
 
     # create media objects for each video quality

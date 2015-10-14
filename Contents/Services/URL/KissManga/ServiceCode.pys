@@ -61,8 +61,11 @@ def GetPhotos(url):
 
     oc = ObjectContainer()
 
+    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
+        'user-agent': Dict['Cookies'][type_title]['user-agent']}
+
     # get relevant javascript block
-    html = HTML.ElementFromURL(url, headers=Dict['Cookies']['Manga'])
+    html = HTML.ElementFromURL(url, headers=temp_headers)
 
     for java in html.xpath('//script[@type="text/javascript"]'):
         javatext = java.text

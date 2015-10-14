@@ -72,12 +72,17 @@ def Start():
     HTTP.Headers['User-Agent'] = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
         'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36')
 
-    # ceck to make sure the auto cache is not already running
-    cache_headers_running = False
+    Dict['First Headers Cached'] = False
 
-    if not cache_headers_running:
-        cache_headers_running = True
-        # created as Thread so it will run in the background
+    if Dict['Headers Auto Cached']:
+        if not Dict['Headers Auto Cached']:
+            Log('caching cookies')
+            Thread.Create(BackgroundAutoCache)
+        else:
+            Log('cookies already cached')
+    else:
+        Dict['Headers Auto Cached'] = False
+        Log('caching cookies')
         Thread.Create(BackgroundAutoCache)
 
 ####################################################################################################
@@ -234,6 +239,10 @@ def ValidatePrefs():
     # created as Thread so it will run in the background
     Thread.Create(CacheBookmarkCovers)
 
+    if Prefs['cache_headers_now']:
+        Logger('caching cookies')
+        Thread.Create(BackgroundAutoCache)
+
     # Update the Dict to latest prefs
     Dict.Save()
 
@@ -383,7 +392,7 @@ def GenreList(url, title, art):
     # add exception in case the cookies are being refreshed
     try:
         # formate url response into html for xpath
-        html = HTML.ElementFromURL(genre_url, headers=Dict['Cookies'][title])
+        html = HTML.ElementFromURL(genre_url, headers=GetHeadersForURL(genre_url))
     except:
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -412,7 +421,7 @@ def CountryList(url, title, art):
     country_url = url + '/DramaList'  # setup url for finding current Country list
 
     try:
-        html = HTML.ElementFromURL(country_url, headers=Dict['Cookies'][title])
+        html = HTML.ElementFromURL(country_url, headers=GetHeadersForURL(country_url))
     except:
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -470,7 +479,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
     try:
         # format url and set variables
-        html = HTML.ElementFromURL(item_url, headers=Dict['Cookies'][type_title])
+        html = HTML.ElementFromURL(item_url, headers=GetHeadersForURL(item_url))
     except:
         return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -572,6 +581,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
 @route(PREFIX + '/item')
 def ItemPage(item_sys_name, item_title, type_title, page_url, art):
+    Logger('testing GetHeadersForURL | %s' %GetHeadersForURL(page_url))
     # decode unicode string(s)
     item_title_decode = item_title.decode('unicode_escape')
 
@@ -594,7 +604,7 @@ def ItemPage(item_sys_name, item_title, type_title, page_url, art):
     Logger('page url = %s | base url = %s' %(page_url, base_url))
 
     try:
-        html = HTML.ElementFromURL(page_url, headers=Dict['Cookies'][type_title])
+        html = HTML.ElementFromURL(page_url, headers=GetHeadersForURL(page_url))
     except:
         return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -741,7 +751,7 @@ def ItemSubPage(item_sys_name, item_title, type_title, page_url, page_category, 
 
     try:
         # setup html for parsing
-        html = HTML.ElementFromURL(page_url, headers=Dict['Cookies'][type_title])
+        html = HTML.ElementFromURL(page_url, headers=GetHeadersForURL(page_url))
     except:
         return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -831,7 +841,7 @@ def Search(query=''):
             Logger('Search url=%s' % search_url_filled)
             Logger('type title = %s' %type_title)
 
-            html = HTML.ElementFromURL(search_url_filled, headers=Dict['Cookies'][type_title])
+            html = HTML.ElementFromURL(search_url_filled, headers=GetHeadersForURL(search_url))
             if html.xpath('//table[@class="listing"]'):
                 oc.add(DirectoryObject(
                     key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
@@ -858,7 +868,7 @@ def SearchPage(type_title, search_url, art):
     # If normal seach result then send to DirectoryList
 
     try:
-        html = HTML.ElementFromURL(search_url, headers=Dict['Cookies'][type_title])
+        html = HTML.ElementFromURL(search_url, headers=GetHeadersForURL(search_url))
     except:
         return ObjectContainer(header=type_title + ' Search',
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -1139,7 +1149,7 @@ def CoverImageFileExist(image_file):
         return False
 
 ####################################################################################################
-# get type title from url
+# Get type title from url
 
 @route(PREFIX + 'get-type-title')
 def GetTypeTitle(url):
@@ -1151,77 +1161,118 @@ def GetTypeTitle(url):
     return type_title
 
 ####################################################################################################
-# set headers for url
-# this is old code, leaving just in case I need it later, but it's not in use currenlty
+# Inital setup of Cookies Dict
 
-@route(PREFIX + '/load-headers')
-def LoadHeadersForURL(url):
+@route(PREFIX + '/create-cookies-dict')
+def CreateCookiesDict():
+    Logger('Cookies dictionary not yet created. Creating new Cookies Dict and filling in data')
+    # set initial Dict up for Cookies
+    # set cookie for first url, so we can update the Dict later
+    cookie = cfscrape.get_cookie_string(
+        url=ANIME_BASE_URL, user_agent=HTTP.Headers['User-Agent'])
+    Dict['Cookies'] = {
+        'Anime': {'cookie': cookie[0], 'user-agent': cookie[1], 'date': Datetime.Now()}}
+
+    Logger('cookies for Anime = %s' %Dict['Cookies']['Anime']['cookie'])
+
+    url_list = [
+        ('Drama', ASIAN_BASE_URL), ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
+    # Now get cookies for the other urls and save to Dict for future use.
+    for item in url_list:
+        cookie = cfscrape.get_cookie_string(url=item[1], user_agent=HTTP.Headers['User-Agent'])
+        Dict['Cookies'].update(
+            {item[0]: {'cookie': cookie[0], 'user-agent': cookie[1], 'date': Datetime.Now()}})
+
+        Logger('cookies for %s = %s' %(item[0], Dict['Cookies'][item[0]]['cookie']))
+
+    # Save changes to Dict
+    Dict.Save()
+
+    return
+
+####################################################################################################
+# Set headers for url.  Return headers from Dict.
+# If cookies have expired then get new ones.
+
+@route(PREFIX + '/get-headers')
+def GetHeadersForURL(url):
 
     # get base url for headers
     base_url = 'http://' + url.rsplit('/')[2]
     # get title for headers
     type_title = GetTypeTitle(url)
+    # get current datetime
+    current_datetime = Datetime.Now()
+    # cookie time constants for each site.
+    time_constants = {
+        'Anime': Datetime.Delta(days=7, hours=1), 'Cartoon': Datetime.Delta(days=16, hours=1),
+        'Drama': Datetime.Delta(hours=1, minutes=30), 'Manga': Datetime.Delta(days=365)}
 
-    HTTP.Headers['Referer'] = base_url
-    HTTP.Headers['User-Agent'] = Dict['Cookies'][type_title]['user-agent']
-    HTTP.Headers['Cookie'] = Dict['Cookies'][type_title]['cookie']
+    Logger('current datetime = %s' %current_datetime)
 
-    Logger('Headers set for url = %s' %url)
+    # check if cookies fiel exist in Dict
+    # if so then update, otherwise create the Dict['Cookies'] section
+    if Dict['Cookies']:
+        cachetime = Dict['Cookies'][type_title]['date']
+        deltatime = current_datetime - cachetime
+        Logger('delta time = %s' %str(deltatime))
+        if deltatime >= time_constants[type_title]:
+            Logger('Time to update %s cookies.' %type_title)
+
+            cookie_string = cfscrape.get_cookie_string(
+                url=base_url, user_agent=HTTP.Headers['User-Agent'])
+            Dict['Cookies'].update(
+                {type_title: {
+                    'cookie': cookie_string[0], 'user-agent': cookie_string[1],
+                    'date': Datetime.Now()}})
+
+            Logger('updated %s cookies to %s' %(type_title, Dict['Cookies'][type_title]))
+
+            # update Dict
+            Dict.Save()
+        else:
+            Logger('Time left untile %s cookies need to be udated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
+            pass
+    else:
+        # Cookies Dict not yet setup, so create it and fill in the data
+        CreateCookiesDict()
+
+    # setup headers to return, do not want date in header field
+    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
+        'user-agent': Dict['Cookies'][type_title]['user-agent']}
+
+    return temp_headers
 
 ####################################################################################################
 # auto cache headers
 
 @route(PREFIX + '/auto-cache')
 def BackgroundAutoCache():
-    while True:
+    if not Dict['First Headers Cached']:
         Logger("Running Background Auto-Cache.", force=True)
 
         if Dict['Cookies']:
             Logger('Cookies dictionary already found, writing new cookies to old Dict')
-            # setup urls with titles for setting cookies
-            url_list = [('Anime', ANIME_BASE_URL), ('Drama', ASIAN_BASE_URL),
-                ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
+            # setup urls for setting cookies
+            url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
 
-            # get cookies for each url and save to Dict
+            # get cookies for each url
             for url in url_list:
-                cookie = cfscrape.get_cookie_string(url=url[1], user_agent=HTTP.Headers['User-Agent'])
-                Dict['Cookies'].update({url[0]: {'cookie': cookie[0], 'user-agent': cookie[1]}})
-                Logger('cookies for %s = %s' %(url[0], Dict['Cookies'][url[0]]['cookie']))
+                GetHeadersForURL(url)
 
         else:
-            Logger('Cookies dictionary not crated yet. Creating new Cookies Dict and filling it')
-            # set initial Dict up for Cookies
-            # set cookie for first url, so we can update the Dict later
-            cookie = cfscrape.get_cookie_string(url=ANIME_BASE_URL, user_agent=HTTP.Headers['User-Agent'])
-            Dict['Cookies'] = {'Anime': {'cookie': cookie[0], 'user-agent': cookie[1]}}
-            Logger('cookies for Anime = %s' %Dict['Cookies']['Anime']['cookie'])
-
-            url_list = [('Drama', ASIAN_BASE_URL), ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
-            # Now get cookies for the other urls and save to Dict for future use.
-            for url in url_list:
-                cookie = cfscrape.get_cookie_string(url=url[1], user_agent=HTTP.Headers['User-Agent'])
-                Dict['Cookies'].update({url[0]: {'cookie': cookie[0], 'user-agent': cookie[1]}})
-                Logger('cookies for %s = %s' %(url[0], Dict['Cookies'][url[0]]['cookie']))
+            # Cookies Dict not yet setup, so create it and fill in the data
+            CreateCookiesDict()
 
         # check to make sure each section/url has cookies now
         Logger('all cookies =%s' %(Dict['Cookies']), force=True)
 
-        # Save the Dict just in case pms did not already
+        # Setup the Dict and save
+        Dict['First Headers Cached'] = True
+        Dict['Headers Auto Cached'] = True
         Dict.Save()
-
-        # check for updates every 24hours... give or take 30 minutes to avoid hammering GitHub
-        sleep_time = 24*60*60 + (Util.RandomInt(-30, 30))*60
-        hours, minutes = divmod(sleep_time/60, 60)
-        Logger("Auto-Cache will run again in %d hours and %d minutes" % (hours, minutes), force=True)
-
-        while sleep_time > 0:
-            remainder = sleep_time % (3600)
-            if remainder > 0:
-                time.sleep(remainder)
-                sleep_time = sleep_time - remainder
-
-            Logger("Time until next auto-cache = %d hours" % (int(sleep_time)/3600))
-            sleep_time = sleep_time - 3600
-            time.sleep(3600)
+    else:
+        Logger('Headers were already cached.  Will cache them independently when needed')
+        pass
 
     return

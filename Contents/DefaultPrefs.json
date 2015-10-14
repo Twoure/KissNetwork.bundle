@@ -1,5 +1,12 @@
 [
   {
+    "id": "sort_opt",
+    "label": "Sorting Option",
+    "type": "enum",
+    "values": ["Alphabetical", "Popularity", "Latest Update", "Newest"],
+    "default": "Alphabetical"
+  },
+  {
     "id": "kissanime",
     "label": "View Content from Kissanime.com (Anime)",
     "type": "bool",
@@ -22,13 +29,6 @@
     "label": "View Content from Kissmanga.com (Manga)",
     "type": "bool",
     "default": "True"
-  },
-  {
-    "id": "sort_opt",
-    "label": "Sorting Option",
-    "type": "enum",
-    "values": ["Alphabetical", "Popularity", "Latest Update", "Newest"],
-    "default": "Alphabetical"
   },
   {
     "id": "cache_covers",
