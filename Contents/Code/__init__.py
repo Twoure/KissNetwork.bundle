@@ -963,7 +963,7 @@ def AddBookmark(item_sys_name, item_title, type_title, cover_url, summary, page_
             temp = {}
             temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
             Dict['Bookmarks'][type_title] = temp[type_title]
-            Logger('bookmark list after addition\n%s' % Dict['Bookmarks'], king='Info')
+            Logger('bookmark list after addition\n%s' % Dict['Bookmarks'], kind='Info')
 
             # Update Dict to include new Item
             Dict.Save()

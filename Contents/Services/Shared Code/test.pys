@@ -92,7 +92,7 @@ def GetHeadersForURL(url):
     # cookie time constants for each site.
     time_constants = {
         'Anime': Datetime.Delta(days=7), 'Cartoon': Datetime.Delta(days=16),
-        'Drama': Datetime.Delta(minutes=45), 'Manga': Datetime.Delta(days=364)}
+        'Drama': Datetime.Delta(minutes=30), 'Manga': Datetime.Delta(days=364)}
 
     test = None
     header_data = LoadHeaderDict(True)
