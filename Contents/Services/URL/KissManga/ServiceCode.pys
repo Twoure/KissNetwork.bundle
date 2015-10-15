@@ -3,8 +3,12 @@
 """Kissmanga Service code - Gather all image urls for a Chapter."""
 
 # import system modules
-import os, pickle, io
+#import os, io
 
+# import Shared Service Code
+import test as Test
+
+"""
 ########################################################################################
 # Load Dict, for some reason Dict is not defaulty loaded for Service URLs
 
@@ -24,7 +28,7 @@ f.close()
 Dict = savedDict.copy()
 
 Log('testing Dict, anime cookies = %s' %Dict['Cookies']['Anime']['cookie'])
-
+"""
 ####################################################################################################
 def NormalizeURL(url):
     """This function should return a 'normalised' version of the given URL. Plex uses the URL"""
@@ -61,6 +65,7 @@ def GetPhotos(url):
 
     oc = ObjectContainer()
 
+    """
     # setup type title for getting cookies from Dict
     type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
     # correct type title for Dict
@@ -69,9 +74,10 @@ def GetPhotos(url):
 
     temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
         'user-agent': Dict['Cookies'][type_title]['user-agent']}
+    """
 
     # get relevant javascript block
-    html = HTML.ElementFromURL(url, headers=temp_headers)
+    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
 
     for java in html.xpath('//script[@type="text/javascript"]'):
         javatext = java.text
@@ -89,7 +95,7 @@ def GetPhotos(url):
 
         if m:  # test for empty results
             image = m.group(1)
-            Log(image)
+            Log.Info('image url = %s' %image)
             image_title = image.rsplit('/')[-1].rsplit('.', 1)[0]
 
             if "proxy" in image_title:

@@ -6,14 +6,17 @@
 # import section(s) not included in Plex Plug-In Framwork
 import sys, shutil, io, time
 
+# import Shared Service Code
+Test = SharedCodeService.test
+
 # add custom modules to python path
-path = Core.storage.join_path(
+module_path = Core.storage.join_path(
     Core.app_support_path, Core.config.bundles_dir_name,
     'KissNetwork.bundle', 'Contents', 'Modules')
 
-if path not in sys.path:
-    sys.path.append(path)
-    Log.Debug('%s added to sys.path' % path)
+if module_path not in sys.path:
+    sys.path.append(module_path)
+    Log.Info('\n----------\n%s\n---^^^^---added to sys.path---^^^^---' % module_path)
 
 # import custom module cfscrape to load url's hosted on cloudflare
 import cfscrape, requests
@@ -69,20 +72,19 @@ def Start():
     DirectoryObject.thumb = R(MAIN_ICON)
 
     HTTP.CacheTime = 0
-    HTTP.Headers['User-Agent'] = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36')
+    HTTP.Headers['User-Agent'] = Test.USER_AGENT
 
     Dict['First Headers Cached'] = False
 
     if Dict['Headers Auto Cached']:
         if not Dict['Headers Auto Cached']:
-            Log('caching cookies')
+            Log.Info('\n----------Caching Headers----------')
             Thread.Create(BackgroundAutoCache)
         else:
-            Log('cookies already cached')
+            Log.Info('\n----------Cookies already cached----------')
     else:
         Dict['Headers Auto Cached'] = False
-        Log('caching cookies')
+        Log.Info('\n----------Caching Headers----------')
         Thread.Create(BackgroundAutoCache)
 
 ####################################################################################################
@@ -385,14 +387,17 @@ def AlphabetList(url, title, art):
 def GenreList(url, title, art):
     genre_url = url + '/%sList' % title  # setup url for finding current Genre list
 
+    """
     # add exception in case the cookies are being refreshed
     try:
         # formate url response into html for xpath
-        html = HTML.ElementFromURL(genre_url, headers=GetHeadersForURL(genre_url))
+        html = HTML.ElementFromURL(genre_url, headers=Test.GetHeadersForURL(genre_url))
     except:
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
+    """
+    html = HTML.ElementFromURL(genre_url, headers=Test.GetHeadersForURL(genre_url))
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
@@ -417,7 +422,7 @@ def CountryList(url, title, art):
     country_url = url + '/DramaList'  # setup url for finding current Country list
 
     try:
-        html = HTML.ElementFromURL(country_url, headers=GetHeadersForURL(country_url))
+        html = HTML.ElementFromURL(country_url, headers=Test.GetHeadersForURL(country_url))
     except:
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -475,7 +480,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
     try:
         # format url and set variables
-        html = HTML.ElementFromURL(item_url, headers=GetHeadersForURL(item_url))
+        html = HTML.ElementFromURL(item_url, headers=Test.GetHeadersForURL(item_url))
     except:
         return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -577,7 +582,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
 @route(PREFIX + '/item')
 def ItemPage(item_sys_name, item_title, type_title, page_url, art):
-    Logger('testing GetHeadersForURL | %s' %GetHeadersForURL(page_url))
+    Logger('testing GetHeadersForURL | %s' %Test.GetHeadersForURL(page_url))
     # decode unicode string(s)
     item_title_decode = item_title.decode('unicode_escape')
 
@@ -600,7 +605,7 @@ def ItemPage(item_sys_name, item_title, type_title, page_url, art):
     Logger('page url = %s | base url = %s' %(page_url, base_url))
 
     try:
-        html = HTML.ElementFromURL(page_url, headers=GetHeadersForURL(page_url))
+        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(page_url))
     except:
         return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -670,7 +675,7 @@ def ItemPage(item_sys_name, item_title, type_title, page_url, art):
             if summary:
                 summary = summary.encode('unicode_escape')
 
-            Log('summary = %s' %summary)
+            Logger('summary = %s' %summary)
 
             # provide a way to add Item to the bookmarks list
             oc.add(DirectoryObject(
@@ -710,7 +715,7 @@ def ItemPage(item_sys_name, item_title, type_title, page_url, art):
         if summary:
             summary = summary.encode('unicode_escape')
 
-        Log('summary = %s' %summary)
+        Logger('summary = %s' %summary)
 
         # provide a way to add Item to bookmarks list
         oc.add(DirectoryObject(
@@ -747,7 +752,7 @@ def ItemSubPage(item_sys_name, item_title, type_title, page_url, page_category, 
 
     try:
         # setup html for parsing
-        html = HTML.ElementFromURL(page_url, headers=GetHeadersForURL(page_url))
+        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(page_url))
     except:
         return ObjectContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -837,7 +842,7 @@ def Search(query=''):
             Logger('Search url=%s' % search_url_filled)
             Logger('type title = %s' %type_title)
 
-            html = HTML.ElementFromURL(search_url_filled, headers=GetHeadersForURL(search_url))
+            html = HTML.ElementFromURL(search_url_filled, headers=Test.GetHeadersForURL(search_url))
             if html.xpath('//table[@class="listing"]'):
                 oc.add(DirectoryObject(
                     key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
@@ -864,7 +869,7 @@ def SearchPage(type_title, search_url, art):
     # If normal seach result then send to DirectoryList
 
     try:
-        html = HTML.ElementFromURL(search_url, headers=GetHeadersForURL(search_url))
+        html = HTML.ElementFromURL(search_url, headers=Test.GetHeadersForURL(search_url))
     except:
         return ObjectContainer(header=type_title + ' Search',
             message='Please wait a second or two while the URL Headers are set, then try again',
@@ -892,7 +897,7 @@ def SearchPage(type_title, search_url, art):
             return DirectoryList(1, 'Search', query, search_url, type_title, art)
     # No results found :( keep trying
     else:
-        Logger('Search returned no results.')
+        Logger('Search returned no results.', kind='Warn')
         query = search_url.rsplit('=')[-1]
         return ObjectContainer(header='Search',
             message=
@@ -958,7 +963,7 @@ def AddBookmark(item_sys_name, item_title, type_title, cover_url, summary, page_
             temp = {}
             temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
             Dict['Bookmarks'][type_title] = temp[type_title]
-            Logger('bookmark list after addition\n%s' % Dict['Bookmarks'])
+            Logger('bookmark list after addition\n%s' % Dict['Bookmarks'], king='Info')
 
             # Update Dict to include new Item
             Dict.Save()
@@ -969,7 +974,7 @@ def AddBookmark(item_sys_name, item_title, type_title, cover_url, summary, page_
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({type_title: [new_bookmark]})
-        Logger('bookmark list after addition of new section\n%s' % Dict['Bookmarks'])
+        Logger('bookmark list after addition of new section\n%s' % Dict['Bookmarks'], kind='Info')
 
         # Update Dict to include new Item
         Dict.Save()
@@ -986,8 +991,8 @@ def RemoveBookmark(item_sys_name, item_title, type_title):
     item_title_decode = item_title.decode('unicode_escape')
     # index 'Bookmarks' list
     bm = Dict['Bookmarks'][type_title]
-    Log('boomarks = %s' %bm)
-    Log('bookmark lenght = %s' %len(bm))
+    Logger('boomarks = %s' %bm)
+    Logger('bookmark lenght = %s' %len(bm))
     for i in xrange(len(bm)):
         # remove item's data from 'Bookmarks' list
         if bm[i][type_title] == item_sys_name:
@@ -1052,9 +1057,14 @@ def ClearBookmarks(type_title):
 # Setup logging options based on prefs, indirect because it has no return
 
 @route(PREFIX + '/logger')
-def Logger(message, force=False):
+def Logger(message, force=False, kind=None):
     if force or Prefs['debug']:
-        Log.Debug(message)
+        if kind == 'Debug' or kind == None:
+            Log.Debug(message)
+        elif kind == 'Info':
+            Log.Info(message)
+        elif kind == 'Warn':
+            Log.Warn(message)
     else:
         pass
 
@@ -1081,7 +1091,7 @@ def GetCoverImagePath():
 @route(PREFIX + '/save-cover-image')
 def SaveCoverImage(image_url):
     image_file = image_url.rsplit('/')[-1]
-    type_title = GetTypeTitle(image_url)
+    type_title = Test.GetTypeTitle(image_url)
 
     path = Core.storage.join_path(GetCoverImagePath(), image_file)
     Logger('image file path = %s' %path)
@@ -1145,101 +1155,6 @@ def CoverImageFileExist(image_file):
         return False
 
 ####################################################################################################
-# Get type title from url
-
-@route(PREFIX + 'get-type-title')
-def GetTypeTitle(url):
-    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct title for Dict
-    if type_title == 'Asian':
-        type_title = 'Drama'
-
-    return type_title
-
-####################################################################################################
-# Inital setup of Cookies Dict
-
-@route(PREFIX + '/create-cookies-dict')
-def CreateCookiesDict():
-    Logger('Cookies dictionary not yet created. Creating new Cookies Dict and filling in data')
-    # set initial Dict up for Cookies
-    # set cookie for first url, so we can update the Dict later
-    cookie = cfscrape.get_cookie_string(
-        url=ANIME_BASE_URL, user_agent=HTTP.Headers['User-Agent'])
-    Dict['Cookies'] = {
-        'Anime': {'cookie': cookie[0], 'user-agent': cookie[1], 'date': Datetime.Now()}}
-
-    Logger('cookies for Anime = %s' %Dict['Cookies']['Anime']['cookie'])
-
-    url_list = [
-        ('Drama', ASIAN_BASE_URL), ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)]
-    # Now get cookies for the other urls and save to Dict for future use.
-    for item in url_list:
-        cookie = cfscrape.get_cookie_string(url=item[1], user_agent=HTTP.Headers['User-Agent'])
-        Dict['Cookies'].update(
-            {item[0]: {'cookie': cookie[0], 'user-agent': cookie[1], 'date': Datetime.Now()}})
-
-        Logger('cookies for %s = %s' %(item[0], Dict['Cookies'][item[0]]['cookie']))
-
-    # Save changes to Dict
-    Dict.Save()
-
-    return
-
-####################################################################################################
-# Set headers for url.  Return headers from Dict.
-# If cookies have expired then get new ones.
-
-@route(PREFIX + '/get-headers')
-def GetHeadersForURL(url):
-
-    # get base url for headers
-    base_url = 'http://' + url.rsplit('/')[2]
-    # get title for headers
-    type_title = GetTypeTitle(url)
-    # get current datetime
-    current_datetime = Datetime.Now()
-    # cookie time constants for each site.
-    time_constants = {
-        'Anime': Datetime.Delta(days=7), 'Cartoon': Datetime.Delta(days=16),
-        'Drama': Datetime.Delta(minutes=30), 'Manga': Datetime.Delta(days=364)}
-
-    Logger('current datetime = %s' %current_datetime)
-
-    # check if cookies fiel exist in Dict
-    # if so then update, otherwise create the Dict['Cookies'] section
-    if Dict['Cookies']:
-        cachetime = Dict['Cookies'][type_title]['date']
-        deltatime = current_datetime - cachetime
-        Logger('delta time = %s' %str(deltatime))
-        if deltatime >= time_constants[type_title]:
-            Logger('Time to update %s cookies.' %type_title)
-
-            cookie_string = cfscrape.get_cookie_string(
-                url=base_url, user_agent=HTTP.Headers['User-Agent'])
-            Dict['Cookies'].update(
-                {type_title: {
-                    'cookie': cookie_string[0], 'user-agent': cookie_string[1],
-                    'date': Datetime.Now()}})
-
-            Logger('updated %s cookies to %s' %(type_title, Dict['Cookies'][type_title]))
-
-            # update Dict
-            Dict.Save()
-        else:
-            Logger('Time left until %s cookies need to be udated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
-            pass
-    else:
-        # Cookies Dict not yet setup, so create it and fill in the data
-        CreateCookiesDict()
-
-    # setup headers to return, do not want date in header field
-    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
-        'user-agent': Dict['Cookies'][type_title]['user-agent']}
-
-    return temp_headers
-
-####################################################################################################
 # auto cache headers
 
 @route(PREFIX + '/auto-cache')
@@ -1247,21 +1162,21 @@ def BackgroundAutoCache():
     if not Dict['First Headers Cached']:
         Logger("Running Background Auto-Cache.", force=True)
 
-        if Dict['Cookies']:
-            Logger('Cookies dictionary already found, writing new cookies to old Dict')
-            # setup urls for setting cookies
+        if Core.storage.file_exists(Test.LoadHeaderDict(False)):
+            Logger('Header Dictionary already found, writing new Headers to old Dictionary')
+            # setup urls for setting headers
             url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
 
-            # get cookies for each url
+            # get headers for each url
             for url in url_list:
-                GetHeadersForURL(url)
+                Test.GetHeadersForURL(url)
 
         else:
-            # Cookies Dict not yet setup, so create it and fill in the data
-            CreateCookiesDict()
+            # Header Dictionary not yet setup, so create it and fill in the data
+            Test.CreateHeadersDict()
 
         # check to make sure each section/url has cookies now
-        Logger('all cookies =%s' %(Dict['Cookies']), force=True)
+        Logger('all cookies =%s' %Test.LoadHeaderDict(setup=True), force=True)
 
         # Setup the Dict and save
         Dict['First Headers Cached'] = True

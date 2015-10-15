@@ -3,27 +3,10 @@
 """Kiss(anime, cartoon, and drama) Service code"""
 
 # import system modules
-import base64, os, pickle, io
+import base64
 
-########################################################################################
-# Load Dict, for some reason Dict is not defaulty loaded for Service URLs
-
-global Dict
-global savedDict
-
-Dict_file = os.path.join(
-    os.getcwd().rsplit('Plug-in Support')[0],
-    'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork', 'Dict')
-
-Log('Dict file path = %s' %Dict_file)
-
-f = io.open(Dict_file, 'r')
-savedDict = pickle.load(f)
-f.close()
-
-Dict = savedDict.copy()
-
-Log('testing Dict, anime cookies = %s' %Dict['Cookies']['Anime']['cookie'])
+# import Shared Service Code
+import test as Test
 
 ########################################################################################
 def NormalizeURL(url):
@@ -43,19 +26,10 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
-    Log('MetadataObjectForURL url = %s' %url)
-
-    # setup type title for getting cookies from Dict
-    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct type title for Dict
-    if type_title == 'Asian':
-        type_title = 'Drama'
-
-    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
-        'user-agent': Dict['Cookies'][type_title]['user-agent']}
+    Log.Info('MetadataObjectForURL url = %s' %url)
 
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=temp_headers)
+    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
 
     # set the video title
     title = html.xpath("//option[@selected='selected']/text()")[0]
@@ -76,19 +50,10 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
-    Log('MediaObjectsForURL url = %s' %url)
-
-    # setup type title for getting cookies from Dict
-    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct type title for Dict
-    if type_title == 'Asian':
-        type_title = 'Drama'
-
-    temp_headers = {'cookie': Dict['Cookies'][type_title]['cookie'],
-        'user-agent': Dict['Cookies'][type_title]['user-agent']}
+    Log.Info('MediaObjectsForURL url = %s' %url)
 
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=temp_headers)
+    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
     mo = []
 
     # create media objects for each video quality
@@ -111,6 +76,6 @@ def MediaObjectsForURL(url):
 def PlayVideo(url):
     """Log the url and return the decoded base64 url"""
 
-    Log('PlayVideo url = %s' %url)
+    Log.Info('PlayVideo url = %s' %url)
 
     return Redirect(base64.b64decode(url))

@@ -1,0 +1,195 @@
+#!/usr/bin/env python
+
+# import section(s) not included in Plex Plug-In Framwork
+import sys, os, io, json
+
+# constants
+BUNDLE_PATH = os.path.join(os.getcwd().rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
+MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Modules')
+SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork')
+
+USER_AGENT = (
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
+    'AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Chrome/31.0.1650.63 Safari/537.36'
+    )
+
+ANIME_BASE_URL = 'http://kissanime.com'
+ASIAN_BASE_URL = 'http://kissasian.com'
+CARTOON_BASE_URL = 'http://kisscartoon.me'
+MANGA_BASE_URL = 'http://kissmanga.com'
+
+# add custom modules to python path
+if MODULE_PATH not in sys.path:
+    sys.path.append(MODULE_PATH)
+    Log.Debug('\n----------\n%s\n---^^^^---added to sys.path---^^^^---' % MODULE_PATH)
+
+####################################################################################################
+def GetTypeTitle(url):
+    """ Get type title from URL """
+
+    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct title for Dict
+    if type_title == 'Asian':
+        type_title = 'Drama'
+
+    return type_title
+
+####################################################################################################
+def CreateHeadersDict():
+    """ Setup and fill the Headers Dict file """
+
+    Log.Debug('Headers dictionary not yet created. Creating new Header Dict and filling in data')
+
+    # Create Header file with default values
+    temp_dict = LoadHeaderDict(True)
+
+    url_list = [
+        ('Anime', ANIME_BASE_URL), ('Drama', ASIAN_BASE_URL),
+        ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)
+        ]
+
+    # Import cfscrape
+    import cfscrape
+
+    # Get cookies for URLs and save to Header Dict for future use.
+    for item in url_list:
+        cookie = cfscrape.get_cookie_string(url=item[1], user_agent=USER_AGENT)
+
+        temp_dict.update({
+            item[0]: {
+                'cookie': cookie[0], 'user-agent': cookie[1],
+                'date': str(Datetime.Now()), 'referer': item[1]}})
+
+        Log.Debug('cookies for %s = %s' %(item[0], temp_dict[item[0]]['cookie']))
+        Log.Debug('current header dict = %s' %temp_dict)
+
+    # Save changes to Dict
+    SaveHeaderDict(temp_dict)
+
+    Log.Debug('Headers should have been set')
+
+    return
+
+####################################################################################################
+def GetHeadersForURL(url):
+    """
+    Set headers for URL. Return headers from headers dict.
+    If cookies have expired then get new ones.
+    """
+
+    Log.Debug('url to get headers = %s' %url)
+
+    # get base url for headers
+    base_url = 'http://' + url.rsplit('/')[2]
+
+    # get title for headers
+    type_title = GetTypeTitle(url)
+
+    # get current datetime
+    current_datetime = Datetime.Now()
+
+    # cookie time constants for each site.
+    time_constants = {
+        'Anime': Datetime.Delta(days=7), 'Cartoon': Datetime.Delta(days=16),
+        'Drama': Datetime.Delta(minutes=45), 'Manga': Datetime.Delta(days=364)}
+
+    test = None
+    header_data = LoadHeaderDict(True)
+
+    # Update Header Dictionary
+    cachetime = Datetime.ParseDate(header_data[type_title]['date'])
+    deltatime = current_datetime - cachetime
+
+    if deltatime >= time_constants[type_title]:
+        Log.Info('\n----------Time to update %s cookies----------' %type_title)
+
+        # Import cfscrape
+        import cfscrape
+
+        cookie_string = cfscrape.get_cookie_string(url=base_url, user_agent=USER_AGENT)
+        header_data.update({
+            type_title: {
+                'cookie': cookie_string[0], 'user-agent': cookie_string[1],
+                'referer': base_url, 'date': str(Datetime.Now())}})
+
+        Log.Info('\n----------Updated %s Header to----------\n%s\n----------' %(type_title, header_data[type_title]))
+
+        # update header dict
+        SaveHeaderDict(header_data)
+        Log.Info('\n----------New Cookies saved for %s Header----------' %base_url)
+    else:
+        Log.Debug('Time left until %s cookies need to be updated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
+
+        # load fresh headers
+        #fresh_headers = LoadHeaderDict(True)
+
+    # setup headers to return, do not want date in header field
+    headers_to_return = {
+        'cookie': header_data[type_title]['cookie'],
+        'user-agent': header_data[type_title]['user-agent'],
+        'referer': header_data[type_title]['referer']
+        }
+
+    Log.Debug('\n----------Header for %s Loaded----------' %base_url)
+
+    return headers_to_return
+
+####################################################################################################
+def SaveHeaderDict(content=dict):
+    """ Save Header Dict to file """
+
+    Log.Debug('Saving Header to file')
+    header_file = LoadHeaderDict(False)
+
+    with io.open(header_file, 'wb') as f:
+        json.dump(content, f, indent=4, sort_keys=True, separators=(',', ': '))
+
+    Log.Debug('Header Dictionary file has been saved')
+
+    return
+
+####################################################################################################
+def LoadHeaderDict(setup=bool):
+    """ Setup header dict file path.  Setup default header file data for filling later """
+
+    header_file = os.path.join(SUPPORT_PATH, 'Header_Dict')
+
+    if not setup:
+        Log.Debug('header dict file location = %s' %header_file)
+
+        return header_file
+    else:
+        if os.path.isfile(header_file):
+            with io.open(header_file) as data_file:
+                data = json.load(data_file)
+
+            return data
+        else:
+            Log.Debug('header dict file not found, creating a new one')
+            data = {
+                'Anime': {
+                    'cookie': 'test', 'user-agent': 'test',
+                    'date': 'test', 'referer': 'test'
+                    }
+                }
+
+            with io.open(header_file, 'wb') as f:
+                json.dump(data, f, indent=4, sort_keys=True, separators=(',', ': '))
+
+            return data
+
+####################################################################################################
+def ImportCFScrape():
+    """add custom modules to python path"""
+
+    if MODULE_PATH not in sys.path:
+        sys.path.append(MODULE_PATH)
+        Log.Debug('%s added to sys.path' % MODULE_PATH)
+
+    Log.Debug('importing cfscrape')
+
+    # import custom module cfscrape to load url's hosted with cloudflare server
+    import cfscrape
+
+    return
