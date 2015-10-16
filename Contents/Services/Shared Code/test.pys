@@ -178,18 +178,3 @@ def LoadHeaderDict(setup=bool):
                 json.dump(data, f, indent=4, sort_keys=True, separators=(',', ': '))
 
             return data
-
-####################################################################################################
-def ImportCFScrape():
-    """add custom modules to python path"""
-
-    if MODULE_PATH not in sys.path:
-        sys.path.append(MODULE_PATH)
-        Log.Debug('%s added to sys.path' % MODULE_PATH)
-
-    Log.Debug('importing cfscrape')
-
-    # import custom module cfscrape to load url's hosted with cloudflare server
-    import cfscrape
-
-    return

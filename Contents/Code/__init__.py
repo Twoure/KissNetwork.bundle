@@ -1,10 +1,10 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v0.03                                  #
+#                               KissNetwork Plex Channel -- v0.04                                  #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
-import sys, shutil, io, time
+import sys, shutil, io
 
 # import Shared Service Code
 Test = SharedCodeService.test
@@ -19,7 +19,7 @@ if module_path not in sys.path:
     Log.Info('\n----------\n%s\n---^^^^---added to sys.path---^^^^---' % module_path)
 
 # import custom module cfscrape to load url's hosted on cloudflare
-import cfscrape, requests
+import requests
 
 # set global variables
 PREFIX = '/video/kissnetwork'
@@ -387,7 +387,6 @@ def AlphabetList(url, title, art):
 def GenreList(url, title, art):
     genre_url = url + '/%sList' % title  # setup url for finding current Genre list
 
-    """
     # add exception in case the cookies are being refreshed
     try:
         # formate url response into html for xpath
@@ -396,8 +395,6 @@ def GenreList(url, title, art):
         return ObjectContainer(header=title,
             message='Please wait a second or two while the URL Headers are set, then try again',
             no_cache=True)
-    """
-    html = HTML.ElementFromURL(genre_url, headers=Test.GetHeadersForURL(genre_url))
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
