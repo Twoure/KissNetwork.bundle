@@ -1091,13 +1091,12 @@ def GetCoverImagePath():
 @route(PREFIX + '/save-cover-image')
 def SaveCoverImage(image_url):
     image_file = image_url.rsplit('/')[-1]
-    type_title = Test.GetTypeTitle(image_url)
 
     path = Core.storage.join_path(GetCoverImagePath(), image_file)
     Logger('image file path = %s' %path)
 
     if not Core.storage.file_exists(path):
-        r = requests.get(image_url, headers=Dict['Cookies'][type_title], stream=True)
+        r = requests.get(image_url, headers=Test.GetHeadersForURL(image_url), stream=True)
         Logger('status code for image url = %s' %r.status_code)
 
         if r.status_code == 200:
