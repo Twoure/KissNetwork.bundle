@@ -7,6 +7,7 @@ import sys, os, io, json
 
 # constants
 BUNDLE_PATH = os.path.join(os.getcwd().rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
+RESOURCES_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Resources')
 MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Modules')
 SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork')
 
@@ -31,7 +32,7 @@ def GetTypeTitle(url):
     """ Get type title from URL """
 
     type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct title for Dict
+    # correct type_title
     if type_title == 'Asian':
         type_title = 'Drama'
 
@@ -66,7 +67,7 @@ def CreateHeadersDict():
         Log.Debug('cookies for %s = %s' %(item[0], temp_dict[item[0]]['cookie']))
         Log.Debug('current header dict = %s' %temp_dict)
 
-    # Save changes to Dict
+    # Save changes to Header Dict
     SaveHeaderDict(temp_dict)
 
     Log.Debug('Headers should have been set')
@@ -83,7 +84,7 @@ def GetHeadersForURL(url):
     Log.Debug('url to get headers = %s' %url)
 
     # get base url for headers
-    base_url = 'http://' + url.rsplit('/')[2]
+    base_url = GetBaseURL(url)
 
     # get title for headers
     type_title = GetTypeTitle(url)
@@ -123,9 +124,6 @@ def GetHeadersForURL(url):
     else:
         Log.Debug('Time left until %s cookies need to be updated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
 
-        # load fresh headers
-        #fresh_headers = LoadHeaderDict(True)
-
     # setup headers to return, do not want date in header field
     headers_to_return = {
         'cookie': header_data[type_title]['cookie'],
@@ -163,12 +161,13 @@ def LoadHeaderDict(setup=bool):
         return header_file
     else:
         if os.path.isfile(header_file):
+            Log.Info('loading header dict in json format')
             with io.open(header_file) as data_file:
                 data = json.load(data_file)
 
             return data
         else:
-            Log.Debug('header dict file not found, creating a new one')
+            Log.Debug('header dict file not found, creating a new one and loading it in json format')
             data = {
                 'Anime': {
                     'cookie': 'test', 'user-agent': 'test',
@@ -180,3 +179,9 @@ def LoadHeaderDict(setup=bool):
                 json.dump(data, f, indent=4, sort_keys=True, separators=(',', ': '))
 
             return data
+
+####################################################################################################
+def GetBaseURL(url):
+    """ Get base url for headers """
+
+    return 'http://' + url.split('/')[2]

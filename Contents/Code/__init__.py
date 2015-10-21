@@ -18,7 +18,7 @@ if module_path not in sys.path:
     sys.path.append(module_path)
     Log.Info('\n----------\n%s\n---^^^^---added to sys.path---^^^^---' % module_path)
 
-# import custom module cfscrape to load url's hosted on cloudflare
+# import custom modules
 import requests
 
 # set global variables
@@ -361,7 +361,6 @@ def BookmarksMain(title, status):
                 thumb = 'icon-drama.png'
                 prefs_name = 'kissasian'
 
-            Logger(art)
             # if site in Prefs then add its bookmark section
             if Prefs[prefs_name]:
                 # Create sub Categories for Anime, Cartoon, Drama, and Manga
@@ -589,7 +588,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     if "Search" in pname:
         # The Search result page returnes a long list with no 'next page' option
         # set url back to base url
-        base_url = item_url.rsplit('Search', 1)[0][:-1]
+        base_url = Test.GetBaseURL(item_url)
         Logger("Searching for %s" % category)  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
@@ -626,8 +625,6 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                 except:
                     thumb = None
 
-                #Log('thumb url = %s' %thumb)
-
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text)
                 summary = summary.group(1).strip().encode('ascii', 'ignore')
 
@@ -636,8 +633,6 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                 item_url_final = base_url + String.Quote(item_url_base)
 
                 item_title = m[0].xpath('./a/text()')[0].strip()
-
-                #Logger('item_title = %s | item_url = %s | item_url_final = %s' %(item_title, item_url, item_url_final))
 
                 if m[1].xpath('./a'):
                     item_title_cleaned = Regex('[^a-zA-Z0-9 \n]').sub('', item_title)
@@ -691,14 +686,14 @@ def HomePageList(tab, category, base_url, type_title, art):
         return MessageContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again')
 
-    # scrap home page for Top (Day, Week, and Month) list
+    # scrape home page for Top (Day, Week, and Month) list
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
         page_node = node.xpath('./a')[1].get('href')
         item_sys_name = page_node.split('/')[-1]
         item_title = node.xpath('./a/span[@class="title"]/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
         title2 = '%s | Latest %s' %(item_title, latest)
-        summary = 'NA'
+        summary = 'NA'  # no summarys are given in the 'Top' lists
         thumb = node.xpath('./a/img')[0].get('src')
         page_url = base_url + '/' + page_node
 
@@ -713,14 +708,14 @@ def HomePageList(tab, category, base_url, type_title, art):
             'art': art
             }
 
-        # send results to ItamPage
+        # send results to ItemPage
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info), title=title2))
 
     return oc
 
 ####################################################################################################
-# Creates the Media Page with the Video(s)/Chapter(s) section and a Bookmark option Add/Remove
+# Create the Media Page with the Video(s)/Chapter(s) section and a Bookmark option Add/Remove
 
 @route(PREFIX + '/item', item_info=dict)
 def ItemPage(item_info):
@@ -912,6 +907,8 @@ def VideoDetail(video_info, item_info):
         return MessageContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again')
 
+    # test if video link is hosted on OneDrive
+    # currently the URL Service is not setup to handle OneDrive Links
     onedrive_test = html.xpath('//div[@id="centerDivVideo"]//iframe')
     if onedrive_test:
         if "onedrive" in onedrive_test[0].get('src'):
@@ -922,6 +919,7 @@ def VideoDetail(video_info, item_info):
                     Try another source if avalible.
                     """)
 
+    # Movie
     if video_info['video_type'] == 'movie':
         oc.add(
             MovieObject(
@@ -929,21 +927,26 @@ def VideoDetail(video_info, item_info):
                 summary=summary,
                 originally_available_at=date,
                 thumb=thumb,
+                art=R(art),
                 url=url))
+    # TV Episode
     elif video_info['video_type'] == 'episode':
         oc.add(
             EpisodeObject(
                 title=title,
                 summary=summary,
                 thumb=thumb,
+                art=R(art),
                 originally_available_at=date,
                 url=url))
+    # everything else
     else:
         oc.add(
             VideoClipObject(
                 title=title,
                 summary=summary,
                 thumb=thumb,
+                art=R(art),
                 originally_available_at=date,
                 url=url))
 
@@ -966,14 +969,14 @@ def Search(query=''):
     for search_url in all_search_urls:
         search_url_filled = search_url % String.Quote(query, usePlus=True)
         type_title = search_url.rsplit('/')[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
-        # change kissasian urls to 'Drama' for type title
+        # change kissasian info to 'Drama'
         if type_title == 'Asian':
             type_title = 'Drama'
             art = ASIAN_ART
             thumb = ASIAN_ICON
             prefs_name = 'kissasian'
         else:
-            art = '%s_ART' % type_title.upper()
+            art = 'art-%s.png' % type_title.lower()
             thumb = 'icon-%s.png' % type_title.lower()
             prefs_name = 'kiss%s' %type_title.lower()
 
@@ -1018,7 +1021,7 @@ def SearchPage(type_title, search_url, art):
         search_match = Regex('var\ path\ =\ (\'Search\')').search(node)
         if not search_match:
             # Send url to 'ItemPage'
-            base_url = 'http://' + search_url.rsplit('/')[2]
+            base_url = Test.GetBaseURL(search_url)
             node = html.xpath('//div[@class="barContent"]/div/a')[0]
 
             item_sys_name = node.get('href').rsplit('/')[-1].strip()
@@ -1033,7 +1036,7 @@ def SearchPage(type_title, search_url, art):
                 'item_sys_name': item_sys_name,
                 'item_title': item_title.encode('unicode_escape'),
                 'short_summary': None,
-                'cover_url': thumb,
+                'cover_url': cover_url,
                 'type_title': type_title,
                 'base_url': base_url,
                 'page_url': item_url,
@@ -1043,6 +1046,7 @@ def SearchPage(type_title, search_url, art):
         else:
             # Send results to 'DirectoryList'
             query = search_url.rsplit('=')[-1]
+            Log.Debug('art = %s' %art)
             return DirectoryList(1, 'Search', query, search_url, type_title, art)
     # No results found :( keep trying
     else:
@@ -1070,7 +1074,7 @@ def AddBookmark(item_info):
     # decode title string
     item_title_decode = item_title.decode('unicode_escape')
 
-    Logger('item = %s' %item_sys_name)
+    Logger('item to add = %s' %item_sys_name, kind='Info')
 
     try:
         # setup html for parsing

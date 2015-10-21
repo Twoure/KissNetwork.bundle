@@ -20,6 +20,7 @@ def MetadataObjectForURL(url):
     """
 
     title = url.rsplit('?')[0].rsplit('/')[-1]
+
     return PhotoAlbumObject(key=Callback(GetPhotos, url=url), title=title)
 
 ####################################################################################################

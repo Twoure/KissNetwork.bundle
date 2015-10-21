@@ -40,17 +40,6 @@ def MetadataObjectForURL(url):
 
     Log.Debug('\nshow_name_raw | %s\ntitle_raw | %s\ntitle | %s' %(show_name_raw, title_raw, title))
 
-    """
-    # set the video title
-    title = html.xpath("//option[@selected='selected']/text()")[0]
-    title = title.replace('\n', '').strip()
-    Log.Debug('title = %s' %title)
-
-    # set the video summary
-    summary = html.xpath("//meta[@name='description']/@content")[0]
-    summary = summary.replace('\n', '').strip()
-    """
-
     # set full summary
     summary = None
     match = None
@@ -81,49 +70,59 @@ def MetadataObjectForURL(url):
     elif not summary and summary_table:
         summary = summary_table[0].text_content().strip()
 
-    """
-    if summary:
-        # fix string encoding errors before they happen by converting to unicode
-        summary = summary.encode('unicode_escape')
-    """
-
     if 'movie' in title.lower():
         return MovieObject(
             title=show_name_raw.strip(),
             summary=summary)
     elif 'episode' in title.lower():
-        """
-        show_name = html.xpath('//div[@id="navsubbar"]/p/a/text()')[0]
-        show_name = show_name.replace(Test.GetTypeTitle(url), '').replace('\n', '').lower()
-        show_name = show_name.replace('information', '').strip().title()
-        Log.Debug('show name = %s' %show_name)
-        """
         show_title = None
+        ep_node = Regex('Episode (\d+)').search(title)
+        episode_number = int(ep_node.group(1).lstrip('0'))
+        episode_name = title.replace(ep_node.group(0), 'Episode %i' %episode_number)
 
         if "season" in show_name_raw.lower():
-            season_number = int(Regex('Season (\d+)').search(show_name_raw).group(1))
-            show_title = Regex('^(.+?)\ (?:Season|Episode)').search(show_name_raw).group(1)
+
+            test1 = Regex('(\d+)(?:[a-z][a-z]\ Season)').search(show_name_raw)
+            if test1:
+                season_number = int(test1.group(1))
+            else:
+                test2 = Regex('(?:Season\ )(\d+)').search(show_name_raw)
+                if test2:
+                    season_number = int(test2.group(1))
+                else:
+                    test3 = Regex('(First|Second|Third)\ (?:Season)').search(show_name_raw)
+                    if test3:
+                        test3_text = test3.group(1)
+                        if test3_text == 'First':
+                            season_number = int(1)
+                        elif test3_text == 'Second':
+                            season_number = int(2)
+                        elif test3_text == 'Third':
+                            season_number = int(3)
+                    else:
+                        season_number = None
+
+            show_title_regex = Regex('^(.+?)(?:\ |\ (?:[1-9][a-z][a-z]|First|Second)\ )(?:Season|Episode)(.+|)').search(show_name_raw)
+            show_title = show_title_regex.group(1) + show_title_regex.group(2)
             test = Regex('^(.+?)\ (?:\(Sub\)|\(Dub\))').search(show_title)
+
             if test:
                 show_title = test.group(1)
+
+            if season_number:
+                new_title = 'Season %i | %s' %(season_number, episode_name)
+            else:
+                new_title = episode_name
         else:
-            season_number = int(1)
+            season_number = None
             test = Regex('^(.+?)\ (?:\(Sub\)|\(Dub\))').search(show_name_raw)
             if test:
                 show_title = test.group(1)
 
-        if "episode" in title.lower():
-            episode_number = int(Regex('episode (\d+)').search(title.lower()).group(1))
-        else:
-            episode_number = int(0)
+            new_title = episode_name
 
         if not show_title:
             show_title = show_name_raw
-
-        if 'Episode %i' %episode_number == title:
-            new_title = 'Season %i | Episode %i' %(season_number, episode_number)
-        else:
-            new_title = 'Season %i | %s' %(season_number, title)
 
         return EpisodeObject(
             title=new_title,
@@ -133,8 +132,6 @@ def MetadataObjectForURL(url):
             summary=summary)
     else:
         return VideoClipObject(title=title, summary=summary)
-
-    #return VideoClipObject(title=title, summary=summary)
 
 ########################################################################################
 def MediaObjectsForURL(url):
@@ -152,10 +149,10 @@ def MediaObjectsForURL(url):
     mo = []
 
     if "(Dub)" in html.xpath('//head/title/text()')[0]:
-        Log('language = English')
+        Log.Info('language = English')
         AudioStreamObject.language_code = Locale.Language.English
     elif "(Sub)" in html.xpath('//head/title/text()')[0]:
-        Log('language = Japanese')
+        Log.Info('language = Japanese')
         AudioStreamObject.language_code = Locale.Language.Japanese
     else:
         Log.Info('No Language set')
@@ -173,7 +170,7 @@ def MediaObjectsForURL(url):
             video_codec=VideoCodec.H264,
             audio_codec=AudioCodec.AAC,
             audio_channels=2,
-            optimized_for_streaming = True))  # if Client.Product != 'Plex Web' else False))
+            optimized_for_streaming = True))
 
     return mo
 

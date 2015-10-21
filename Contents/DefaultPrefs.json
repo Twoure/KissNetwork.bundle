@@ -1,32 +1,32 @@
 [
   {
     "id": "sort_opt",
-    "label": "Sort (All, Alphabets, Country, Genre, and Movie) list by...",
+    "label": "Sort List by...",
     "type": "enum",
     "values": ["Alphabetical", "Popularity", "Latest Update", "Newest"],
     "default": "Alphabetical"
   },
   {
     "id": "kissanime",
-    "label": "View Content from Kissanime.com (Anime)",
+    "label": "View Kissanime.com (Anime)",
     "type": "bool",
     "default": "True"
   },
   {
     "id": "kissasian",
-    "label": "View Content from Kissasian.com (Drama)",
+    "label": "View Kissasian.com (Drama)",
     "type": "bool",
     "default": "True"
   },
   {
     "id": "kisscartoon",
-    "label": "View Content from Kisscartoon.me (Cartoon)",
+    "label": "View Kisscartoon.me (Cartoon)",
     "type": "bool",
     "default": "True"
   },
   {
     "id": "kissmanga",
-    "label": "View Content from Kissmanga.com (Manga)",
+    "label": "View Kissmanga.com (Manga)",
     "type": "bool",
     "default": "True"
   },
@@ -38,8 +38,8 @@
   },
   {
     "id": "debug",
-    "type": "bool",
     "label": "Enable Debug Logging",
+    "type": "bool",
     "default": "True"
   }
 ]
