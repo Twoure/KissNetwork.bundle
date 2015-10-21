@@ -12,7 +12,7 @@
       <array>
         <string>^http://(?:www\.|)kissanime\.(?:com|me)/Anime/.+(?:\?id=\d+)$</string>
         <string>^http://(?:www\.|)kissasian\.(?:com|me)/Drama/.+(?:\?id=\d+)$</string>
-        <string>^http://(?:www\.|)kisscartoon\.(:?com|me)/Cartoon/.+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|)kisscartoon\.(?:com|me)/Cartoon/.+(?:\?id=\d+)$</string>
       </array>
       <key>TestURLs</key>
       <array>

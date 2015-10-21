@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""KissNetwork shared code"""
+
 # import section(s) not included in Plex Plug-In Framwork
 import sys, os, io, json
 
