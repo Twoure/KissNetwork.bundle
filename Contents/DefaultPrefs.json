@@ -1,7 +1,7 @@
 [
   {
     "id": "sort_opt",
-    "label": "Sorting Option",
+    "label": "Sort (All, Alphabets, Country, Genre, and Movie) list by...",
     "type": "enum",
     "values": ["Alphabetical", "Popularity", "Latest Update", "Newest"],
     "default": "Alphabetical"
