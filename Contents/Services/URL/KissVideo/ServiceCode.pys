@@ -26,20 +26,115 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
+    video_href = '/' + url.split('/', 3)[3]
+    url = url.rsplit('/', 1)[0]
+
     Log.Info('MetadataObjectForURL url = %s' %url)
 
     # setup html for parsing
     html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
 
+    show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
+    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[@href="%s"]/../a/text()' %video_href)[0]
+    title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
+
+    Log.Debug('\nshow_name_raw | %s\ntitle_raw | %s\ntitle | %s' %(show_name_raw, title_raw, title))
+
+    """
     # set the video title
     title = html.xpath("//option[@selected='selected']/text()")[0]
     title = title.replace('\n', '').strip()
+    Log.Debug('title = %s' %title)
 
     # set the video summary
     summary = html.xpath("//meta[@name='description']/@content")[0]
     summary = summary.replace('\n', '').strip()
+    """
 
-    return VideoClipObject(title=title, summary=summary)
+    # set full summary
+    summary = None
+    match = None
+
+    # enumerate array so we can find the Summary text
+    for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
+        if node.xpath('./span[@class="info"][text()="Summary:"]'):
+            match = int(i)
+            break
+
+    # add 1 to our Summary match to find the Summary text
+    # wish the site was more consistant with its summary location... ugh
+    for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
+        if match and match + 1 == i:
+            # sometimes summary is inside a <span>
+            if node.xpath('./span'):
+                summary = node.xpath('./span')[0].text_content().strip()
+                break
+            else:
+                summary = node.text_content().strip()
+                break
+
+    # some Summary text is not in the <p> but in it's own <div> or within a <table>
+    summary_div = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
+    summary_table = html.xpath('//div[@id="container"]//table//td')
+    if not summary and summary_div:
+        summary = summary_div[0].text_content().strip()
+    elif not summary and summary_table:
+        summary = summary_table[0].text_content().strip()
+
+    """
+    if summary:
+        # fix string encoding errors before they happen by converting to unicode
+        summary = summary.encode('unicode_escape')
+    """
+
+    if 'movie' in title.lower():
+        return MovieObject(
+            title=show_name_raw.strip(),
+            summary=summary)
+    elif 'episode' in title.lower():
+        """
+        show_name = html.xpath('//div[@id="navsubbar"]/p/a/text()')[0]
+        show_name = show_name.replace(Test.GetTypeTitle(url), '').replace('\n', '').lower()
+        show_name = show_name.replace('information', '').strip().title()
+        Log.Debug('show name = %s' %show_name)
+        """
+        show_title = None
+
+        if "season" in show_name_raw.lower():
+            season_number = int(Regex('Season (\d+)').search(show_name_raw).group(1))
+            show_title = Regex('^(.+?)\ (?:Season|Episode)').search(show_name_raw).group(1)
+            test = Regex('^(.+?)\ (?:\(Sub\)|\(Dub\))').search(show_title)
+            if test:
+                show_title = test.group(1)
+        else:
+            season_number = int(1)
+            test = Regex('^(.+?)\ (?:\(Sub\)|\(Dub\))').search(show_name_raw)
+            if test:
+                show_title = test.group(1)
+
+        if "episode" in title.lower():
+            episode_number = int(Regex('episode (\d+)').search(title.lower()).group(1))
+        else:
+            episode_number = int(0)
+
+        if not show_title:
+            show_title = show_name_raw
+
+        if 'Episode %i' %episode_number == title:
+            new_title = 'Season %i | Episode %i' %(season_number, episode_number)
+        else:
+            new_title = 'Season %i | %s' %(season_number, title)
+
+        return EpisodeObject(
+            title=new_title,
+            show=show_title,
+            season=season_number,
+            index=episode_number,
+            summary=summary)
+    else:
+        return VideoClipObject(title=title, summary=summary)
+
+    #return VideoClipObject(title=title, summary=summary)
 
 ########################################################################################
 def MediaObjectsForURL(url):
@@ -55,6 +150,16 @@ def MediaObjectsForURL(url):
     # setup html for parsing
     html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
     mo = []
+
+    if "(Dub)" in html.xpath('//head/title/text()')[0]:
+        Log('language = English')
+        AudioStreamObject.language_code = Locale.Language.English
+    elif "(Sub)" in html.xpath('//head/title/text()')[0]:
+        Log('language = Japanese')
+        AudioStreamObject.language_code = Locale.Language.Japanese
+    else:
+        Log.Info('No Language set')
+        #AudioStreamObject.language_code = Locale.Language.English
 
     # create media objects for each video quality
     for node in html.xpath('//select[@id="selectQuality"]/option'):
@@ -73,9 +178,12 @@ def MediaObjectsForURL(url):
     return mo
 
 ########################################################################################
-def PlayVideo(url):
+@indirect
+def PlayVideo(url, **kwargs):
     """Log the url and return the decoded base64 url"""
 
-    Log.Info('PlayVideo url = %s' %url)
+    path = base64.b64decode(url)
 
-    return Redirect(base64.b64decode(url))
+    Log.Info('PlayVideo url = %s' %path)
+
+    return IndirectResponse(VideoClipObject, key=path)
