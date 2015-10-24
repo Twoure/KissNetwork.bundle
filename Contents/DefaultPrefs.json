@@ -37,6 +37,12 @@
     "default": "False"
   },
   {
+    "id": "adult",
+    "label": "Allow Adult Content",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "debug",
     "label": "Enable Debug Logging",
     "type": "bool",

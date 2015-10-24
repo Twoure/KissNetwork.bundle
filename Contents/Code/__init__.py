@@ -25,6 +25,7 @@ import requests
 PREFIX = '/video/kissnetwork'
 TITLE = 'KissNetwork'
 LIST_VIEW_CLIENTS = ['Android', 'iOS']
+ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 
 # KissAnime
 ANIME_BASE_URL = 'http://kissanime.com'
@@ -493,15 +494,28 @@ def GenreList(url, title, art):
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
     # For loop to pull out valid Genres
+    genre_list = set([])
     for genre in html.xpath('//div[@class="barContent"]//a'):
-        if "Genre" in genre.get('href') and not "Movie" in genre.get('href'):
-            pname = genre.get('href')  # name used internally
-            category = genre.text.replace('\n', '').strip()  # name used for title2
+        genre_href = genre.get('href')
+        if "Genre" in genre_href and not "Movie" in genre_href:
+            genre_list.add(genre_href)
 
-            oc.add(DirectoryObject(
-                key=Callback(DirectoryList,
-                    page=1, pname=pname, category=category, base_url=url, type_title=title, art=art),
-                title=category))
+    if not Prefs['adult']:
+        adult_genre_list = set(['/Genre/' + g for g in ADULT_LIST])
+        clean_genre_list = sorted(genre_list.difference(adult_genre_list))
+    else:
+        clean_genre_list = sorted(genre_list)
+
+    for genre in clean_genre_list:
+        # name used internally
+        pname = genre
+        # name used for title2
+        category = html.xpath('//div[@class="barContent"]//a[@href="%s"]/text()' %genre)[0].replace('\n', '').strip()
+
+        oc.add(DirectoryObject(
+            key=Callback(DirectoryList,
+                page=1, pname=pname, category=category, base_url=url, type_title=title, art=art),
+            title=category))
 
     return oc
 
@@ -735,6 +749,24 @@ def ItemPage(item_info):
 
     oc = ObjectContainer(title2=title2, art=R(art))
 
+    try:
+        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
+    except:
+        return MessageContainer(header=type_title,
+            message='Please wait a second or two while the URL Headers are set, then try again')
+
+    # Check for Adult content, block if Prefs set.
+    genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
+    Log('genres = %s' %genres)
+    if genres and not Prefs['adult']:
+        matching_list = set(genres) & ADULT_LIST
+        Log
+        if len(matching_list) > 0:
+            warning_string = ', '.join(list(matching_list))
+            Logger('\n----------Adult Content Blocked: %s----------' %warning_string, force=True, kind='Info')
+            return MessageContainer(header='Warning',
+                message='Adult Content Blocked: %s' %warning_string)
+
     # page category stings depending on media
     if not 'Manga' in type_title:
         category_thumb = CATEGORY_VIDEO_ICON
@@ -891,7 +923,9 @@ def VideoDetail(video_info, item_info):
     # set variables
     title = video_info['title'].decode('unicode_escape')
     date = Datetime.ParseDate(video_info['date'])
-    summary = item_info['short_summary'].decode('unicode_escape')
+    summary = item_info['short_summary']
+    if summary:
+        summary = summary.decode('unicode_escape')
     thumb = item_info['cover_url']
     art = item_info['art']
     url = video_info['video_page_url']
@@ -1091,40 +1125,25 @@ def AddBookmark(item_info):
             cover_url = None
 
     # set full summary
-    summary = None
-    match = None
-
-    # enumerate array so we can find the Summary text
-    for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-        if node.xpath('./span[@class="info"][text()="Summary:"]'):
-            match = int(i)
-            break
-
-    # add 1 to our Summary match to find the Summary text
-    # wish the site was more consistant with its summary location... ugh
-    for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-        if match and match + 1 == i:
-            # sometimes summary is inside a <span>
-            if node.xpath('./span'):
-                summary = node.xpath('./span')[0].text_content().strip()
-                break
-            else:
-                summary = node.text_content().strip()
-                break
-
-    # some Summary text is not in the <p> but in it's own <div> or within a <table>
-    summary_div = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
-    summary_table = html.xpath('//div[@id="container"]//table//td')
-    if not summary and summary_div:
-        summary = summary_div[0].text_content().strip()
-    elif not summary and summary_table:
-        summary = summary_table[0].text_content().strip()
-
+    summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
     if summary:
-        # fix string encoding errors before they happen by converting to unicode
-        summary = summary.encode('unicode_escape')
+        summary = summary[0].text_content().strip()
     else:
-        summary = short_summary
+        summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
+        if summary:
+            summary = summary[0].text_content().strip()
+        else:
+            summary = html.xpath('//div[@id="container"]//table//td')
+            if summary:
+                summary = summary[0].text_content().strip()
+            else:
+                summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
+                if summary:
+                    summary = summary[0].text_content().strip()
+                    # fix string encoding errors before they happen by converting to unicode
+                    summary = summary.encode('unicode_escape')
+                else:
+                    summary = None
 
     Logger('summary = %s' %summary, kind='Debug')
 
