@@ -28,6 +28,7 @@ def MetadataObjectForURL(url):
 
     video_href = '/' + url.split('/', 3)[3]
     url = url.rsplit('/', 1)[0]
+    source_title = 'Kiss' + Test.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
 
     Log.Info('MetadataObjectForURL url = %s' %url)
 
@@ -37,59 +38,165 @@ def MetadataObjectForURL(url):
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
     title_raw = html.xpath('//table[@class="listing"]/tr/td/a[@href="%s"]/../a/text()' %video_href)[0]
     title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
+    other_names = html.xpath('//p[span[@class="info"]="Other name:"]/a/text()')
+    Log.Debug('other names = %s' %other_names)
+    genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
+    Log.Debug('genres = %s' %genres)
+    view_text = html.xpath('//p[span[@class="info"]="Status:"]')[0].text_content()[:100].replace(',', '')
+    views = int(Regex('(?s).*(?:Views:).(\d+)').search(view_text).group(1))
+    Log.Debug('views = %i' %views)
+    countries = html.xpath('//p[span[@class="info"]="Country:"]/a/text()')
+    Log.Debug('countries = %s' %countries)
+    date_aired = html.xpath('//p[span[@class="info"]="Date aired:"]/text()')
+    Log.Debug('date aired = %s' %date_aired)
 
     Log.Debug('\nshow_name_raw | %s\ntitle_raw | %s\ntitle | %s' %(show_name_raw, title_raw, title))
 
     # set full summary
-    summary = None
-    match = None
-
-    # enumerate array so we can find the Summary text
-    for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-        if node.xpath('./span[@class="info"][text()="Summary:"]'):
-            match = int(i)
-            break
-
-    # add 1 to our Summary match to find the Summary text
-    # wish the site was more consistant with its summary location... ugh
-    for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-        if match and match + 1 == i:
-            # sometimes summary is inside a <span>
-            if node.xpath('./span'):
-                summary = node.xpath('./span')[0].text_content().strip()
-                break
+    summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
+    # if summary found in <p> after <p><span>Summary:</span></p>
+    if summary:
+        # use text_content() to get text after </b>
+        summary = summary[0].text_content().strip()
+    else:
+        summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
+        # if summary found in <p><span> after <p><span>Summary:</span></p>
+        if summary:
+            summary = summary[0].text_content().strip()
+        else:
+            summary = html.xpath('//div[@id="container"]//table//td')
+            # if summary found in own <table>
+            if summary:
+                summary = summary[0].text_content().strip()
             else:
-                summary = node.text_content().strip()
-                break
+                summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
+                # if summary found in own <div>
+                if summary:
+                    summary = summary[0].text_content().strip()
+                # if no summary found then set to 'None'
+                else:
+                    summary = None
 
-    # some Summary text is not in the <p> but in it's own <div> or within a <table>
-    summary_div = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
-    summary_table = html.xpath('//div[@id="container"]//table//td')
-    if not summary and summary_div:
-        summary = summary_div[0].text_content().strip()
-    elif not summary and summary_table:
-        summary = summary_table[0].text_content().strip()
+    Log.Debug('summary = %s' %summary)
 
-    if 'movie' in title.lower():
+    # setup MovieObject
+    if 'movie' in title.lower() or 'Movie' in genres:
+        Log.Info('this is a movie')
+
+        # remove 'Movie' from genre list
+        genre_list = [g for g in genres if not g == 'Movie']
+
+        # try and set date and year
+        if date_aired:
+            try:
+                date_aired = date_aired[1].strip()
+                date = Datetime.ParseDate(date_aired)
+                year = int(Datetime.ParseDate(date_aired).year)
+            except:
+                date = None
+                year = None
+        else:
+            date = None
+            year = None
+
         return MovieObject(
             title=show_name_raw.strip(),
+            genres=genre_list,
+            tags=other_names,
+            source_title=source_title,
+            originally_available_at=date,
+            year=year,
+            countries=countries,
             summary=summary)
+    # setup EpisodeObject
     elif 'episode' in title.lower():
+        Log.Info('this is a TV Show')
+
         show_title = None
-        ep_node = Regex('Episode (\d+)').search(title)
-        episode_number = int(ep_node.group(1).lstrip('0'))
-        episode_name = title.replace(ep_node.group(0), 'Episode %i' %episode_number)
+        season_number = None
+        # test title for episode # and season # via Regex
+        ep_node = Regex('Episode(?:(?:\ (\d+)(\ .*))|(?:\ (\d+))|(\ .*))').search(title)
+        se_node = Regex('Season (\d+)').search(title)
 
-        if "season" in show_name_raw.lower():
+        # if season in title then set season number
+        if se_node:
+            season_number = int(se_node.group(1))
 
+        # set up episode_name and episode number
+        if ep_node:
+            # if ep # and text found after # then:
+            if ep_node.group(1) and ep_node.group(2):
+                # set episode number (ep #)
+                episode_number = int(ep_node.group(1))
+                # if ep # != 0 then strip leading 0 from #
+                if not episode_number == int(0):
+                    episode_number = int(str(episode_number).lstrip('0'))
+                # set episode name
+                episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(2).lstrip(' -'))
+            # if ep # with no text after it then:
+            elif ep_node.group(3):
+                episode_number = int(ep_node.group(3))
+                if not episode_number == int(0):
+                    episode_number = int(str(episode_number).lstrip('0'))
+
+                episode_name = 'Episode %i' %episode_number
+            # if ep found with no number but has text after it then:
+            elif ep_node.group(4):
+                # get episode list from show page
+                test = html.xpath('//table[@class="listing"]/tr/td/a')
+                # reverse list and enumerate to match selected video id with interation
+                for i, item in enumerate(list(reversed(test))):
+                    # get episode id
+                    ep_id = int(item.get('href').split('=')[-1])
+                    if int(video_href.split('=')[-1]) == ep_id:
+                        # add 1 to i since it starts at 0 in list
+                        episode_number = int(i) + 1
+                        episode_name = 'E%i%s' %(episode_number, ' |' + ep_node.group(4).lstrip(' -'))
+                        break
+            # this shouldn't be needed but just in case the above fails
+            else:
+                episode_number = None
+                episode_name = title
+        # if Episode in name but Regex has not matches then add ep # and format ep name
+        else:
+            # get episode list from show page
+            test = html.xpath('//table[@class="listing"]/tr/td/a')
+            # reverse list and enumerate to match selected video id with interation
+            for i, item in enumerate(list(reversed(test))):
+                # get episode id
+                ep_id = int(item.get('href').split('=')[-1])
+                if int(video_href.split('=')[-1]) == ep_id:
+                    # add 1 to i since it starts at 0 in list
+                    episode_number = int(i) + 1
+                    episode_name = 'Episode %i' %episode_number
+                    break
+
+        # add genres to other_names, for 'tags' later
+        for genre in genres:
+            other_names.append(genre)
+
+        # set up tags test lits of strings for finding season
+        tags_test = [x.lower() for x in other_names]
+        # setup summary for finding season
+        if summary:
+            summary_test = summary.lower()
+        else:
+            summary_test = 'none'
+
+        # if season number was not found above and if 'season' in the show name
+        # then try and find the season number in the show name
+        if "season" in show_name_raw.lower() and not season_number:
+            # test for "2nd Season" etc...
             test1 = Regex('(\d+)(?:[a-z][a-z]\ Season)').search(show_name_raw)
             if test1:
                 season_number = int(test1.group(1))
             else:
+                # test for "Season 2" etc...
                 test2 = Regex('(?:Season\ )(\d+)').search(show_name_raw)
                 if test2:
                     season_number = int(test2.group(1))
                 else:
+                    # test for "Second Season" etc...
                     test3 = Regex('(First|Second|Third)\ (?:Season)').search(show_name_raw)
                     if test3:
                         test3_text = test3.group(1)
@@ -99,39 +206,101 @@ def MetadataObjectForURL(url):
                             season_number = int(2)
                         elif test3_text == 'Third':
                             season_number = int(3)
+                    # if season number not in show name then try and find it in the summary or tags test array
+                    elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
+                        season_number = int(2)
+                    elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
+                        season_number = int(3)
+                    elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
+                        season_number = int(4)
+                    elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+                        season_nubmer = int(0)
+                    # if no season number found then set season to 1
                     else:
-                        season_number = None
-
-            show_title_regex = Regex('^(.+?)(?:\ |\ (?:[1-9][a-z][a-z]|First|Second)\ )(?:Season|Episode)(.+|)').search(show_name_raw)
-            show_title = show_title_regex.group(1) + show_title_regex.group(2)
-            test = Regex('^(.+?)\ (?:\(Sub\)|\(Dub\))').search(show_title)
-
-            if test:
-                show_title = test.group(1)
-
-            if season_number:
-                new_title = 'Season %i | %s' %(season_number, episode_name)
+                        season_number = int(1)
+        # if season number not above and if 'season' not in show name
+        # try and find season number in summary or tags test string
+        elif not season_number:
+            if 'first season' in summary_test or FindPartElement(array=tags_test, string='first season'):
+                season_number = int(1)
+            elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
+                season_number = int(2)
+            elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
+                season_number = int(3)
+            elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
+                season_number = int(4)
+            elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+                season_number = int(0)
+            # if no season number found then set season to 1
             else:
-                new_title = episode_name
-        else:
-            season_number = None
-            test = Regex('^(.+?)\ (?:\(Sub\)|\(Dub\))').search(show_name_raw)
-            if test:
-                show_title = test.group(1)
+                season_number = int(1)
 
+        # set show title
+        show_title_regex = Regex('^(.+?)(?:\ |\ (?:[1-9][a-z][a-z]|First|Second)\ )(?:Season|Episode)(.+|)').search(show_name_raw)
+        if show_title_regex:
+            show_title = show_title_regex.group(1) + show_title_regex.group(2)
+        else:
+            show_title = show_name_raw
+
+        # set episode title for EpisodeObject
+        if season_number or season_number == 0:
+            ep_test = Regex('E(?:\d+)(.*)').search(episode_name)
+            # if no show name then return 'Season %i | Episode %i'
+            if not ep_test:
+                new_title = 'Season %i | %s' %(season_number, episode_name)
+            # shorten season and episode to include ep name
+            else:
+                new_title = 'S%i | E%i%s' %(season_number, episode_number, ep_test.group(1))
+        # no season # found, so just return ep # and name
+        else:
             new_title = episode_name
 
-        if not show_title:
-            show_title = show_name_raw
+        # try and get the date and year
+        if date_aired:
+            try:
+                date_aired = date_aired[1].lower().split('to')[0].split('-')[0].strip()
+                Log('date aired = %s' %date_aired)
+                date = Datetime.ParseDate(date_aired)
+                Log('date = %s' %str(date))
+            except:
+                date = None
+        else:
+            date = None
 
         return EpisodeObject(
             title=new_title,
+            source_title=source_title,
             show=show_title,
             season=season_number,
             index=episode_number,
+            tags=other_names,
+            originally_available_at=date,
             summary=summary)
+    # setup VideoClibObject in case video has no episode or movie data
     else:
-        return VideoClipObject(title=title, summary=summary)
+        Log.Info('show not defined, so returned general video clip')
+
+        if date_aired:
+            try:
+                date_aired = date_aired[1].lower().split('to')[0].split('-')[0].strip()
+                date = Datetime.ParseDate(date_aired)
+                year = int(Datetime.ParseDate(date_aired).year)
+            except:
+                date = None
+                year = None
+        else:
+            date = None
+            year = None
+
+        return VideoClipObject(
+            title=title.lstrip('_'),
+            genres=genres,
+            tags=other_names,
+            source_title=source_title,
+            originally_available_at=date,
+            year=year,
+            countries=countries,
+            summary=summary)
 
 ########################################################################################
 def MediaObjectsForURL(url):
@@ -184,3 +353,12 @@ def PlayVideo(url, **kwargs):
     Log.Info('PlayVideo url = %s' %path)
 
     return IndirectResponse(VideoClipObject, key=path)
+
+########################################################################################
+def FindPartElement(array=list, string=str):
+    """fileter elements in array by sting, allows for loose matches"""
+
+    if filter(lambda element: string in element, array):
+        return True
+    else:
+        return False
