@@ -80,7 +80,7 @@ def MetadataObjectForURL(url):
     Log.Debug('summary = %s' %summary)
 
     # setup MovieObject
-    if 'movie' in title.lower() or 'Movie' in genres:
+    if 'movie' in title.lower() or 'Movie' in genres and not 'episode' in title.lower():
         Log.Info('this is a movie')
 
         # remove 'Movie' from genre list
@@ -151,7 +151,7 @@ def MetadataObjectForURL(url):
                     if int(video_href.split('=')[-1]) == ep_id:
                         # add 1 to i since it starts at 0 in list
                         episode_number = int(i) + 1
-                        episode_name = 'E%i%s' %(episode_number, ' |' + ep_node.group(4).lstrip(' -'))
+                        episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(4).lstrip(' -'))
                         break
             # this shouldn't be needed but just in case the above fails
             else:
