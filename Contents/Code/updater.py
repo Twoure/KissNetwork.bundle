@@ -1,12 +1,13 @@
 UPDATED_AT = 'updater.updated_at'
+LIST_VIEW_CLIENTS = ['Android', 'iOS']
 
 class GithubStrategy(object):
-    def __init__(self, repo, branch = 'master'):
+    def __init__(self, repo, branch='master'):
         super(GithubStrategy, self).__init__()
-        self.repo        = repo
-        self.branch      = branch
-        self.archive_url = 'https://github.com/%s/archive/%s.zip'  % (repo, branch)
-        self.atom_url    = 'https://github.com/%s/commits/%s.atom' % (repo, branch)
+        self.repo = repo
+        self.branch = branch
+        self.archive_url = 'https://github.com/%s/archive/%s.zip'  %(repo, branch)
+        self.atom_url = 'https://github.com/%s/commits/%s.atom' %(repo, branch)
 
     @property
     def updated_at(self):
@@ -19,10 +20,10 @@ class GithubStrategy(object):
     def perform_update(self):
         archive = Archive.ZipFromURL(self.archive_url)
         for name in archive.Names():
-            data    = archive[name]
-            parts   = name.split('/')
+            data = archive[name]
+            parts = name.split('/')
             shifted = Core.storage.join_path(*parts[1:])
-            full    = Core.storage.join_path(Core.bundle_path, shifted)
+            full = Core.storage.join_path(Core.bundle_path, shifted)
 
             if '/.' in name: continue
 
@@ -55,8 +56,8 @@ def update_available():
 def PerformUpdate():
     threaded_update_if_available()
     return ObjectContainer(
-        header  = L('updater.label.updating'),
-        message = L('updater.response.updating')
+        header = 'Updating...',
+        message = 'Please wait while the channel is updating.'
     )
 
 def update_if_available():
@@ -72,6 +73,7 @@ def threaded_update_if_available():
 def add_button_to(container, cb):
     if update_available():
         container.add(DirectoryObject(
-            title = L('updater.label.update-now'),
-            key   = Callback(cb)
+            title = 'Update Now',
+            key = Callback(cb)
+            thumb = R('icon-update.png') if not Client.Platform in LIST_VIEW_CLIENTS else None
         ))
