@@ -6,6 +6,10 @@
 # import section(s) not included in Plex Plug-In Framwork
 import sys, shutil, io
 
+# import updater and set to master branch
+import updater
+updater.init(repo='Twoure/KissNetwork.bundle', branch='master')
+
 # import Shared Service Code
 Test = SharedCodeService.test
 
@@ -88,6 +92,9 @@ def Start():
         Log.Info('\n----------Caching Headers----------')
         Thread.Create(BackgroundAutoCache)
 
+    # Validate Prefs
+    ValidatePrefs()
+
 ####################################################################################################
 # Create the main menu
 
@@ -125,6 +132,9 @@ def MainMenu():
         Dict.Save()
 
     status = Dict['Bookmark_Deleted']
+
+    # add updater button only if update avalible
+    updater.add_button_to(oc, PreformUpdate)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
@@ -317,7 +327,7 @@ def KissManga(url, title, art):
 @route(PREFIX + '/validateprefs')
 def ValidatePrefs():
     # load prefs into dict for use later
-    if Prefs['sort_opt'] == 'Alphabet':
+    if Prefs['sort_opt'] == 'Alphabetical':
         Dict['s_opt'] = ''
     elif Prefs['sort_opt'] == 'Popularity':
         Dict['s_opt'] = '/MostPopular'
@@ -325,6 +335,8 @@ def ValidatePrefs():
         Dict['s_opt'] = '/LatestUpdate'
     elif Prefs['sort_opt'] == 'Newest':
         Dict['s_opt'] = '/Newest'
+
+    Logger('Dict[\'s_opt\'] = %s' %Dict['s_opt'], kind='Info', force=True)
 
     # Check bookmark cache image opt
     # if not cache images then remove any old ones
@@ -580,6 +592,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         # Genre Specific with Prefs
         item_url = base_url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
     elif "All" in pname:
+        Log('dict s_opt = %s' %Dict['s_opt'])
         item_url = base_url + '/%sList%s?page=%s' % (type_title, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
@@ -860,58 +873,66 @@ def ItemSubPage(item_info):
         return MessageContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again')
 
-    # parse html for media url, title and date added
-    a = []
-    b = []
+    # episode_list_node
+    episode_list = html.xpath('//table[@class="listing"]/tr/td')
 
-    for media in html.xpath('//table[@class="listing"]/tr/td'):
-        if media.xpath('./a'):
-            node = media.xpath('./a')
-
-            # url for Video/Chapter
-            media_page_url = page_url + '/' + node[0].get('href').rsplit('/')[-1]
-            Logger('%s Page URL = %s' % (s_removed_page_category, media_page_url))
-
-            # title for Video/Chapter, cleaned
-            raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_decode, '')
-            if not 'Manga' in type_title:
-                media_title = raw_title.replace('Watch Online', '').strip()
-            else:
-                media_title = raw_title.replace('Read Online', '').strip()
-            Logger('%s Title = %s' % (s_removed_page_category, media_title))
-
-            a.append((media_page_url, media_title))
-        else:
-            # date Video/Chapter added
-            date = media.text.strip()
-            Logger('date=%s' %date)
-            b.append(date)
-
-    # setup photo/video objects, Service URL's will do the rest
-    if not 'Manga' in type_title:
-        for x, y in map(None, a, b):
-            video_info = {
-                'date': y,
-                'title': x[1].encode('unicode_escape'),
-                'video_page_url': x[0]
-                }
-
-            if "movie" in x[1].lower():
-                video_info.update({'video_type': 'movie'})
-            elif 'episode' in x[1].lower():
-                video_info.update({'video_type': 'episode'})
-            else:
-                video_info.update({'video_type': 'na'})
-
-            oc.add(DirectoryObject(
-                key=Callback(VideoDetail,
-                    video_info=video_info, item_info=item_info),
-                title='%s | %s' % (x[1], y)))
+    # if no shows, then none have been added yet
+    if not episode_list:
+        return MessageContainer(header='Warning',
+            message='%s \"%s\" Not Yet Aired.' %(type_title, item_title_decode))
     else:
-        for x, y in map(None, a, b):
-            oc.add(PhotoAlbumObject(url=x[0], title='%s | %s' % (x[1], y)))
+        # parse html for media url, title and date added
+        a = []
+        b = []
 
-    return oc
+        for media in episode_list:
+            if media.xpath('./a'):
+                node = media.xpath('./a')
+
+                # url for Video/Chapter
+                media_page_url = page_url + '/' + node[0].get('href').rsplit('/')[-1]
+                Logger('%s Page URL = %s' % (s_removed_page_category, media_page_url))
+
+                # title for Video/Chapter, cleaned
+                raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_decode, '')
+                if not 'Manga' in type_title:
+                    media_title = raw_title.replace('Watch Online', '').strip()
+                else:
+                    media_title = raw_title.replace('Read Online', '').strip()
+                Logger('%s Title = %s' % (s_removed_page_category, media_title))
+
+                a.append((media_page_url, media_title))
+            else:
+                # date Video/Chapter added
+                date = media.text.strip()
+                Logger('date=%s' %date)
+                b.append(date)
+
+        # setup photo/video objects, Service URL's will do the rest
+        if not 'Manga' in type_title:
+            for x, y in map(None, a, b):
+                video_info = {
+                    'date': y,
+                    'title': x[1].encode('unicode_escape'),
+                    'video_page_url': x[0]
+                    }
+
+                if "movie" in x[1].lower():
+                    video_info.update({'video_type': 'movie'})
+                elif 'episode' in x[1].lower():
+                    video_info.update({'video_type': 'episode'})
+                else:
+                    video_info.update({'video_type': 'na'})
+
+                oc.add(DirectoryObject(
+                    key=Callback(VideoDetail,
+                        video_info=video_info, item_info=item_info),
+                    title='%s | %s' % (x[1], y)))
+        else:
+            for x, y in map(None, a, b):
+                oc.add(PhotoAlbumObject(url=x[0], title='%s | %s' % (x[1], y)))
+
+        return oc
 
 ####################################################################################################
 # Create Video container
@@ -1339,21 +1360,21 @@ def GetCoverImagePath():
 @route(PREFIX + '/cache-bookmark-covers')
 def CacheBookmarkCovers():
     if Prefs['cache_covers']:
-        Logger('Caching Bookmark covers locally')
+        Logger('Caching Bookmark covers locally', kind='Info')
         if Dict['Bookmarks']:
             for key in Dict['Bookmarks'].keys():
                 if not key == 'Manga':
                     for bm in Dict['Bookmarks'][key]:
                         SaveCoverImage(bm['cover_url'])
     else:
-        Logger('Removing Cached Bookmark Covers')
+        Logger('Removing Cached Bookmark Covers', kind='Info')
         if Dict['Bookmarks']:
             for key in Dict['Bookmarks'].keys():
                 if not key == 'Manga':
                     for bm in Dict['Bookmarks'][key]:
                         RemoveCoverImage(bm['cover_file'])
 
-                    Logger('Finished Removing Cached Bookmark Covers')
+                    Logger('Finished Removing Cached "%s" Bookmark Covers' %key, kind='Info')
 
 ####################################################################################################
 # Save image to Cover Image Path and return the file name
@@ -1434,3 +1455,11 @@ def BackgroundAutoCache():
         pass
 
     return
+
+####################################################################################################
+# preform update
+
+@route(PREFIX + '/performupdate')
+def PerformUpdate():
+
+    return updater.PerformUpdate()
