@@ -54,7 +54,8 @@ Known Issues
 - General
   - First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
   - If the headers are not set before Plex Framework tries to scrape the site then an error message will popup saying you need to wait until the headers are set.
-  - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function since it will have to re-cache every the Drama section every 30 minutes.  You should notice a 5 second delay if it is re-caching the Drama section (or any sites).
+  - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function since it will have to re-cache the Drama section every if 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
+  - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 
 - Kiss(anime, asian, cartoon) are all hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
   - Cover art does not load for Videos
@@ -80,8 +81,6 @@ Plans
   - Might look into grouping seasons of the same show for the directory list
   - Try to display cover art for video items.  Not a thumb of the video, kiss sites don't include that data.
   - Implement some kind of Password protection for choosing which sites to display
-  - May separate out TV and Movies for video sections
-  - May move Sorting Preferences out and make it into directories instead, or maybe make it an option
 
 - Bookmarks
   - Add option to add all seasons at once for a show
@@ -90,6 +89,8 @@ Plans
 
 ChangeLog
 ---------
+
+**0.05** - 10/26/15 - Improved Metadata & summary.  Added 'Adult' to Prefs, _Top_ list to Cartoon and Drama sections, and Updater from [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/master/Contents/Code/updater.py).  Fixed Cartoon cache time.
 
 **0.04** - 10/16/15 - Moved to "Shared Code" for setting headers.  Improved Header Cache times.
 
