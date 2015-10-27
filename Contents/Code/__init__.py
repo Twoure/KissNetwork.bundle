@@ -1,14 +1,13 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v0.04                                  #
+#                               KissNetwork Plex Channel -- v0.05                                  #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
 import sys, shutil, io
 
-# import updater and set to master branch
+# import updater
 import updater
-updater.init(repo='Twoure/KissNetwork.bundle', branch='master')
 
 # import Shared Service Code
 Test = SharedCodeService.test
@@ -87,6 +86,8 @@ def Start():
             Thread.Create(BackgroundAutoCache)
         else:
             Log.Info('\n----------Cookies already cached----------')
+            Log.Info('\n----------Checking Each URL Cache Time----------')
+            Thread.Create(BackgroundAutoCache)
     else:
         Dict['Headers Auto Cached'] = False
         Log.Info('\n----------Caching Headers----------')
@@ -338,6 +339,14 @@ def ValidatePrefs():
 
     Logger('Dict[\'s_opt\'] = %s' %Dict['s_opt'], kind='Info', force=True)
 
+    # setup updater based on prefs
+    if Prefs['dev'] == 'dev':
+        updater.init(repo='Twoure/KissNetwork.bundle', branch='dev')
+    else:
+        updater.init(repo='Twoure/KissNetwork.bundle', branch='master')
+
+    Logger('Github branch for updating = %s' %Prefs['dev'], kind='Info', force=True)
+
     # Check bookmark cache image opt
     # if not cache images then remove any old ones
     # created as Thread so it will run in the background
@@ -361,7 +370,7 @@ def BookmarksMain(title, status):
     if not Dict['Bookmarks']:
         # if no 'Bookmarks' section the return pop up
         return MessageContainer(header=title,
-            message='No Bookmarks yet. Get out there and start adding some!!!.')
+            message='No Bookmarks yet. Get out there and start adding some!!!')
     # create boomark directory based on category
     else:
         for key in sorted(Dict['Bookmarks'].keys()):
@@ -1427,13 +1436,13 @@ def CoverImageFileExist(image_file):
 
 @route(PREFIX + '/auto-cache')
 def BackgroundAutoCache():
+    # setup urls for setting headers
+    url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
     if not Dict['First Headers Cached']:
         Logger("Running Background Auto-Cache.", force=True)
 
         if Core.storage.file_exists(Test.LoadHeaderDict(False)):
             Logger('Header Dictionary already found, writing new Headers to old Dictionary')
-            # setup urls for setting headers
-            url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
 
             # get headers for each url
             for url in url_list:
@@ -1451,7 +1460,12 @@ def BackgroundAutoCache():
         Dict['Headers Auto Cached'] = True
         Dict.Save()
     else:
-        Logger('Headers were already cached.  Will cache them independently when needed')
+        for url in url_list:
+            Log.Info('\n----------Checking %s headers----------' %url)
+            Test.GetHeadersForURL(url)
+
+        Log.Info('\n----------Completed Header Cache Check----------')
+        Log.Info('\n----------Headers will be cached independently when needed from now on----------')
         pass
 
     return
