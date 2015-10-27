@@ -134,7 +134,7 @@ def MainMenu():
     status = Dict['Bookmark_Deleted']
 
     # add updater button only if update avalible
-    updater.add_button_to(oc, PreformUpdate)
+    updater.add_button_to(oc, PerformUpdate)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
