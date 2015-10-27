@@ -6,9 +6,6 @@
 # import section(s) not included in Plex Plug-In Framwork
 import sys, shutil, io
 
-# import updater
-import updater
-
 # import Shared Service Code
 Test = SharedCodeService.test
 
@@ -133,9 +130,6 @@ def MainMenu():
         Dict.Save()
 
     status = Dict['Bookmark_Deleted']
-
-    # add updater button only if update avalible
-    updater.add_button_to(oc, PerformUpdate)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
@@ -1469,11 +1463,3 @@ def BackgroundAutoCache():
         pass
 
     return
-
-####################################################################################################
-# preform update
-
-@route(PREFIX + '/performupdate')
-def PerformUpdate():
-
-    return updater.PerformUpdate()
