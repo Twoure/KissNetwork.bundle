@@ -90,7 +90,7 @@ Plans
 ChangeLog
 ---------
 
-**0.05** - 10/26/15 - Improved Metadata & summary.  Added 'Adult' to Prefs, _Top_ list to Cartoon and Drama sections, and Updater from [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/master/Contents/Code/updater.py).  Fixed Cartoon cache time.
+**0.05** - 10/26/15 - Improved Metadata & summary.  Added 'Adult' to Prefs, _Top_ list to Cartoon and Drama sections, and Updater from [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/70d1abc8001962892b2f54afe6252e6be02e7eb7/Contents/Code/updater.py).  Fixed Cartoon cache time.
 
 **0.04** - 10/16/15 - Moved to "Shared Code" for setting headers.  Improved Header Cache times.
 
