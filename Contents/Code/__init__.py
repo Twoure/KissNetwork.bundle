@@ -4,7 +4,7 @@
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
-import sys, shutil, io
+import sys, shutil, io, urllib
 
 # import Shared Service Code
 Test = SharedCodeService.test
@@ -333,14 +333,6 @@ def ValidatePrefs():
 
     Logger('Dict[\'s_opt\'] = %s' %Dict['s_opt'], kind='Info', force=True)
 
-    # setup updater based on prefs
-    if Prefs['dev'] == 'dev':
-        updater.init(repo='Twoure/KissNetwork.bundle', branch='dev')
-    else:
-        updater.init(repo='Twoure/KissNetwork.bundle', branch='master')
-
-    Logger('Github branch for updating = %s' %Prefs['dev'], kind='Info', force=True)
-
     # Check bookmark cache image opt
     # if not cache images then remove any old ones
     # created as Thread so it will run in the background
@@ -419,7 +411,7 @@ def BookmarksSub(type_title, art):
         summary = bookmark['summary']
 
         if summary:
-            summary2 = summary.decode('unicode_escape')
+            summary2 = StringCode(string=summary, code='decode')
         else:
             summary2 = None
 
@@ -447,7 +439,7 @@ def BookmarksSub(type_title, art):
         # gotta send the bookmark somewhere
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
-            title=item_title.decode('unicode_escape'), summary=summary2, thumb=cover))
+            title=StringCode(string=item_title, code='decode'), summary=summary2, thumb=cover))
     # setup icons depending on platform
     if Client.Platform in LIST_VIEW_CLIENTS and not cover:
         bm_clr_icon = None
@@ -656,11 +648,12 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                     thumb = None
 
                 summary = Regex('(?s)<p>([\r\n].*)</p>').search(title_text)
-                summary = summary.group(1).strip().encode('ascii', 'ignore')
+                summary = summary.group(1).strip()
 
                 item_url_base = m[0].xpath('./a/@href')[0]
-                item_sys_name = item_url_base.rsplit('/')[-1].strip().encode('unicode_escape')
-                item_url_final = base_url + String.Quote(item_url_base)
+                item_sys_name = StringCode(string=item_url_base.rsplit('/')[-1].strip(), code='encode')
+                item_url_final = base_url + StringCode(string=item_url_base, code='encode')
+                Log('\nitem_url_base = %s\nitem_sys_name = %s\nitem_url_final = %s' %(item_url_base, item_sys_name, item_url_final))
 
                 item_title = m[0].xpath('./a/text()')[0].strip()
 
@@ -677,8 +670,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
             item_info = {
                 'item_sys_name': item_sys_name,
-                'item_title': item_title.encode('unicode_escape'),
-                'short_summary': summary,
+                'item_title': StringCode(string=item_title, code='encode'),
+                'short_summary': StringCode(string=summary, code='encode'),
                 'cover_url': thumb,
                 'type_title': type_title,
                 'base_url': base_url,
@@ -718,8 +711,8 @@ def HomePageList(tab, category, base_url, type_title, art):
 
     # scrape home page for Top (Day, Week, and Month) list
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
-        page_node = node.xpath('./a')[1].get('href')
-        item_sys_name = page_node.split('/')[-1]
+        page_node = StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
+        item_sys_name = StringCode(string=page_node.split('/')[-1], code='encode')
         item_title = node.xpath('./a/span[@class="title"]/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
         title2 = '%s | Latest %s' %(item_title, latest)
@@ -729,7 +722,7 @@ def HomePageList(tab, category, base_url, type_title, art):
 
         item_info = {
             'item_sys_name': item_sys_name,
-            'item_title': item_title.encode('unicode_escape'),
+            'item_title': StringCode(string=item_title, code='encode'),
             'short_summary': summary,
             'cover_url': thumb,
             'type_title': type_title,
@@ -757,8 +750,8 @@ def ItemPage(item_info):
     page_url = item_info['page_url']
     art = item_info['art']
 
-    # decode unicode string
-    item_title_decode = item_info['item_title'].decode('unicode_escape')
+    # decode string
+    item_title_decode = StringCode(string=item_title, code='decode')
 
     # setup new title2 for container
     title2 = '%s | %s' % (type_title, item_title_decode)
@@ -845,7 +838,6 @@ def ItemPage(item_info):
 @route(PREFIX + '/itemsubpage', item_info=dict)
 def ItemSubPage(item_info):
     # set variables
-    item_sys_name = item_info['item_sys_name']
     item_title = item_info['item_title']
     type_title = item_info['type_title']
     base_url = item_info['base_url']
@@ -853,8 +845,8 @@ def ItemSubPage(item_info):
     page_category = item_info['page_category']
     art = item_info['art']
 
-    # decode unicode string(s)
-    item_title_decode = item_title.decode('unicode_escape')
+    # decode string(s)
+    item_title_decode = StringCode(string=item_title, code='decode')
 
     # setup title2 for container
     title2 = '%s | %s | %s' % (type_title, item_title_decode, page_category.lower())
@@ -871,7 +863,7 @@ def ItemSubPage(item_info):
 
     try:
         # setup html for parsing
-        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(page_url))
+        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
     except:
         return MessageContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again')
@@ -916,7 +908,7 @@ def ItemSubPage(item_info):
             for x, y in map(None, a, b):
                 video_info = {
                     'date': y,
-                    'title': x[1].encode('unicode_escape'),
+                    'title': StringCode(string=x[1], code='encode'),
                     'video_page_url': x[0]
                     }
 
@@ -945,14 +937,15 @@ def ItemSubPage(item_info):
 @route(PREFIX + '/videodetail', video_info=dict, item_info=dict)
 def VideoDetail(video_info, item_info):
     # set variables
-    title = video_info['title'].decode('unicode_escape')
+    title = StringCode(string=video_info['title'], code='decode')
     date = Datetime.ParseDate(video_info['date'])
     summary = item_info['short_summary']
     if summary:
-        summary = summary.decode('unicode_escape')
+        summary = StringCode(string=summary, code='decode')
     thumb = item_info['cover_url']
     art = item_info['art']
     url = video_info['video_page_url']
+    video_type = video_info['video_type']
 
     oc = ObjectContainer(title2=title, art=R(art))
 
@@ -978,7 +971,7 @@ def VideoDetail(video_info, item_info):
                     """)
 
     # Movie
-    if video_info['video_type'] == 'movie':
+    if video_type == 'movie':
         oc.add(
             MovieObject(
                 title=title,
@@ -988,7 +981,7 @@ def VideoDetail(video_info, item_info):
                 art=R(art),
                 url=url))
     # TV Episode
-    elif video_info['video_type'] == 'episode':
+    elif video_type == 'episode':
         oc.add(
             EpisodeObject(
                 title=title,
@@ -1082,8 +1075,8 @@ def SearchPage(type_title, search_url, art):
             base_url = Test.GetBaseURL(search_url)
             node = html.xpath('//div[@class="barContent"]/div/a')[0]
 
-            item_sys_name = node.get('href').rsplit('/')[-1].strip()
-            item_url = base_url + '/' + type_title + '/' + String.Quote(item_sys_name)
+            item_sys_name = StringCode(string=node.get('href').rsplit('/')[-1].strip(), code='encode')
+            item_url = base_url + '/' + type_title + '/' + StringCode(item_sys_name, code='encode')
             item_title = node.text
             cover_url = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
 
@@ -1092,7 +1085,7 @@ def SearchPage(type_title, search_url, art):
 
             item_info = {
                 'item_sys_name': item_sys_name,
-                'item_title': item_title.encode('unicode_escape'),
+                'item_title': StringCode(string=item_title, code='encode'),
                 'short_summary': None,
                 'cover_url': cover_url,
                 'type_title': type_title,
@@ -1128,15 +1121,16 @@ def AddBookmark(item_info):
     cover_url = item_info['cover_url']
     short_summary = item_info['short_summary']
     page_url = item_info['page_url']
+    base_url = item_info['base_url']
 
     # decode title string
-    item_title_decode = item_title.decode('unicode_escape')
+    item_title_decode = StringCode(string=item_title, code='decode')
 
-    Logger('item to add = %s' %item_sys_name, kind='Info')
+    Logger('item to add = %s | %s' %(item_title_decode, item_sys_name), kind='Info')
 
     try:
         # setup html for parsing
-        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(page_url))
+        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
     except:
         return MessageContainer(header=type_title,
             message='Please wait a second or two while the URL Headers are set, then try again')
@@ -1150,26 +1144,62 @@ def AddBookmark(item_info):
 
     # set full summary
     summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
+    # if summary found in <p> after <p><span>Summary:</span></p>
     if summary:
-        summary = summary[0].text_content().strip()
+        Logger('summary in <p>', kind='Info')
+        p_list = html.xpath('//div[@id="container"]//p')
+        p_num = len(p_list)
+        match = int(0)
+        for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
+            if node.xpath('./span[@class="info"]="Summary:"'):
+                match = int(i) + 1
+                break
+
+        new_p_list = p_list[match:p_num]
+        sum_list = []
+        for node in new_p_list:
+            if node is not None and not node.xpath('.//a'):
+                sum_text = node.text_content().strip()
+                if sum_text:
+                    sum_list.append(sum_text)
+
+        if len(sum_list) > 1:
+            Logger('summary was in %i <p>\'s' %int(len(sum_list)), kind='Info')
+            summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip()
+        else:
+            if sum_list[0]:
+                Logger('summary was in the only <p>', kind='Info')
+                summary = sum_list[0]
+            else:
+                Logger('no summary found in <p>\'s, setting to \"None\"', force=True)
+                summary = None
     else:
         summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
+        # if summary found in <p><span> after <p><span>Summary:</span></p>
         if summary:
+            Logger('summary is in <p><span>', kind='Info')
             summary = summary[0].text_content().strip()
         else:
             summary = html.xpath('//div[@id="container"]//table//td')
+            # if summary found in own <table>
             if summary:
+                Logger('summary is in own <table>', kind='Info')
                 summary = summary[0].text_content().strip()
             else:
                 summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
+                # if summary found in own <div>
                 if summary:
+                    Logger('summary is in own <div>', kind='Info')
                     summary = summary[0].text_content().strip()
-                    # fix string encoding errors before they happen by converting to unicode
-                    summary = summary.encode('unicode_escape')
+                    # fix string encoding errors before they happen by encoding
+                    #summary = StringCode(string=summary, code='encode')
                 else:
+                    Logger('no summary found, setting summary to \"None\"', force=True)
                     summary = None
 
-    Logger('summary = %s' %summary, kind='Debug')
+    if summary:
+        Logger('summary = %s' %summary, kind='Debug')
+        summary = StringCode(string=summary, code='encode')
 
     # setup new bookmark json data to add to Dict
     # Manga cover urls are accessible so no need to store images locally
@@ -1221,14 +1251,15 @@ def AddBookmark(item_info):
                 break
 
         if match:
+            Logger('bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
             return MessageContainer(header=item_title_decode,
-                message='\"%s\" is already in your bookarks.' % item_title_decode)
+                message='\"%s\" is already in your bookmarks.' % item_title_decode)
         # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
         else:
             temp = {}
             temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
             Dict['Bookmarks'][type_title] = temp[type_title]
-            Logger('bookmark list after addition\n%s' % Dict['Bookmarks'], kind='Info')
+            Logger('bookmark \"%s\" has been appended to your %s bookmarks' %(item_title_decode, type_title), kind='Info')
 
             # Update Dict to include new Item
             Dict.Save()
@@ -1239,14 +1270,14 @@ def AddBookmark(item_info):
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({type_title: [new_bookmark]})
-        Logger('bookmark list after addition of new section\n%s' % Dict['Bookmarks'], kind='Info')
+        Logger('bookmark \"%s\" has been created in new %s section in bookmarks' %(item_title_decode, type_title), kind='Info')
 
         # Update Dict to include new Item
         Dict.Save()
 
         # Provide feedback that the Item has been added to bookmarks
         return MessageContainer(header=item_title_decode,
-            message='\"%s\" has been added to your bookmarks.' % item_title)
+            message='\"%s\" has been added to your bookmarks.' % item_title_decode)
 
 ####################################################################################################
 # Removes item from the bookmarks list using the item as a key
@@ -1259,11 +1290,11 @@ def RemoveBookmark(item_info):
     type_title = item_info['type_title']
 
     # decode string
-    item_title_decode = item_title.decode('unicode_escape')
+    item_title_decode = StringCode(string=item_title, code='decode')
 
     # index 'Bookmarks' list
     bm = Dict['Bookmarks'][type_title]
-    Logger('boomarks = %s' %bm)
+    Logger('bookmarks = %s' %bm)
     Logger('bookmark lenght = %s' %len(bm))
     for i in xrange(len(bm)):
         # remove item's data from 'Bookmarks' list
@@ -1278,12 +1309,11 @@ def RemoveBookmark(item_info):
 
     # update Dict, and debug log
     Dict.Save()
-    Logger('\"%s\" has been removed from Bookmark List' % item_title_decode)
-    Logger('bookmark list after removal\n%s' % Dict['Bookmarks'])
+    Logger('\"%s\" has been removed from Bookmark List' % item_title_decode, kind='Info')
 
     if len(bm) == 0:
         # if the last bookmark was removed then clear it's bookmark section
-        Logger('%s bookmarks was the last, so removed %s bookmark section' %(item_title_decode, type_title), force=True)
+        Logger('%s bookmark was the last, so removed %s bookmark section' %(item_title_decode, type_title), force=True)
         return ClearBookmarks(type_title)
     else:
         # Provide feedback that the Item has been removed from the 'Bookmarks' list
@@ -1304,7 +1334,7 @@ def ClearBookmarks(type_title):
 
         # delete 'Bookmarks' section from Dict
         del Dict['Bookmarks']
-        Logger('Bookmarks section cleared')
+        Logger('Entire Bookmark Dict Removed')
     else:
         if not type_title == 'Manga' and Prefs['cache_covers']:
             for bookmark in Dict['Bookmarks'][type_title]:
@@ -1312,8 +1342,7 @@ def ClearBookmarks(type_title):
 
         # delete section 'Anime', 'Manga', 'Cartoon', or 'Drama' from bookmark list
         del Dict['Bookmarks'][type_title]
-        Logger('Bookmark section %s cleared' % type_title)
-        Logger('bookmarks after deletion\n%s' % Dict['Bookmarks'])
+        Logger('\"%s\" Bookmark Section Cleared' % type_title)
 
     Dict['Bookmark_Deleted'] = {'bool': True, 'type_title': type_title}
     status = Dict['Bookmark_Deleted']
@@ -1426,6 +1455,19 @@ def CoverImageFileExist(image_file):
         return False
 
 ####################################################################################################
+# handle string coding
+
+@route(PREFIX + '/string-code', string=str, code=str)
+def StringCode(string, code):
+    if code == 'encode':
+        string_code = urllib.quote(string.encode('utf8'))
+    elif code == 'decode':
+        # Â artifact in Windows OS, don't know why, think it has to do with the Dict protocall
+        string_code = urllib.unquote(string).decode('utf8').replace('Â', '')
+
+    return string_code
+
+####################################################################################################
 # auto cache headers
 
 @route(PREFIX + '/auto-cache')
@@ -1433,10 +1475,10 @@ def BackgroundAutoCache():
     # setup urls for setting headers
     url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
     if not Dict['First Headers Cached']:
-        Logger("Running Background Auto-Cache.", force=True)
+        Logger('\n----------Running Background Auto-Cache----------', force=True)
 
         if Core.storage.file_exists(Test.LoadHeaderDict(False)):
-            Logger('Header Dictionary already found, writing new Headers to old Dictionary')
+            Logger('\n----------Header Dictionary already found, writing new Headers to old Dictionary----------', force=True)
 
             # get headers for each url
             for url in url_list:
@@ -1447,7 +1489,7 @@ def BackgroundAutoCache():
             Test.CreateHeadersDict()
 
         # check to make sure each section/url has cookies now
-        Logger('all cookies =%s' %Test.LoadHeaderDict(setup=True), force=True)
+        Logger('\n----------All cookies----------\n%s' %Test.LoadHeaderDict(setup=True))
 
         # Setup the Dict and save
         Dict['First Headers Cached'] = True

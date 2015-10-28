@@ -27,6 +27,8 @@ def MetadataObjectForURL(url):
     """
 
     video_href = '/' + url.split('/', 3)[3]
+    video_id = video_href.split('=')[-1]
+    Log('video href = %s | video id = %s' %(video_href, video_id))
     url = url.rsplit('/', 1)[0]
     source_title = 'Kiss' + Test.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
 
@@ -36,7 +38,7 @@ def MetadataObjectForURL(url):
     html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
 
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
-    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[@href="%s"]/../a/text()' %video_href)[0]
+    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "%s")]/../a/text()' %video_id)[0]
     title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
     other_names = html.xpath('//p[span[@class="info"]="Other name:"]/a/text()')
     Log.Debug('other names = %s' %other_names)
@@ -56,28 +58,58 @@ def MetadataObjectForURL(url):
     summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
     # if summary found in <p> after <p><span>Summary:</span></p>
     if summary:
-        # use text_content() to get text after </b>
-        summary = summary[0].text_content().strip()
+        Log.Info('summary in <p>')
+        p_list = html.xpath('//div[@id="container"]//p')
+        p_num = len(p_list)
+        match = int(0)
+        for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
+            if node.xpath('./span[@class="info"]="Summary:"'):
+                match = int(i) + 1
+                break
+
+        new_p_list = p_list[match:p_num]
+        sum_list = []
+        for node in new_p_list:
+            if node is not None and not node.xpath('.//a'):
+                sum_text = node.text_content().strip()
+                if sum_text:
+                    sum_list.append(sum_text)
+
+        if len(sum_list) > 1:
+            Log.Info('summary was in %i <p>\'s' %int(len(sum_list)))
+            summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip()
+        else:
+            if sum_list[0]:
+                Log.Info('summary was in the only <p>')
+                summary = sum_list[0]
+            else:
+                Log.Info('no summary found in <p>\'s, setting to \"None\"')
+                summary = None
     else:
         summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
         # if summary found in <p><span> after <p><span>Summary:</span></p>
         if summary:
+            Log.Info('summary is in <p><span>')
             summary = summary[0].text_content().strip()
         else:
             summary = html.xpath('//div[@id="container"]//table//td')
             # if summary found in own <table>
             if summary:
+                Log.Info('summary is in own <table>')
                 summary = summary[0].text_content().strip()
             else:
                 summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
                 # if summary found in own <div>
                 if summary:
+                    Log.Info('summary is in own <div>')
                     summary = summary[0].text_content().strip()
                 # if no summary found then set to 'None'
                 else:
+                    Log.Info('no summary found, setting summary to \"None\"')
                     summary = None
 
-    Log.Debug('summary = %s' %summary)
+    if summary:
+        Log.Debug('summary = %s' %summary)
 
     # setup MovieObject
     if 'movie' in title.lower() or 'Movie' in genres and not 'episode' in title.lower():
@@ -148,7 +180,7 @@ def MetadataObjectForURL(url):
                 for i, item in enumerate(list(reversed(test))):
                     # get episode id
                     ep_id = int(item.get('href').split('=')[-1])
-                    if int(video_href.split('=')[-1]) == ep_id:
+                    if int(video_id) == ep_id:
                         # add 1 to i since it starts at 0 in list
                         episode_number = int(i) + 1
                         episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(4).lstrip(' -'))
@@ -165,7 +197,7 @@ def MetadataObjectForURL(url):
             for i, item in enumerate(list(reversed(test))):
                 # get episode id
                 ep_id = int(item.get('href').split('=')[-1])
-                if int(video_href.split('=')[-1]) == ep_id:
+                if int(video_id) == ep_id:
                     # add 1 to i since it starts at 0 in list
                     episode_number = int(i) + 1
                     episode_name = 'Episode %i' %episode_number
@@ -324,8 +356,8 @@ def MediaObjectsForURL(url):
         Log.Info('language = Japanese')
         AudioStreamObject.language_code = Locale.Language.Japanese
     else:
-        Log.Info('No Language set')
-        #AudioStreamObject.language_code = Locale.Language.English
+        Log.Info('No Language set. Setting to Unknown')
+        AudioStreamObject.language_code = Locale.Language.Unknown
 
     # create media objects for each video quality
     for node in html.xpath('//select[@id="selectQuality"]/option'):
