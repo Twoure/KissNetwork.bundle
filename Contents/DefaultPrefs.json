@@ -47,12 +47,5 @@
     "label": "Enable Debug Logging",
     "type": "bool",
     "default": "True"
-  },
-  {
-    "id": "dev",
-    "label": "Choose Git Branch",
-    "type": "enum",
-    "values": ["master", "dev"],
-    "default": "master"
   }
 ]
