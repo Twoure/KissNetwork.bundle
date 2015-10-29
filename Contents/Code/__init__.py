@@ -30,29 +30,29 @@ ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri']
 # KissAnime
 ANIME_BASE_URL = 'http://kissanime.com'
 ANIME_SEARCH_URL = ANIME_BASE_URL + '/Search/Anime?keyword=%s'
-ANIME_ART = 'art-anime.png'
+ANIME_ART = 'art-anime.jpg'
 ANIME_ICON = 'icon-anime.png'
 
 # KissAsian
 ASIAN_BASE_URL = 'http://kissasian.com'
 ASIAN_SEARCH_URL = ASIAN_BASE_URL + '/Search/Drama?keyword=%s'
-ASIAN_ART = 'art-drama.png'
+ASIAN_ART = 'art-drama.jpg'
 ASIAN_ICON = 'icon-drama.png'
 
 # KissCartoon
 CARTOON_BASE_URL = 'http://kisscartoon.me'
 CARTOON_SEARCH_URL = CARTOON_BASE_URL + '/Search/Cartoon?keyword=%s'
-CARTOON_ART = 'art-cartoon.png'
+CARTOON_ART = 'art-cartoon.jpg'
 CARTOON_ICON = 'icon-cartoon.png'
 
 # KissManga
 MANGA_BASE_URL = 'http://kissmanga.com'
 MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
-MANGA_ART = 'art-manga.png'
+MANGA_ART = 'art-manga.jpg'
 MANGA_ICON = 'icon-manga.png'
 
 # set background art and icon defaults
-MAIN_ART = 'art-main.png'
+MAIN_ART = 'art-main.jpg'
 MAIN_ICON = 'icon-default.png'
 NEXT_ICON = 'icon-next.png'
 CATEGORY_VIDEO_ICON = 'icon-video.png'
@@ -96,7 +96,7 @@ def Start():
 ####################################################################################################
 # Create the main menu
 
-@handler(PREFIX, TITLE, thumb='icon-default.png', art='art-main.png')
+@handler(PREFIX, TITLE, MAIN_ICON, MAIN_ART)
 def MainMenu():
     oc = ObjectContainer(title2=TITLE, no_cache=True)
 
@@ -361,11 +361,11 @@ def BookmarksMain(title, status):
     else:
         for key in sorted(Dict['Bookmarks'].keys()):
             if not key == 'Drama':
-                art = 'art-%s.png' %key.lower()
+                art = 'art-%s.jpg' %key.lower()
                 thumb = 'icon-%s.png' %key.lower()
                 prefs_name = 'kiss%s' %key.lower()
             else:
-                art = 'art-drama.png'
+                art = 'art-drama.jpg'
                 thumb = 'icon-drama.png'
                 prefs_name = 'kissasian'
 
@@ -1023,7 +1023,7 @@ def Search(query=''):
             thumb = ASIAN_ICON
             prefs_name = 'kissasian'
         else:
-            art = 'art-%s.png' % type_title.lower()
+            art = 'art-%s.jpg' % type_title.lower()
             thumb = 'icon-%s.png' % type_title.lower()
             prefs_name = 'kiss%s' %type_title.lower()
 
