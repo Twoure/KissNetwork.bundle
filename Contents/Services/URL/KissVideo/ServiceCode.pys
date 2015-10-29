@@ -245,7 +245,8 @@ def MetadataObjectForURL(url):
                         season_number = int(3)
                     elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
                         season_number = int(4)
-                    elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+                    #elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+                    elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
                         season_nubmer = int(0)
                     # if no season number found then set season to 1
                     else:
@@ -261,7 +262,8 @@ def MetadataObjectForURL(url):
                 season_number = int(3)
             elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
                 season_number = int(4)
-            elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+            #elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+            elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
                 season_number = int(0)
             # if no season number found then set season to 1
             else:
@@ -280,6 +282,9 @@ def MetadataObjectForURL(url):
             # if no show name then return 'Season %i | Episode %i'
             if not ep_test:
                 new_title = 'Season %i | %s' %(season_number, episode_name)
+            # PHT displays season and episode already, so don't include in name
+            elif Client.Platform == 'Plex Home Theater':
+                new_title = ep_test.group(1).lstrip(' |')
             # shorten season and episode to include ep name
             else:
                 new_title = 'S%i | E%i%s' %(season_number, episode_number, ep_test.group(1))

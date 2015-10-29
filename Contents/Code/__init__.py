@@ -964,11 +964,7 @@ def VideoDetail(video_info, item_info):
     if onedrive_test:
         if "onedrive" in onedrive_test[0].get('src'):
             return MessageContainer(header='Error',
-                message=
-                    """
-                    OneDrive Videos Not Yet Supported.
-                    Try another source if avalible.
-                    """)
+                message='OneDrive Videos Not Yet Supported. Try another source if avalible.')
 
     # Movie
     if video_type == 'movie':
