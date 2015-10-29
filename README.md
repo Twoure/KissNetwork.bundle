@@ -10,6 +10,7 @@ Features
 
 - Watch video content across all Kiss sites (quality ranges from 360p to 1080p)
 - Choose which Kiss sites to view content, hide others
+- Option to Block most Adult content
 - Read manga from Kissmanga
 - Create custom Bookmarks
 - Search all Kiss sites for videos/manga
@@ -54,10 +55,12 @@ Known Issues
 - General
   - First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
   - If the headers are not set before Plex Framework tries to scrape the site then an error message will popup saying you need to wait until the headers are set.
-  - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function since it will have to re-cache the Drama section every if 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
+  - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
   - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
+  - Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
 
 - Kiss(anime, asian, cartoon) are all hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
+  - Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
   - Cover art does not load for Videos
     - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
     - I have added a local caching option for video bookmarks to work around cloudflare
@@ -81,23 +84,20 @@ Plans
   - Might look into grouping seasons of the same show for the directory list
   - Try to display cover art for video items.  Not a thumb of the video, kiss sites don't include that data.
   - Implement some kind of Password protection for choosing which sites to display
+  - Updater similar to [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/70d1abc8001962892b2f54afe6252e6be02e7eb7/Contents/Code/updater.py)
+  - Continue Improving Metadata
 
 - Bookmarks
   - Add option to add all seasons at once for a show
   - Group seasons into one show
   - Create separate directories for TV and Movies
-
-Currently Working On
---------------------
-
-- Updater similar to [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/70d1abc8001962892b2f54afe6252e6be02e7eb7/Contents/Code/updater.py)
-- Better bookmarks, might move to own file
-- Improve Metadata
+  - Might move bookmarks to own file like I did with Header_Dict
 
 ChangeLog
 ---------
 
-**0.05** - 10/28/15 - Improved Metadata & summary.  Added 'Adult' to Prefs and  _Top_ list to Cartoon and Drama sections.  Fixed Cartoon cache time.
+**0.05** - 10/29/15 - Improved Metadata & summary.  Added 'Adult' to Prefs and  _Top_ list to Cartoon and Drama sections.  Fixed Cartoon cache time.
+- **Note** Due to a string encode/decode error you will have to **Clear All Bookmarks** before updating from **0.04** to **0.05**.
 
 **0.04** - 10/16/15 - Moved to "Shared Code" for setting headers.  Improved Header Cache times.
 
