@@ -100,26 +100,30 @@ def GetHeadersForURL(url):
     test = None
     header_data = LoadHeaderDict(True)
 
-    # Update Header Dictionary
-    cachetime = Datetime.ParseDate(header_data[type_title]['date'])
-    deltatime = current_datetime - cachetime
+    if len(header_data) > 1:
+        # Update Header Dictionary
+        cachetime = Datetime.ParseDate(header_data[type_title]['date'])
+        deltatime = current_datetime - cachetime
 
-    if deltatime >= time_constants[type_title]:
-        Log.Info('\n----------Time to update %s cookies----------' %type_title)
+        if deltatime >= time_constants[type_title]:
+            Log.Info('\n----------Time to update %s cookies----------' %type_title)
 
-        cookie_string = cfscrape.get_cookie_string(url=base_url, user_agent=USER_AGENT)
-        header_data.update({
-            type_title: {
-                'cookie': cookie_string[0], 'user-agent': cookie_string[1],
-                'referer': base_url, 'date': str(Datetime.Now())}})
+            cookie_string = cfscrape.get_cookie_string(url=base_url, user_agent=USER_AGENT)
+            header_data.update({
+                type_title: {
+                    'cookie': cookie_string[0], 'user-agent': cookie_string[1],
+                    'referer': base_url, 'date': str(Datetime.Now())}})
 
-        Log.Info('\n----------Updated %s Header to----------\n%s\n----------' %(type_title, header_data[type_title]))
+            Log.Info('\n----------Updated %s Header to----------\n%s\n----------' %(type_title, header_data[type_title]))
 
-        # update header dict
-        SaveHeaderDict(header_data)
-        Log.Info('\n----------New Cookies saved for %s Header----------' %base_url)
+            # update header dict
+            SaveHeaderDict(header_data)
+            Log.Info('\n----------New Cookies saved for %s Header----------' %base_url)
+        else:
+            Log.Debug('Time left until %s cookies need to be updated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
     else:
-        Log.Debug('Time left until %s cookies need to be updated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
+        CreateHeadersDict()
+        header_data = LoadHeaderDict(True)
 
     # setup headers to return, do not want date in header field
     headers_to_return = {
@@ -166,7 +170,7 @@ def LoadHeaderDict(setup=bool):
         else:
             Log.Debug('header dict file not found, creating a new one and loading it in json format')
             data = {
-                'Test': {
+                'Anime': {
                     'cookie': 'test', 'user-agent': 'test',
                     'date': 'test', 'referer': 'test'
                     }

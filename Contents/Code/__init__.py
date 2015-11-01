@@ -4,7 +4,7 @@
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framwork
-import sys, shutil, io, urllib
+import os, sys, shutil, io, urllib
 
 # import Shared Service Code
 Test = SharedCodeService.test
@@ -1473,7 +1473,7 @@ def BackgroundAutoCache():
     if not Dict['First Headers Cached']:
         Logger('\n----------Running Background Auto-Cache----------', force=True)
 
-        if Core.storage.file_exists(Test.LoadHeaderDict(False)):
+        if os.path.isfile(Test.LoadHeaderDict(False)):
             Logger('\n----------Header Dictionary already found, writing new Headers to old Dictionary----------', force=True)
 
             # get headers for each url
