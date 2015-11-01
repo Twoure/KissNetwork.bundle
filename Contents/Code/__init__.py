@@ -495,7 +495,7 @@ def GenreList(url, title, art):
         # formate url response into html for xpath
         html = HTML.ElementFromURL(genre_url, headers=Test.GetHeadersForURL(genre_url))
     except:
-        return MessageContainer(header=title,
+        return MessageContainer(header='Warning',
             message='Please wait a second or two while the URL Headers are set, then try again')
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
@@ -536,7 +536,7 @@ def CountryList(url, title, art):
     try:
         html = HTML.ElementFromURL(country_url, headers=Test.GetHeadersForURL(country_url))
     except:
-        return MessageContainer(header=title,
+        return MessageContainer(header='Warning',
             message='Please wait a second or two while the URL Headers are set, then try again')
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
@@ -706,7 +706,7 @@ def HomePageList(tab, category, base_url, type_title, art):
     try:
         html = HTML.ElementFromURL(base_url, headers=Test.GetHeadersForURL(base_url))
     except:
-        return MessageContainer(header=type_title,
+        return MessageContainer(header='Warning',
             message='Please wait a second or two while the URL Headers are set, then try again')
 
     # scrape home page for Top (Day, Week, and Month) list
@@ -761,7 +761,7 @@ def ItemPage(item_info):
     try:
         html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
     except:
-        return MessageContainer(header=type_title,
+        return MessageContainer(header='Warning',
             message='Please wait a second or two while the URL Headers are set, then try again')
 
     # Check for Adult content, block if Prefs set.
@@ -865,7 +865,7 @@ def ItemSubPage(item_info):
         # setup html for parsing
         html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
     except:
-        return MessageContainer(header=type_title,
+        return MessageContainer(header='Warning',
             message='Please wait a second or two while the URL Headers are set, then try again')
 
     # episode_list_node
@@ -955,7 +955,7 @@ def VideoDetail(video_info, item_info):
         # setup html for parsing
         html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
     except:
-        return MessageContainer(header=type_title,
+        return MessageContainer(header='Warning',
             message='Please wait a second or two while the URL Headers are set, then try again')
 
     # test if video link is hosted on OneDrive
