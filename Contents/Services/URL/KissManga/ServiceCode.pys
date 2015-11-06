@@ -51,6 +51,7 @@ def GetPhotos(url):
             if "lstImages" in javatext:
                 # then do a regex search to pull out relevant text
                 m = Regex('(?s)lstImages\.push\(\"([\S].*)\"\);').search(javatext).group(0)
+                break
 
     # then split the string by the ';' to get each relevant line in an array
     image_lines = m.rsplit(';')
