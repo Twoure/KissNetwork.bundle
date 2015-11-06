@@ -32,6 +32,12 @@
   },
   {
     "id": "cache_covers",
+    "label": "Cache All Covers Locally",
+    "type": "bool",
+    "default": "False"
+  },
+  {
+    "id": "cache_bookmark_covers",
     "label": "Cache Bookmark Covers Locally",
     "type": "bool",
     "default": "False"
@@ -39,6 +45,12 @@
   {
     "id": "adult",
     "label": "Allow Adult Content",
+    "type": "bool",
+    "default": "False"
+  },
+  {
+    "id": "devtools",
+    "label": "Enable Developer Tools",
     "type": "bool",
     "default": "False"
   },
