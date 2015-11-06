@@ -1,0 +1,122 @@
+#!/usr/bin/env python
+
+"""
+KissNetwork shared code
+Setup Domain names dynamically
+"""
+
+# import section(s) not included in Plex Plug-In Framwork
+import sys, os, io, json
+
+# constants
+BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
+MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Modules')
+SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork')
+DOMAIN_FILE = os.path.join(SUPPORT_PATH, 'Domain_Dict')
+
+USER_AGENT = (
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
+    'AppleWebKit/537.36 (KHTML, like Gecko) '
+    'Chrome/31.0.1650.63 Safari/537.36'
+    )
+
+# add custom modules to python path
+if MODULE_PATH not in sys.path:
+    sys.path.append(MODULE_PATH)
+    Log.Debug('\n----------\n%s\n---^^^^---added to sys.path---^^^^---\n----------By domain.pys----------' % MODULE_PATH)
+
+# Import cfscrape from MODULE_PATH
+import requests
+
+####################################################################################################
+def SetDomainURL(string, domain=None, count=0):
+    """
+    Get the domain url dynamically
+    Sites like the Kiss Sites sometimes change thier domain names
+    This will find the new domain and return it
+    """
+
+    Log('string = %s' %string)
+
+    if string == 'anime':
+        test_one = 'http://kissanime.com'
+    elif string == 'asian':
+        test_one = 'http://kissasian.com'
+    elif string == 'cartoon':
+        test_one = 'http://kisscartoon.me'
+    elif string == 'manga':
+        test_one = 'http://kissmanga.com'
+    elif string == 'retry':
+        test_one = domain
+
+    r = requests.get(test_one, headers={'user-agent': USER_AGENT}).headers
+    Log('headers = %s' %str(r))
+    count += 1
+    data = r
+    for item in data['set-cookie'].split(';'):
+        if 'domain' in item:
+            r_domain = 'http://' + item.split('=')[1].lstrip('.')
+            if r_domain == test_one:
+                Log('Domain %s is the same as original %s' %(r_domain, test_one))
+                type_title = GetTypeTitle(test_one)
+                Log('Setting %s domain to %s' %(type_title, test_one))
+                return test_one
+            elif count < 3:
+                Log('Domain %s is different from original %s' %(r_domain, test_one))
+                Log('Try %i of 3' %count)
+                return SetDomainURL(string='retry', domain=r_domain, count=count)
+
+    if not r_domain:
+        Log.Critical('Cannot find domain for %s' %string.title())
+        return
+
+####################################################################################################
+def GetTypeTitle(url):
+    """ Get type title from URL """
+
+    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct type_title
+    if type_title == 'Asian':
+        type_title = 'Drama'
+
+    return type_title
+
+####################################################################################################
+def SaveDomainDict(content=dict):
+    """ Save Domains to file json file """
+
+    Log.Debug('Saving Domains to file')
+
+    with io.open(DOMAIN_FILE, 'wb') as f:
+        json.dump(content, f, indent=4, sort_keys=True, separators=(',', ': '))
+
+    Log.Debug('Domain Dictionary file has been saved')
+
+    return
+
+####################################################################################################
+def CreateDomainDict():
+    """setup the domain dict"""
+
+    setup_list = ['anime', 'asian', 'cartoon', 'manga']
+    for i, item in enumerate(setup_list):
+        if i == 0:
+            temp_dict = {item.title(): SetDomainURL(item)}
+        else:
+            temp_dict.update({item.title(): SetDomainURL(item)})
+
+    return SaveDomainDict(temp_dict)
+
+####################################################################################################
+def LoadDomainDict():
+    """load domain dict to json format string"""
+
+    if os.path.isfile(DOMAIN_FILE):
+        Log.Info('loading domain dict in json format')
+        with io.open(DOMAIN_FILE) as data_file:
+            data = json.load(data_file)
+
+        return data
+    else:
+        CreateDomainDict()
+        return LoadDomainDict()
