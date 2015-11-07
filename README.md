@@ -121,7 +121,7 @@ ChangeLog
 - **NOTE:** Kissanime.com changed to Kissanime.to You will need to Reset your Header_Dict. Follow **Operation** above for usage.
 
 **0.05** - 10/29/15 - Improved Metadata & summary.  Added 'Adult' to Prefs and  _Top_ list to Cartoon and Drama sections.  Fixed Cartoon cache time.
-- **Note** Due to a string encode/decode error you will have to **Clear All Bookmarks** before updating from **0.04** to **0.05**.
+- **NOTE:** Due to a string encode/decode error you will have to **Clear All Bookmarks** before updating from **0.04** to **0.05**.
 
 **0.04** - 10/16/15 - Moved to "Shared Code" for setting headers.  Improved Header Cache times.
 
