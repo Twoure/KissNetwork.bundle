@@ -61,21 +61,18 @@ System Requirements
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
     - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 
----
 - Tested Working:
   - Linux
     - PMS version 0.9.12.13
   - Windows 7 & 10
     - PMS version 0.9.12.13
 
----
 #####**Plex Clients:**
 - Tested Working:
   - Plex Media Center / Home Theater (Ubuntu & Windows 7 & 10, same as above)
   - Android (4.4.2)
   - Plex/Web (2.4.23)
   - Chromecast (Videos)
-
 - Not Working:
   - Chromecast (Pictures)
 
