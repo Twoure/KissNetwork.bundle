@@ -57,10 +57,10 @@ System Requirements
 -------------------
 
 #####**Plex Media Server**
-- JavaScript Runtime Required: Recomended Node.js or V8 (with or without the PyV8 module)
+- JavaScript Runtime Required:
+    - Recomended Node.js or V8 (with or without the PyV8 module)
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
     - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
-
 - Tested Working:
   - Linux
     - PMS version 0.9.12.13
