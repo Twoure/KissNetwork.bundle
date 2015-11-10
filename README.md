@@ -31,8 +31,10 @@ Operation
 #####**Cache Bookmark Covers Locally**
 - If enabled AND "Cache All Covers Locally" is False, will download cover images and only display them in your "My Bookmarks" list.
 - If disabled AND 'Cache All Covers Locally" is False, will delete all bookmarked covers from computer.
+
 #####**Allow Adult Content**
 - Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
+
 #####**Enable Developer Tools**
 - Hide/Un-Hide Developer Tools Menu located in "About / Help" section
 
@@ -54,28 +56,28 @@ Operation
 System Requirements
 -------------------
 
-- **Plex Media Server**
+#####**Plex Media Server**
+- JavaScript Runtime Required: Recomended Node.js or V8 (with or without the PyV8 module)
+    - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
+    - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 
-  - Tested Working:
-    - Linux
-      - PMS version 0.9.12.13
-      - [Ubuntu 14.04 x86_64 Linux 3.13.0-63-generic](http://i.imgur.com/ZiO7htR.png)
-        - Installation of a Javascript runtime may be required
-        - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
-        - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
-    - Windows 7 & 10
-      - PMS version 0.9.12.13
+---
+- Tested Working:
+  - Linux
+    - PMS version 0.9.12.13
+  - Windows 7 & 10
+    - PMS version 0.9.12.13
 
-- **Plex Clients:**
+---
+#####**Plex Clients:**
+- Tested Working:
+  - Plex Media Center / Home Theater (Ubuntu & Windows 7 & 10, same as above)
+  - Android (4.4.2)
+  - Plex/Web (2.4.23)
+  - Chromecast (Videos)
 
-  - Tested Working:
-    - Plex Media Center / Home Theater (Ubuntu & Windows 7 & 10, same as above)
-    - Android (4.4.2)
-    - Plex/Web (2.4.23)
-    - Chromecast (Videos)
-
-  - Not Working:
-    - Chromecast (Pictures)
+- Not Working:
+  - Chromecast (Pictures)
 
 How To Install
 --------------
@@ -111,17 +113,17 @@ Known Issues
 Plans
 -----
 
-- General
-  - Might look into grouping seasons of the same show for the directory list
-  - Implement some kind of Password protection for choosing which sites to display
-  - Updater similar to [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/70d1abc8001962892b2f54afe6252e6be02e7eb7/Contents/Code/updater.py)
-  - Continue Improving Metadata
+#####General
+- Might look into grouping seasons of the same show for the directory list
+- Implement some kind of Password protection for choosing which sites to display
+- Updater similar to [piplongrun](https://github.com/piplongrun/lmwt-kiss.bundle/blob/70d1abc8001962892b2f54afe6252e6be02e7eb7/Contents/Code/updater.py)
+- Continue Improving Metadata
 
-- Bookmarks
-  - Add option to add all seasons at once for a show
-  - Group seasons into one show
-  - Create separate directories for TV and Movies
-  - Might move bookmarks to own file like I did with Header_Dict
+#####Bookmarks
+- Add option to add all seasons at once for a show
+- Group seasons into one show
+- Create separate directories for TV and Movies
+- Might move bookmarks to own file like I did with Header_Dict
 
 ChangeLog
 ---------
