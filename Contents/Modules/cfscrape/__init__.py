@@ -9,8 +9,10 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
-DEFAULT_USER_AGENT = ("Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
-    "Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36")
+DEFAULT_USER_AGENT = (
+    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0 '
+    'Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36'
+    )
 JS_ENGINE = execjs.get().name
 
 #if not ("Node" in JS_ENGINE or "V8" in JS_ENGINE):

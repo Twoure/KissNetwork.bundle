@@ -27,7 +27,7 @@
       <string>com.plexapp.plugins.kissnetwork</string>
       <key>URLPatterns</key>
       <array>
-        <string>^http://(?:www\.|)kissmanga\.(?:com|me|to)/Manga/.+(?:\?id=\d+)$</string>
+        <string>^http://(?:www\.|)kissmanga\.(?:[^/]+\/)?Manga/.+(?:\?id=\d+)$</string>
       </array>
       <key>TestURLs</key>
       <array>
