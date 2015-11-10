@@ -3,7 +3,7 @@
 """Kissmanga Service code - Gather all image URLs for a Chapter."""
 
 # import Shared Service Code
-import test as Test
+import headers as Headers
 
 ####################################################################################################
 def NormalizeURL(url):
@@ -43,7 +43,7 @@ def GetPhotos(url):
     oc = ObjectContainer()
 
     # get relevant javascript block
-    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
+    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
 
     for java in html.xpath('//script[@type="text/javascript"]'):
         javatext = java.text

@@ -23,10 +23,21 @@ USER_AGENT = (
 # add custom modules to python path
 if MODULE_PATH not in sys.path:
     sys.path.append(MODULE_PATH)
-    Log.Debug('\n----------\n%s\n---^^^^---added to sys.path---^^^^---\n----------By domain.pys----------' % MODULE_PATH)
+    Log.Debug('\n----------\n%s\n---^^^^---added to sys.path---^^^^---\n----------By domain.pys----------' %MODULE_PATH)
 
 # Import cfscrape from MODULE_PATH
 import requests
+
+####################################################################################################
+def GetTypeTitle(url):
+    """ Get type title from URL """
+
+    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct type_title
+    if type_title == 'Asian':
+        type_title = 'Drama'
+
+    return type_title
 
 ####################################################################################################
 def SetDomainURL(string, domain=None, count=0):
@@ -69,17 +80,6 @@ def SetDomainURL(string, domain=None, count=0):
     if not r_domain:
         Log.Critical('Cannot find domain for %s' %string.title())
         return
-
-####################################################################################################
-def GetTypeTitle(url):
-    """ Get type title from URL """
-
-    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct type_title
-    if type_title == 'Asian':
-        type_title = 'Drama'
-
-    return type_title
 
 ####################################################################################################
 def SaveDomainDict(content=dict):

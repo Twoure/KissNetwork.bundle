@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+"""
+KissNetwork shared code.
+Shared common code.
+"""
+
+# import section(s) not included in Plex Plug-In Framwork
+import sys, os, io, json
+import domain as Domain
+
+# constants
+BUNDLE_PATH = Domain.BUNDLE_PATH
+RESOURCES_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Resources')
+MODULE_PATH = Domain.MODULE_PATH
+SUPPORT_PATH = Domain.SUPPORT_PATH
+
+# set constants from shared domain.pys
+Domain_Dict = Domain.LoadDomainDict()
+USER_AGENT = Domain.USER_AGENT
+
+ANIME_BASE_URL = Domain_Dict['Anime']
+ASIAN_BASE_URL = Domain_Dict['Asian']
+CARTOON_BASE_URL = Domain_Dict['Cartoon']
+MANGA_BASE_URL = Domain_Dict['Manga']
+
+BASE_URL_LIST = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
+
+BASE_URL_LIST_T = [
+    ('Anime', ANIME_BASE_URL), ('Drama', ASIAN_BASE_URL),
+    ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL)
+    ]
+
+####################################################################################################
+def GetTypeTitle(url):
+    """ Get type title from URL """
+
+    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+    # correct type_title
+    if type_title == 'Asian':
+        type_title = 'Drama'
+
+    return type_title
+
+####################################################################################################
+def GetBaseURL(url):
+    """ Get base url for headers """
+
+    base_url = 'http://' + url.split('/')[2]
+    type_title = GetTypeTitle(base_url)
+    if not (type_title, base_url) in BASE_URL_LIST_T:
+        for node in BASE_URL_LIST:
+            if node[0] == type_title:
+                base_url = node[1]
+                break
+
+    return base_url
+
+####################################################################################################
+def CoverImageFileExist(image_file):
+    """Check if resource file exist"""
+    if image_file:
+        return os.path.isfile(os.path.join(RESOURCES_PATH, image_file))
+    else:
+        return False

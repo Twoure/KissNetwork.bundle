@@ -6,7 +6,8 @@
 import base64
 
 # import Shared Service Code
-import test as Test
+import headers as Headers
+import common as Common
 
 ########################################################################################
 def NormalizeURL(url):
@@ -30,12 +31,12 @@ def MetadataObjectForURL(url):
     video_id = video_href.split('=')[-1]
     Log('video href = %s | video id = %s' %(video_href, video_id))
     url = url.rsplit('/', 1)[0]
-    source_title = 'Kiss' + Test.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
+    source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
 
     Log.Info('MetadataObjectForURL url = %s' %url)
 
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
+    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
 
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
     title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "%s")]/../a/text()' %video_id)[0]
@@ -351,7 +352,7 @@ def MediaObjectsForURL(url):
     Log.Info('MediaObjectsForURL url = %s' %url)
 
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
+    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
     mo = []
 
     if "(Dub)" in html.xpath('//head/title/text()')[0]:
