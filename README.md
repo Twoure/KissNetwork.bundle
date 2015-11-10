@@ -33,6 +33,7 @@ Operation
 - **Enable Developer Tools**
     - Hide/Un-Hide Developer Tools Menu located in "About / Help" section
 
+---
 - **Developer Tools**
     - **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
     - **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
