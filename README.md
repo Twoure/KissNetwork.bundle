@@ -18,34 +18,38 @@ Features
 Operation
 ---------
 
-- **Sort List by...**
-    - Set list order for "All", "Alphabets", "Genres", and "Movies"
-- **View Kiss(anime, asian, cartoon, manga)**
-    - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
-- **Cache All Covers Locally** (overrides "Cache Bookmark Covers Locally" function)
-    - If enabled, will download and index cover images
-    - If disabled, will remove all downloaded images from computer. If "Cache Bookmark Covers Locally" is True, then bookmark covers will be kept from deletion.
-- **Cache Bookmark Covers Locally**
-    - If enabled AND "Cache All Covers Locally" is False, will download cover images and only display them in your "My Bookmarks" list.
-    - If disabled AND 'Cache All Covers Locally" is False, will delete all bookmarked covers from computer.
-- **Allow Adult Content**
-    - Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
-- **Enable Developer Tools**
-    - Hide/Un-Hide Developer Tools Menu located in "About / Help" section
+#####**Sort List by...**
+- Set list order for "All", "Alphabets", "Genres", and "Movies"
+
+#####**View Kiss(anime, asian, cartoon, manga)**
+- If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
+
+#####**Cache All Covers Locally** (overrides "Cache Bookmark Covers Locally" function)
+- If enabled, will download and index cover images
+- If disabled, will remove all downloaded images from computer. If "Cache Bookmark Covers Locally" is True, then bookmark covers will be kept from deletion.
+
+#####**Cache Bookmark Covers Locally**
+- If enabled AND "Cache All Covers Locally" is False, will download cover images and only display them in your "My Bookmarks" list.
+- If disabled AND 'Cache All Covers Locally" is False, will delete all bookmarked covers from computer.
+#####**Allow Adult Content**
+- Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
+#####**Enable Developer Tools**
+- Hide/Un-Hide Developer Tools Menu located in "About / Help" section
 
 ---
-- **Developer Tools**
-    - **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
-    - **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
-    - **Update... :** Same for Drama, Cartoon, and Manga
-    - **Reset Domain_Dict File:** Create backup of old Domain_Dict, then delete current, and write new Domain_Dict with freash domains
-    - **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test. It is testing for a valid JavaScript Runtime
-    - **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
-- **Bookmark Tools** (located in "Enable Developer Tools")
-    - **Toggle Hiding "Clear Bookmarks" Function:** For those of us who accidentally delete our bookmarks but don't mean to
-    - **Reset "All" Bookmarks:** Same as "Clear All Bookmarks"
-    - **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
-    - **Reset... :** Same for Drama, Cartoon, and Manga
+#####**Developer Tools**
+- **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
+- **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
+- **Update... :** Same for Drama, Cartoon, and Manga
+- **Reset Domain_Dict File:** Create backup of old Domain_Dict, then delete current, and write new Domain_Dict with freash domains
+- **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test. It is testing for a valid JavaScript Runtime
+- **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
+
+#####**Bookmark Tools** (located in "Enable Developer Tools")
+- **Toggle Hiding "Clear Bookmarks" Function:** For those of us who accidentally delete our bookmarks but don't mean to
+- **Reset "All" Bookmarks:** Same as "Clear All Bookmarks"
+- **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
+- **Reset... :** Same for Drama, Cartoon, and Manga
 
 System Requirements
 -------------------
