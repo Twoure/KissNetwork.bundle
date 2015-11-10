@@ -7,8 +7,9 @@
 import os, sys, shutil, io, urllib
 
 # import Shared Service Code
-Test = SharedCodeService.test
+Headers = SharedCodeService.headers
 Domain = SharedCodeService.domain
+Common = SharedCodeService.common
 
 # add custom modules to python path
 module_path = Core.storage.join_path(
@@ -32,25 +33,25 @@ LIST_VIEW_CLIENTS = ['Android', 'iOS']
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 
 # KissAnime
-ANIME_BASE_URL = Test.ANIME_BASE_URL
+ANIME_BASE_URL = Common.ANIME_BASE_URL
 ANIME_SEARCH_URL = ANIME_BASE_URL + '/Search/Anime?keyword=%s'
 ANIME_ART = 'art-anime.jpg'
 ANIME_ICON = 'icon-anime.png'
 
 # KissAsian
-ASIAN_BASE_URL = Test.ASIAN_BASE_URL
+ASIAN_BASE_URL = Common.ASIAN_BASE_URL
 ASIAN_SEARCH_URL = ASIAN_BASE_URL + '/Search/Drama?keyword=%s'
 ASIAN_ART = 'art-drama.jpg'
 ASIAN_ICON = 'icon-drama.png'
 
 # KissCartoon
-CARTOON_BASE_URL = Test.CARTOON_BASE_URL
+CARTOON_BASE_URL = Common.CARTOON_BASE_URL
 CARTOON_SEARCH_URL = CARTOON_BASE_URL + '/Search/Cartoon?keyword=%s'
 CARTOON_ART = 'art-cartoon.jpg'
 CARTOON_ICON = 'icon-cartoon.png'
 
 # KissManga
-MANGA_BASE_URL = Test.MANGA_BASE_URL
+MANGA_BASE_URL = Common.MANGA_BASE_URL
 MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
 MANGA_ART = 'art-manga.jpg'
 MANGA_ICON = 'icon-manga.png'
@@ -82,7 +83,7 @@ def Start():
     DirectoryObject.thumb = R(MAIN_ICON)
 
     HTTP.CacheTime = 0
-    HTTP.Headers['User-Agent'] = Test.USER_AGENT
+    HTTP.Headers['User-Agent'] = Common.USER_AGENT
 
     # setup background auto cache of headers
     Dict['First Headers Cached'] = False
@@ -104,9 +105,6 @@ def Start():
             Dict.Save()
             Log.Info('\n----------Caching Headers----------')
             Thread.CreateTimer(5, BackgroundAutoCache)
-
-        # Validate Prefs
-        ValidatePrefs()
     else:
         pass
 
@@ -175,6 +173,7 @@ def MainMenu():
         Dict.Save()
 
     status = Dict['Bookmark_Deleted']
+    Dict.Save()
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
@@ -375,7 +374,7 @@ def About():
     oc = ObjectContainer(title2='About / Help')
 
     # Get Resources Directory Size
-    d = GetDirSize(Test.RESOURCES_PATH)
+    d = GetDirSize(Common.RESOURCES_PATH)
     if d == 'Error':
         cache_string = 'N/A | Removing Files Still'
     else:
@@ -384,10 +383,12 @@ def About():
     if Prefs['devtools']:
         oc.add(DirectoryObject(key=Callback(DevTools),
             title='Developer Tools',
-            summary='WARNING!!\nThis section is for Resetting "Header_Dict", "Domain_Dict", and parts of the Channel\'s "Dict" manually.'))
+            summary='WARNING!!\nThis section is for Resetting "Header_Dict", "Domain_Dict", and parts of the Channel\'s "Dict" manually.\nBookmark Tools include Reseting all or each bookmark section and toggling the "Clear Bookmarks Section" function.'))
 
-    oc.add(DirectoryObject(key=Callback(About), title='Version %s' %VERSION))
-    oc.add(DirectoryObject(key=Callback(About), title=cache_string))
+    oc.add(DirectoryObject(key=Callback(About),
+        title='Version %s' %VERSION, summary='Current Channel Version'))
+    oc.add(DirectoryObject(key=Callback(About),
+        title=cache_string, summary='Number of Images Cached | Total Images Cached Size'))
 
     return oc
 
@@ -401,15 +402,16 @@ def DevTools(file_to_reset=None, header=None, message=None):
 
     if file_to_reset:
         if file_to_reset == 'Header_Dict' or file_to_reset == 'Domain_Dict':
-            Log('\n----------Removing %s File----------' %file_to_reset)
+            Log('\n----------Backing up %s File to %s.backup----------' %(file_to_reset, file_to_reset))
 
             file_path = Core.storage.join_path(Core.storage.data_path, file_to_reset)
             # create backup of file being removed
             Core.storage.copy(file_path, file_path + '.backup')
+            Log('\n----------Removing %s File----------' %file_to_reset)
             Core.storage.remove_tree(file_path)
 
             if file_to_reset == 'Header_Dict':
-                Test.CreateHeadersDict()
+                Headers.CreateHeadersDict()
             elif file_to_reset == 'Domain_Dict':
                 Domain.CreateDomainDict()
 
@@ -417,6 +419,15 @@ def DevTools(file_to_reset=None, header=None, message=None):
             message = 'Reset %s. New values for %s written' %(file_to_reset, file_to_reset)
 
             return DevTools(header='Custom Dict', message=message)
+        elif ( file_to_reset == 'Anime' or file_to_reset == 'Cartoon'
+            or file_to_reset == 'Drama' or file_to_reset == 'Manga' ):
+            Log('\n----------Updating %s Headers in Header_Dict----------' %file_to_reset)
+            for (name, url) in Common.BASE_URL_LIST_T:
+                if name == file_to_reset:
+                    Headers.GetHeadersForURL(url, update=True)
+                    break
+            message = 'Updated %s Headers.' %file_to_reset
+            return DevTools(header='Update Headers', message=message)
         elif file_to_reset == 'cfscrape_test':
             Log('\n----------Deleting cfscrape test key from Channel Dict----------')
 
@@ -446,6 +457,20 @@ def DevTools(file_to_reset=None, header=None, message=None):
                 message = '"Clear Bookmarks" is Hidden Now'
 
             return DevTools(header='Hide BM Clear Opts', message=message)
+        elif file_to_reset == 'resources_cache':
+            Log('\n----------Cleaning Dirty Resources Directory, and deleating Dict Keys if any----------')
+
+            for dirpath, dirnames, filenames in os.walk(Common.RESOURCES_PATH):
+                for f in filenames:
+                    # filter out default files
+                    if not Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
+                        fp = os.path.join(dirpath, f)
+                        Core.storage.remove(fp)
+            if Dict['cover_files']:
+                del Dict['cover_files']
+
+            message = 'Reset Resources Directory, and Deleted Dict[\'cover_files\']'
+            return DevTools(header='Reset Resource Dir', message=message)
     else:
         pass
 
@@ -455,12 +480,27 @@ def DevTools(file_to_reset=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Header_Dict'),
         title='Reset Header_Dict File',
         summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Anime'),
+        title='Update Anime Headers',
+        summary='Update Anime Headers in the "Header_Dict" file Only.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Cartoon'),
+        title='Update Cartoon Headers',
+        summary='Update Cartoon Headers in the "Header_Dict" file Only.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Drama'),
+        title='Update Drama Headers',
+        summary='Update Drama Headers in the "Header_Dict" file Only.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Manga'),
+        title='Update Manga Headers',
+        summary='Update Manga Headers in the "Header_Dict" file Only.'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Domain_Dict'),
         title='Reset Domain_Dict File',
         summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
         title='Reset Dict cfscrape Test Key',
         summary='Delete previous test key so the channel can retest for a valid JavaScript Runtime.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='resources_cache'),
+        title='Reset Resources Directory',
+        summary='Clean Dirty Image Cache in Resources Directory.'))
 
     return oc
 
@@ -657,7 +697,7 @@ def BookmarksSub(type_title, art):
         # if any Prefs set to cache then try and get the thumb
         if Prefs['cache_bookmark_covers'] or Prefs['cache_covers']:
             # check if the thumb is already cached
-            if Test.CoverImageFileExist(cover):
+            if Common.CoverImageFileExist(cover):
                 cover = R(cover)
                 cover_list_bool.append(True)
             # thumb not cached, set thumb to caching cover and save thumb in background
@@ -739,7 +779,7 @@ def GenreList(url, title, art):
     genre_url = url + '/%sList' % title  # setup url for finding current Genre list
 
     # formate url response into html for xpath
-    html = HTML.ElementFromURL(genre_url, headers=Test.GetHeadersForURL(genre_url))
+    html = HTML.ElementFromURL(genre_url, headers=Headers.GetHeadersForURL(genre_url))
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
@@ -777,7 +817,7 @@ def CountryList(url, title, art):
 
     country_url = url + '/DramaList'  # setup url for finding current Country list
 
-    html = HTML.ElementFromURL(country_url, headers=Test.GetHeadersForURL(country_url))
+    html = HTML.ElementFromURL(country_url, headers=Headers.GetHeadersForURL(country_url))
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
 
@@ -839,7 +879,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     Logger('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
     Logger('Category= %s | URL= %s' % (pname, item_url))
 
-    html = HTML.ElementFromURL(item_url, headers=Test.GetHeadersForURL(base_url))
+    html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
 
     pages = "Last Page"
     nextpg_node = None
@@ -848,7 +888,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     if "Search" in pname:
         # The Search result page returnes a long list with no 'next page' option
         # set url back to base url
-        base_url = Test.GetBaseURL(item_url)
+        base_url = Common.GetBaseURL(item_url)
         Logger("Searching for %s" % category)  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
@@ -932,10 +972,15 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             if Prefs['cache_covers']:
                 if cover_file:
                     # check if file already exist
-                    if Test.CoverImageFileExist(cover_file):
+                    if Common.CoverImageFileExist(cover_file) and cover_file in Dict['cover_files']:
                         Logger('cover file name = %s' %cover_file)
                         cover = R(cover_file)
                     # if no file then set thumb to caching cover icon and save thumb
+                    elif Common.CoverImageFileExist(cover_file) and not cover_file in Dict['cover_files']:
+                        Logger('cover file name = %s' %cover_file)
+                        Logger('cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
+                        Dict['cover_files'].update({cover_file: cover_file})
+                        cover = R(cover_file)
                     else:
                         Logger('cover not yet saved, saving %s now' %cover_file)
                         cover = R(CACHE_COVER_ICON)
@@ -965,6 +1010,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             title='Next Page>>', thumb=R(NEXT_ICON)))
 
     if len(oc) > 0:
+        Dict.Save()
         return oc
     else:
         return MessageContainer(header=type_title, message='%s list is empty' %category)
@@ -978,7 +1024,7 @@ def HomePageList(tab, category, base_url, type_title, art):
     main_title = '%s | %s' % (type_title, category)
     oc = ObjectContainer(title2=main_title, art=R(art))
 
-    html = HTML.ElementFromURL(base_url, headers=Test.GetHeadersForURL(base_url))
+    html = HTML.ElementFromURL(base_url, headers=Headers.GetHeadersForURL(base_url))
 
     # scrape home page for Top (Day, Week, and Month) list
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
@@ -1007,7 +1053,7 @@ def HomePageList(tab, category, base_url, type_title, art):
         if 'kiss' in thumb:
             if Prefs['cache_covers']:
                 if cover_file:
-                    if Test.CoverImageFileExist(cover_file):
+                    if Common.CoverImageFileExist(cover_file):
                         Logger('cover file name = %s' %cover_file)
                         cover = R(cover_file)
                     else:
@@ -1050,7 +1096,7 @@ def ItemPage(item_info):
     oc = ObjectContainer(title2=title2, art=R(art))
 
     if not Prefs['adult']:
-        html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
+        html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
 
         # Check for Adult content, block if Prefs set.
         genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
@@ -1150,7 +1196,7 @@ def ItemSubPage(item_info):
     Logger('item sub page url = %s' %page_url)
 
     # setup html for parsing
-    html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
+    html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
 
     # episode_list_node
     episode_list = html.xpath('//table[@class="listing"]/tr/td')
@@ -1236,7 +1282,7 @@ def VideoDetail(video_info, item_info):
     cover_file = item_info['cover_file']
     if Prefs['cache_covers']:
         if cover_file:
-            if Test.CoverImageFileExist(cover_file):
+            if Common.CoverImageFileExist(cover_file):
                 Logger('cover file name = %s' %cover_file)
                 cover = R(cover_file)
             else:
@@ -1253,7 +1299,7 @@ def VideoDetail(video_info, item_info):
     Logger('vido url in video detail section = %s' %url)
 
     # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Test.GetHeadersForURL(url))
+    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
 
     # test if video link is hosted on OneDrive
     # currently the URL Service is not setup to handle OneDrive Links
@@ -1329,7 +1375,7 @@ def Search(query=''):
             Logger('Search url = %s' % search_url_filled)
             Logger('type title = %s' %type_title)
 
-            html = HTML.ElementFromURL(search_url_filled, headers=Test.GetHeadersForURL(search_url))
+            html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
             if html.xpath('//table[@class="listing"]'):
                 oc.add(DirectoryObject(
                     key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
@@ -1352,7 +1398,7 @@ def SearchPage(type_title, search_url, art):
     If normal seach result then send to DirectoryList
     """
 
-    html = HTML.ElementFromURL(search_url, headers=Test.GetHeadersForURL(search_url))
+    html = HTML.ElementFromURL(search_url, headers=Headers.GetHeadersForURL(search_url))
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
@@ -1361,7 +1407,7 @@ def SearchPage(type_title, search_url, art):
         search_match = Regex('var\ path\ =\ (\'Search\')').search(node)
         if not search_match:
             # Send url to 'ItemPage'
-            base_url = Test.GetBaseURL(search_url)
+            base_url = Common.GetBaseURL(search_url)
             node = html.xpath('//div[@class="barContent"]/div/a')[0]
 
             item_sys_name = StringCode(string=node.get('href').rsplit('/')[-1].strip(), code='encode')
@@ -1419,7 +1465,7 @@ def AddBookmark(item_info):
     Logger('item to add = %s | %s' %(item_title_decode, item_sys_name), kind='Info')
 
     # setup html for parsing
-    html = HTML.ElementFromURL(page_url, headers=Test.GetHeadersForURL(base_url))
+    html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
 
     # if no cover url then try and find one on the item page
     if not cover_url:
@@ -1491,11 +1537,14 @@ def AddBookmark(item_info):
     # Option to store covers locally as files
     if Prefs['cache_covers'] or Prefs['cache_bookmark_covers']:
         image_file = cover_url.rsplit('/')[-1]
-        if Test.CoverImageFileExist(image_file):
+        if Common.CoverImageFileExist(image_file):
             pass
         else:
             try:
-                image_file = SaveCoverImage(cover_url)
+                try:
+                    image_file = SaveCoverImage(cover_url)
+                except:
+                    image_file = cover_url.rsplit('/')[-1]
             except:
                 image_file = None
     # still set file name (if can) for later
@@ -1651,7 +1700,7 @@ def CacheCovers():
         # unless Prefs['cache_covers'] is true, then keep cached covers
         if Dict['cover_files']:
             for cover in Dict['cover_files']:
-                Thread.Create(RemoveCoverImage, image_file=Dict['cover_files'][cover])
+                RemoveCoverImage(image_file=Dict['cover_files'][cover])
 
             del Dict['cover_files']
             Dict.Save()
@@ -1659,7 +1708,7 @@ def CacheCovers():
         elif Dict['Bookmarks']:
             for key in Dict['Bookmarks'].keys():
                 for bm in Dict['Bookmarks'][key]:
-                    Thread.Create(RemoveCoverImage, image_file=bm['cover_file'])
+                    RemoveCoverImage(image_file=bm['cover_file'])
 
             Logger('No Dict[\'cover_files\'] found, Removed cached covers using Dict[\'Bookmarks\'] list as key.', kind='Info')
     elif not Prefs['cache_covers'] and Prefs['cache_bookmark_covers']:
@@ -1670,14 +1719,15 @@ def CacheCovers():
             for key in Dict['Bookmarks'].keys():
                 for bm in Dict['Bookmarks'][key]:
                     bookmark_cache.add(bm['cover_file'])
-                    Thread.Create(SaveCoverImage, image_url=bm['cover_url'])
+                    if 'kiss' in bm['cover_url']:
+                        Thread.Create(SaveCoverImage, image_url=bm['cover_url'])
 
         Logger('Caching Bookmark Cover images if they have not been already.', kind='Info')
         if Dict['cover_files']:
             cover_cache = set([c for c in Dict['cover_files']])
             cover_cache_diff = cover_cache.difference(bookmark_cache)
             for cover in cover_cache_diff:
-                Thread.Create(RemoveCoverImage, image_file=Dict['cover_files'][cover])
+                RemoveCoverImage(image_file=Dict['cover_files'][cover])
                 del Dict['cover_files'][cover]
 
             Logger('Removed cached covers using Dict[\'cover_files\'] list as key, and removed Dict[\'cover_files\'] once finished.', kind='Info')
@@ -1687,7 +1737,8 @@ def CacheCovers():
         if Dict['Bookmarks']:
             for key in Dict['Bookmarks'].keys():
                 for bm in Dict['Bookmarks'][key]:
-                    Thread.Create(SaveCoverImage, image_url=bm['cover_url'])
+                    if 'kiss' in bm['cover_url']:
+                        Thread.Create(SaveCoverImage, image_url=bm['cover_url'])
 
         Logger('Caching Bookmark Cover images if they have not been already.', kind='Info')
         Logger('All covers cached set to True.', kind='Info')
@@ -1700,36 +1751,41 @@ def CacheCovers():
 def SaveCoverImage(image_url, count=0):
     """Save image to Cover Image Path and return the file name"""
 
-    url_node = image_url.split('/', 3)
-    base_url = 'http://' + url_node[2]
-    type_title = Test.GetTypeTitle(base_url)
-    # test image url for correct domain
-    if not (type_title, base_url) in Test.BASE_URL_LIST:
-        # set image base url to new domain
-        for tnode in Test.BASE_URL_LIST:
-            if tnode[0] == type_title:
-                base_url = tnode[1]
-                break
+    if 'kiss' in image_url:
+        url_node = image_url.split('/', 3)
+        base_url = 'http://' + url_node[2]
+        type_title = Common.GetTypeTitle(base_url)
+        # test image url for correct domain
+        if not (type_title, base_url) in Common.BASE_URL_LIST_T:
+            # set image base url to new domain
+            for tnode in Common.BASE_URL_LIST_T:
+                if tnode[0] == type_title:
+                    base_url = tnode[1]
+                    break
 
-        Logger('Old %s URL parsed from page! URL Domain changed to %s' %(type_title, base_url), kind='Warn', force=True)
+            Logger('Old %s URL parsed from page! URL Domain changed to %s' %(type_title, base_url), kind='Warn', force=True)
 
-    content_url = base_url + '/' + url_node[3]
+        content_url = base_url + '/' + url_node[3]
+    else:
+        content_url = image_url
 
     image_file = image_url.rsplit('/')[-1]
-
-    path = Core.storage.join_path(Test.RESOURCES_PATH, image_file)
+    path = Core.storage.join_path(Common.RESOURCES_PATH, image_file)
     Logger('image file path = %s' %path)
 
     if not Core.storage.file_exists(path):
-        #r = requests.get(image_url, headers=Test.GetHeadersForURL(image_url), stream=True)
-        r = requests.get(content_url, headers=Test.GetHeadersForURL(content_url), stream=True)
+        if 'kiss' in content_url:
+            r = requests.get(content_url, headers=Headers.GetHeadersForURL(content_url), stream=True)
+        else:
+            r = requests.get(content_url, stream=True)
 
         if r.status_code == 200:
             with io.open(path, 'wb') as f:
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
 
-            Logger('saved image %s in path %s' %(image_file, path))
+            Logger('saved image %s' %image_file)
+            #Logger('saved image %s in path %s' %(image_file, path))
             # create dict for cover files, so we can clear them later
             #   seperate from bookmark covers if need be
             if Dict['cover_files']:
@@ -1737,17 +1793,17 @@ def SaveCoverImage(image_url, count=0):
             else:
                 Dict['cover_files'] = {image_file: image_file}
 
-            Dict.Save()
+            #Dict.Save()
             return image_file
         elif r.status_code == 503 and count < 3:
             count += 1
             timer = float(Util.RandomInt(5,10))
-            Logger('%s error code. Polling site too fast. Waiting 3sec then try again, try up to 3 times. Try %i' %(r.status_code, count), kind='Warn', force=True)
-            Thread.CreateTimer(timer, SaveCoverImage, image_url=content_url, count=count)
+            Logger('%s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i' %(r.status_code, timer, count), kind='Warn', force=True)
+            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
         else:
             Logger('status code for image url = %s' %r.status_code)
             Logger('image url not found | %s' %content_url, force=True, kind='Error')
-            return None
+            return None  #replace with "no image" icon later
     else:
         Logger('file %s already exists' %image_file)
         return image_file
@@ -1757,11 +1813,13 @@ def SaveCoverImage(image_url, count=0):
 @route(PREFIX + '/remove-cover-image')
 def RemoveCoverImage(image_file):
     """Remove Cover Image"""
+    if image_file:
+        path = Core.storage.join_path(Common.RESOURCES_PATH, image_file)
 
-    path = Core.storage.join_path(Test.RESOURCES_PATH, image_file)
-
-    if Core.storage.file_exists(path):
-        Core.storage.remove(path)
+        if Core.storage.file_exists(path):
+            Core.storage.remove(path)
+        else:
+            pass
     else:
         pass
 
@@ -1827,7 +1885,7 @@ def SetUpCFTest():
 
     if not Dict['cfscrape_test']:
         try:
-            cftest = Test.CFTest()
+            cftest = Headers.CFTest()
             Log.Info('\n----------CFTest passed! Aime Cookies:----------\n%s' %cftest)
             Dict['cfscrape_test'] = True
             Dict.Save()
@@ -1855,21 +1913,20 @@ def BackgroundAutoCache():
     url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
     if not Dict['First Headers Cached']:
         Logger('\n----------Running Background Auto-Cache----------', force=True)
-        Log(Core.storage.file_exists(Core.storage.join_path(Core.storage.data_path, 'Header_Dict')))
 
         if Core.storage.file_exists(Core.storage.join_path(Core.storage.data_path, 'Header_Dict')):
             Logger('\n----------Header Dictionary already found, writing new Headers to old Dictionary----------', force=True)
 
             # get headers for each url
             for url in url_list:
-                Test.GetHeadersForURL(url)
+                Headers.GetHeadersForURL(url)
 
         else:
             # Header Dictionary not yet setup, so create it and fill in the data
-            Test.CreateHeadersDict()
+            Headers.CreateHeadersDict()
 
         # check to make sure each section/url has cookies now
-        Logger('\n----------All cookies----------\n%s' %Test.LoadHeaderDict())
+        Logger('\n----------All cookies----------\n%s' %Headers.LoadHeaderDict())
 
         # Setup the Dict and save
         Dict['First Headers Cached'] = True
@@ -1878,13 +1935,13 @@ def BackgroundAutoCache():
     else:
         for url in url_list:
             Logger('\n----------Checking %s headers----------' %url, kind='Info', force=True)
-            Test.GetHeadersForURL(url)
+            Headers.GetHeadersForURL(url)
 
         Logger('\n----------Completed Header Cache Check----------', kind='Info', force=True)
         Logger('\n----------Headers will be cached independently when needed from now on----------', kind='Info', force=True)
         pass
 
-    return
+    return ValidatePrefs()
 
 ####################################################################################################
 
