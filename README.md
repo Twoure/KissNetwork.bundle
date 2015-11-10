@@ -56,20 +56,18 @@ Operation
 System Requirements
 -------------------
 
-#####**Plex Media Server**
+#####**Plex Media Server:**
 - JavaScript Runtime Required:
     - Recomended Node.js or V8 (with or without the PyV8 module)
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
     - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Linux
-    - PMS version 0.9.12.13
-  - Windows 7 & 10
-    - PMS version 0.9.12.13
+  - Ubuntu 14.04 LTS: PMS version 0.9.12.13
+  - Windows 7 & 10: PMS version 0.9.12.13
 
 #####**Plex Clients:**
 - Tested Working:
-  - Plex Media Center / Home Theater (Ubuntu & Windows 7 & 10, same as above)
+  - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
   - Android (4.4.2)
   - Plex/Web (2.4.23)
   - Chromecast (Videos)
@@ -87,25 +85,28 @@ How To Install
 Known Issues
 ------------
 
-- General
-  - Cookie cache times keep changing. I try and keep these up-to-date, untill I create a checker for valid cookie cache times.
-  - First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
-  - If the headers are not set before Plex Framework tries to scrape the site then an error message will popup saying you need to wait until the headers are set.
-  - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
-  - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
-  - Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
+#####General
+- Cookie cache times keep changing. I try and keep these up-to-date, untill I create a checker for valid cookie cache times.
+- First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
+- If the headers are not set before Plex Framework tries to scrape the site then an error message will popup saying you need to wait until the headers are set.
+- Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
+- Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
+- Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
 
-- Kiss(anime, asian, cartoon, manga) are all hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
-  - Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
-  - Cover art does not load for Videos
-    - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
-    - I have added a local caching option for video bookmarks to work around cloudflare
-  - Kissmanga is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
+#####Kiss(anime, asian, cartoon, manga)
+- Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
+- Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
+- Cover art does not load for Videos
+  - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
+  - I have added a local cover image caching option to work around cloudflare
+- Kissmanga is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
+- Cookie timeouts change too often, cannot parse expire time yet
 
-- Chromecast does not work for Photo Albums but does for Videos, don't know why yet.  Assuming it has to do with how the Photo Albums are created.
+#####Chromecast
+- does not work for Photo Albums but does for Videos, don't know why yet.  Assuming it has to do with how the Photo Albums are created.
 
-- Plex Home Theater
-  - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
+#####Plex Home Theater
+- Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
 
 Plans
 -----
