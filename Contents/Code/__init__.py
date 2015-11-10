@@ -1,6 +1,6 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v0.06                                  #
+#                               KissNetwork Plex Channel -- v0.07                                  #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framework
@@ -28,7 +28,7 @@ import requests
 # set global variables
 PREFIX = '/video/kissnetwork'
 TITLE = 'KissNetwork'
-VERSION = '0.06'
+VERSION = '0.07'
 LIST_VIEW_CLIENTS = ['Android', 'iOS']
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 
