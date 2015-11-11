@@ -55,6 +55,22 @@ def MetadataObjectForURL(url):
 
     Log.Debug('\nshow_name_raw | %s\ntitle_raw | %s\ntitle | %s' %(show_name_raw, title_raw, title))
 
+    # setup thumb and art for video
+    cover_url = html.xpath('//head/link[@rel="image_src"]/@href')[0]
+    cover_file = cover_url.rsplit('/')[-1]
+    #time_stamp = Datetime.TimestampFromDatetime(Datetime.Now())
+    #pms normally has a timestamp at end of image request, but don't think need it here.
+    #if channel is acting up then I'll switch back to timestamp version
+    if Common.CoverImageFileExist(cover_file):
+        thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/' + cover_file
+        #thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%i' %(cover_file, time_stamp)
+    else:
+        thumb = None
+    # Get art background
+    art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg' %Common.GetTypeTitle(url).lower()
+    #art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg?t=%i' %(Common.GetTypeTitle(url).lower(), time_stamp)
+
+
     # set full summary
     summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
     # if summary found in <p> after <p><span>Summary:</span></p>
@@ -93,21 +109,33 @@ def MetadataObjectForURL(url):
             Log.Info('summary is in <p><span>')
             summary = summary[0].text_content().strip()
         else:
-            summary = html.xpath('//div[@id="container"]//table//td')
+            summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/table//td')
             # if summary found in own <table>
             if summary:
                 Log.Info('summary is in own <table>')
                 summary = summary[0].text_content().strip()
             else:
-                summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
+                summary = html.xpath('//div[@id="container"]//div[@class="bigBarContainer"]/div[@class="barContent"]/div/div')
                 # if summary found in own <div>
                 if summary:
                     Log.Info('summary is in own <div>')
                     summary = summary[0].text_content().strip()
-                # if no summary found then set to 'None'
                 else:
-                    Log.Info('no summary found, setting summary to \"None\"')
-                    summary = None
+                    summary = html.xpath('//p[span[@class="info"]="Summary:"]')
+                    # summary may be in <p><span>Summary:</span>summary</p>, ie text outside Summary span
+                    if summary:
+                        summary = summary[0].text_content().strip()
+                        test = Regex('(?s)Summary\:.+?([\S].+)').search(summary)
+                        if test:
+                            Log.Info('summary is in <p><span>Summary:</span>summary</p>')
+                            summary = test.group(1).strip()
+                        else:
+                            Log.Info('no summary found, setting summary to \"None\"')
+                            summary = None
+                    else:
+                        # if no summary found then set to 'None'
+                        Log.Info('no summary found, setting summary to \"None\"')
+                        summary = None
 
     if summary:
         Log.Debug('summary = %s' %summary)
@@ -140,6 +168,8 @@ def MetadataObjectForURL(url):
             originally_available_at=date,
             year=year,
             countries=countries,
+            thumb=thumb,
+            art=art,
             summary=summary)
     # setup EpisodeObject
     elif 'episode' in title.lower():
@@ -313,6 +343,8 @@ def MetadataObjectForURL(url):
             index=episode_number,
             tags=other_names,
             originally_available_at=date,
+            thumb=thumb,
+            art=art,
             summary=summary)
     # setup VideoClibObject in case video has no episode or movie data
     else:
@@ -338,6 +370,8 @@ def MetadataObjectForURL(url):
             originally_available_at=date,
             year=year,
             countries=countries,
+            thumb=thumb,
+            art=art,
             summary=summary)
 
 ########################################################################################
