@@ -383,7 +383,7 @@ def About():
     if Prefs['devtools']:
         oc.add(DirectoryObject(key=Callback(DevTools),
             title='Developer Tools',
-            summary='WARNING!!\nThis section is for Resetting "Header_Dict", "Domain_Dict", and parts of the Channel\'s "Dict" manually.\nBookmark Tools include Reseting all or each bookmark section and toggling the "Clear Bookmarks Section" function.'))
+            summary='WARNING!!\nThis section is for Resetting "Header_Dict" (or parts of "Header_Dict"), "Domain_Dict", and parts of the Channel\'s "Dict" manually.\nBookmark Tools include Reseting all or each bookmark section and toggling the "Clear Bookmarks Section" function. Includes function to clean the Resources Directory.'))
 
     oc.add(DirectoryObject(key=Callback(About),
         title='Version %s' %VERSION, summary='Current Channel Version'))
@@ -1216,7 +1216,7 @@ def ItemSubPage(item_info):
 
                 # url for Video/Chapter
                 media_page_url = page_url + '/' + node[0].get('href').rsplit('/')[-1]
-                Logger('%s Page URL = %s' % (s_removed_page_category, media_page_url))
+                #Logger('%s Page URL = %s' % (s_removed_page_category, media_page_url))
 
                 # title for Video/Chapter, cleaned
                 raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_decode, '')
@@ -1224,13 +1224,13 @@ def ItemSubPage(item_info):
                     media_title = raw_title.replace('Watch Online', '').strip()
                 else:
                     media_title = raw_title.replace('Read Online', '').strip()
-                Logger('%s Title = %s' % (s_removed_page_category, media_title))
+                #Logger('%s Title = %s' % (s_removed_page_category, media_title))
 
                 a.append((media_page_url, media_title))
             else:
                 # date Video/Chapter added
                 date = media.text.strip()
-                Logger('date=%s' %date)
+                #Logger('date=%s' %date)
                 b.append(date)
 
         # setup photo/video objects, Service URL's will do the rest
@@ -1423,6 +1423,7 @@ def SearchPage(type_title, search_url, art):
                 'item_title': StringCode(string=item_title, code='encode'),
                 'short_summary': None,
                 'cover_url': cover_url,
+                'cover_file': cover_url.rsplit('/')[-1],
                 'type_title': type_title,
                 'base_url': base_url,
                 'page_url': item_url,
@@ -1512,13 +1513,13 @@ def AddBookmark(item_info):
             Logger('summary is in <p><span>', kind='Info')
             summary = summary[0].text_content().strip()
         else:
-            summary = html.xpath('//div[@id="container"]//table//td')
+            summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/table//td')
             # if summary found in own <table>
             if summary:
                 Logger('summary is in own <table>', kind='Info')
                 summary = summary[0].text_content().strip()
             else:
-                summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/div/div')
+                summary = html.xpath('//div[@id="container"]//div[@class="bigBarContainer"]/div[@class="barContent"]/div/div')
                 # if summary found in own <div>
                 if summary:
                     Logger('summary is in own <div>', kind='Info')
@@ -1526,8 +1527,22 @@ def AddBookmark(item_info):
                     # fix string encoding errors before they happen by encoding
                     #summary = StringCode(string=summary, code='encode')
                 else:
-                    Logger('no summary found, setting summary to \"None\"', force=True)
-                    summary = None
+                    summary = html.xpath('//p[span[@class="info"]="Summary:"]')
+                    # summary may be in <p><span>Summary:</span>summary</p>, ie text outside Summary span
+                    if summary:
+                        summary = summary[0].text_content().strip()
+                        test = Regex('(?s)Summary\:.+?([\S].+)').search(summary)
+                        if test:
+                            Logger('summary is in <p><span>Summary:</span>summary</p>', kind='Info')
+                            summary = test.group(1).strip()
+                        else:
+                            # if no summary found then set to 'None'
+                            Logger('no summary found, setting summary to \"None\"', kind='Info')
+                            summary = None
+                    else:
+                        # if no summary found then set to 'None'
+                        Logger('no summary found, setting summary to \"None\"', kind='Info')
+                        summary = None
 
     if summary:
         Logger('summary = %s' %summary, kind='Debug')
