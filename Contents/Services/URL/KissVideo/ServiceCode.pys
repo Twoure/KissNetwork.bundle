@@ -56,16 +56,22 @@ def MetadataObjectForURL(url):
     Log.Debug('\nshow_name_raw | %s\ntitle_raw | %s\ntitle | %s' %(show_name_raw, title_raw, title))
 
     # setup thumb and art for video
-    cover_url = html.xpath('//head/link[@rel="image_src"]/@href')[0]
-    cover_file = cover_url.rsplit('/')[-1]
+    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
+    if not 'http' in cover_url:
+        Log.Error('cover url not a valid picture url | %s' %cover_url)
+        cover_file = None
+    else:
+        cover_file = cover_url.rsplit('/')[-1]
     #time_stamp = Datetime.TimestampFromDatetime(Datetime.Now())
     #pms normally has a timestamp at end of image request, but don't think need it here.
     #if channel is acting up then I'll switch back to timestamp version
-    if Common.CoverImageFileExist(cover_file):
-        thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/' + cover_file
-        #thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%i' %(cover_file, time_stamp)
-    else:
-        thumb = None
+    if cover_file:
+        if Common.CoverImageFileExist(cover_file):
+            thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/' + cover_file
+            #thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%i' %(cover_file, time_stamp)
+        else:
+            thumb = None
+
     # Get art background
     art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg' %Common.GetTypeTitle(url).lower()
     #art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg?t=%i' %(Common.GetTypeTitle(url).lower(), time_stamp)
@@ -87,16 +93,16 @@ def MetadataObjectForURL(url):
         new_p_list = p_list[match:p_num]
         sum_list = []
         for node in new_p_list:
-            if node is not None and not node.xpath('.//a'):
+            if node is not None:
                 sum_text = node.text_content().strip()
                 if sum_text:
                     sum_list.append(sum_text)
 
         if len(sum_list) > 1:
             Log.Info('summary was in %i <p>\'s' %int(len(sum_list)))
-            summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip()
+            summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip().replace('\n\n\n', '\n')
         else:
-            if sum_list[0]:
+            if len(sum_list) == 1:
                 Log.Info('summary was in the only <p>')
                 summary = sum_list[0]
             else:
