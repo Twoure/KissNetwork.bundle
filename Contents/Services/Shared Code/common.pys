@@ -59,7 +59,37 @@ def GetBaseURL(url):
 ####################################################################################################
 def CoverImageFileExist(image_file):
     """Check if resource file exist"""
+
     if image_file:
         return os.path.isfile(os.path.join(RESOURCES_PATH, image_file))
     else:
         return False
+
+####################################################################################################
+def CorrectCoverImage(string):
+    """Correct Cover Image file name"""
+
+    if string:
+        name, ext = os.path.splitext(string)
+        ext_l = ext.lower()
+
+        if ext_l == '.jpg' or ext_l == '.png' or ext_l == '.gif':
+            string = name + ext_l
+        else:
+            if ext_l == '.jp' or ext_l == '.pn':
+                string = name + ext_l + 'g'
+            elif ext_l == '.j':
+                string = name + ext_l + 'pg'
+            elif ext_l == '.p':
+                string = name + ext_l + 'ng'
+            elif ext_l == '.gi':
+                string = name + ext_l + 'f'
+            elif ext_l == '.g':
+                string = name + ext_l + 'if'
+            else:
+                Log.Error('Content_url not valid picture | %s' %string)
+                string = None
+    else:
+        pass
+
+    return string
