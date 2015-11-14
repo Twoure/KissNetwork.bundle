@@ -454,7 +454,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
 
 ####################################################################################################
 
-@route(PREFIX + 'devtools-headers')
+@route(PREFIX + '/devtools-headers')
 def DevToolsH(title=None, header=None, message=None):
     """Tools to manipulate Headers"""
 
