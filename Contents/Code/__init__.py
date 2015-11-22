@@ -1232,7 +1232,7 @@ def ItemPage(item_info):
         # test if item already in bookmarks
         if type_title in Dict['Bookmarks']:
             for i, category in enumerate(Dict['Bookmarks'][type_title]):
-                Log('bookmarks = %s' %category)
+                #Log('bookmarks = %s' %category)
                 if not item_sys_name == category[type_title] and len(Dict['Bookmarks'][type_title]) != i+1:
                     continue
                 elif item_sys_name == category[type_title]:
