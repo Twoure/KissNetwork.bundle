@@ -1,0 +1,7 @@
+{
+  "title": "KissNetwork",
+
+  "updater.label.updating":     "Updating ...",
+  "updater.label.update-now":   "Update Now",
+  "updater.response.updating":  "Please wait while the channel is updating."
+}
