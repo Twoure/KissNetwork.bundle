@@ -14,6 +14,7 @@ BUNDLE_PATH = Domain.BUNDLE_PATH
 RESOURCES_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Resources')
 MODULE_PATH = Domain.MODULE_PATH
 SUPPORT_PATH = Domain.SUPPORT_PATH
+LIST_VIEW_CLIENTS = ['Android', 'iOS']
 
 # set constants from shared domain.pys
 Domain_Dict = Domain.LoadDomainDict()

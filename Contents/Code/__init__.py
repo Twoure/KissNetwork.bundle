@@ -1,10 +1,10 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v0.07                                  #
+#                               KissNetwork Plex Channel -- v1.0.0                                 #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framework
-import os, sys, shutil, io, urllib
+import os, sys, shutil, io, urllib, updater
 from time import sleep
 
 # import Shared Service Code
@@ -28,9 +28,8 @@ import requests
 
 # set global variables
 PREFIX = '/video/kissnetwork'
-TITLE = 'KissNetwork'
-VERSION = '0.07'
-LIST_VIEW_CLIENTS = ['Android', 'iOS']
+TITLE = L('title')
+VERSION = '1.0.0'
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 
 # KissAnime
@@ -75,8 +74,10 @@ PREFS_ICON = 'icon-prefs.png'
 CACHE_COVER_ICON = 'icon-cache-cover.png'
 ABOUT_ICON = 'icon-about.png'
 
-####################################################################################################
+# setup updater repo and branch
+updater.init(repo = 'Twoure/KissNetwork.bundle', branch = 'master')
 
+####################################################################################################
 def Start():
     ObjectContainer.art = R(MAIN_ART)
     ObjectContainer.title1 = TITLE
@@ -110,7 +111,6 @@ def Start():
         pass
 
 ####################################################################################################
-
 @handler(PREFIX, TITLE, MAIN_ICON, MAIN_ART)
 def MainMenu():
     """Create the Main Menu"""
@@ -135,7 +135,7 @@ def MainMenu():
     oc = ObjectContainer(title2=TITLE, no_cache=True)
 
     # set thumbs based on client
-    if Client.Platform in LIST_VIEW_CLIENTS:
+    if Client.Platform in Common.LIST_VIEW_CLIENTS:
         anime_thumb = None
         anime_art = None
         cartoon_thumb = None
@@ -204,11 +204,11 @@ def MainMenu():
     oc.add(InputDirectoryObject(
         key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
         thumb=search_thumb))
+    updater.add_button_to(oc, PerformUpdate)
 
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/kissanime')
 def KissAnime(url, title, art):
     """Create KissAnime Site Menu"""
@@ -246,7 +246,6 @@ def KissAnime(url, title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/kissasian')
 def KissAsian(url, title, art):
     """Create KissAsian Site Menu"""
@@ -293,7 +292,6 @@ def KissAsian(url, title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/kisscartoon')
 def KissCartoon(url, title, art):
     """Create KissCartoon site Menu"""
@@ -338,7 +336,6 @@ def KissCartoon(url, title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/kissmanga')
 def KissManga(url, title, art):
     """Create KissManga site Menu"""
@@ -367,7 +364,6 @@ def KissManga(url, title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/about')
 def About():
     """Return Resource Directory Size, and KissNetwork's Current Channel Version"""
@@ -394,7 +390,6 @@ def About():
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/devtools')
 def DevTools(file_to_reset=None, header=None, message=None):
     """
@@ -431,6 +426,11 @@ def DevTools(file_to_reset=None, header=None, message=None):
                 message = 'No Dict cfscrape Code Test Key to Remove'
 
             return DevTools(header=header, message=message)
+        elif file_to_reset == 'restart_channel':
+            Log('\n----------Attempting to Restart KissNetwork Channel----------')
+            RestartChannel()
+            message = 'Restarting channel'
+            return DevTools(header=header, message=message)
     else:
         pass
 
@@ -449,11 +449,13 @@ def DevTools(file_to_reset=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
         title='Reset Dict cfscrape Test Key',
         summary='Delete previous test key so the channel can retest for a valid JavaScript Runtime.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='restart_channel'),
+        title='Restart KissNetwork Channel',
+        summary='Should manually Restart the KissNetwork Channel.'))
 
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/devtools-headers')
 def DevToolsH(title=None, header=None, message=None):
     """Tools to manipulate Headers"""
@@ -496,12 +498,11 @@ def DevToolsH(title=None, header=None, message=None):
     for (name, url) in sorted(Common.BASE_URL_LIST_T):
         oc.add(DirectoryObject(key=Callback(DevToolsH, title=name),
             title='Update %s Headers' %name,
-            summary='Update %s Headers in the "Header_Dict" file Only.' %name))
+            summary='Update %s Headers Only in the "Header_Dict" file.' %name))
 
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/devtools-cache')
 def DevToolsC(title=None, header=None, message=None):
     """
@@ -557,7 +558,6 @@ def DevToolsC(title=None, header=None, message=None):
     return oc
 
 ####################################################################################################
-
 def CacheCoverQ():
     """
     Setup CacheAllCovers in a Queried manner
@@ -590,7 +590,6 @@ def CacheCoverQ():
     return
 
 ####################################################################################################
-
 @route(PREFIX + '/devtools-bookmarks')
 def DevToolsBM(title=None, header=None, message=None):
     """
@@ -657,9 +656,8 @@ def DevToolsBM(title=None, header=None, message=None):
     return oc
 
 ####################################################################################################
-
-@route(PREFIX + '/validateprefs')
-def ValidatePrefs():
+@route(PREFIX + '/validateprefs', start=bool)
+def ValidatePrefs(start=False):
     """Set the sorting options for displaying all lists"""
 
     # load prefs into dict for use later
@@ -687,10 +685,9 @@ def ValidatePrefs():
           then delete all cached thumbs and remove Dict['cache_files']
     Created as Thread so it will run in the background
     """
-    Thread.Create(CacheCovers)
+    Thread.Create(CacheCovers, start=start)
 
 ####################################################################################################
-
 @route(PREFIX + '/bookmarks', status=dict)
 def BookmarksMain(title, status):
     """Create Bookmark Main Menu"""
@@ -747,7 +744,6 @@ def BookmarksMain(title, status):
                 message='At least one source must be selected in Preferences to view Bookmarks')
 
 ####################################################################################################
-
 @route(PREFIX + '/bookmarkssub')
 def BookmarksSub(type_title, art):
     """Load Bookmarked items from Dict"""
@@ -762,7 +758,7 @@ def BookmarksSub(type_title, art):
     # Fill in DirectoryObject information from the bookmark list
     # create empty list for testing covers
     cover_list_bool = []
-    for bookmark in sorted(Dict['Bookmarks'][type_title]):
+    for bookmark in sorted(Dict['Bookmarks'][type_title], key=lambda k: k[type_title]):
         item_title = bookmark['item_title']
         summary = bookmark['summary']
 
@@ -784,7 +780,11 @@ def BookmarksSub(type_title, art):
             else:
                 cover_list_bool.append(False)
                 cover = R(CACHE_COVER_ICON)
-                Thread.Create(SaveCoverImage, image_url=cover_url)
+                if len(Dict['Bookmarks'][type_title]) <= 50:
+                    Thread.Create(SaveCoverImage, image_url=cover_url)
+                else:
+                    ftimer = float(Util.RandomInt(0,30)) + Util.Random()
+                    Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=cover_url)
         # no Prefs to cache thumb, set thumb to None
         else:
             cover_list_bool.append(False)
@@ -795,13 +795,30 @@ def BookmarksSub(type_title, art):
             'item_title': item_title,
             'short_summary': summary,
             'cover_url': cover_url,
-            'cover_file': cover_url.rsplit('/')[-1],
+            'cover_file': cover_url.rsplit('/')[-1] if cover_url else None,
             'type_title': type_title,
             'base_url': 'http://' + bookmark['page_url'].rsplit('/')[2],
             'page_url': bookmark['page_url'],
             'art': art}
 
-        # gotta send the bookmark somewhere
+        # get genre info, provide legacy support for older Bookmarks
+        #   by updating
+        if 'genres' in bookmark.keys():
+            genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
+        else:
+            bm_info = item_info.copy()
+            bm_info.update({'type_title': type_title})
+            ftimer = float(Util.RandomInt(0,30)) + Util.Random()
+            Thread.CreateTimer(interval=ftimer, f=UpdateLegacyBookmark, bm_info=bm_info)
+            genres = ['Temp']
+
+        if not Prefs['adult']:
+            matching_list = set(genres) & ADULT_LIST
+            if len(matching_list) > 0:
+                continue
+            else:
+                pass
+
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
             title=StringCode(string=item_title, code='decode'),
@@ -809,7 +826,7 @@ def BookmarksSub(type_title, art):
 
     if Dict['hide_bm_clear'] == 'unhide':
         # setup icons depending on platform and Prefs caching
-        if Client.Platform in LIST_VIEW_CLIENTS and not True in cover_list_bool:
+        if Client.Platform in Common.LIST_VIEW_CLIENTS and not True in cover_list_bool:
             # client in list and no thumbs set for bookmarks, set bookmark clear icon to None
             bm_clr_icon = None
         else:
@@ -826,24 +843,18 @@ def BookmarksSub(type_title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/alphabets')
 def AlphabetList(url, title, art):
     """Create ABC Directory for each kiss site"""
 
     oc = ObjectContainer(title2='%s By #, A-Z' % title, art=R(art))
 
-    # Manually create the '#' Directory
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='0', category='#', base_url=url, type_title=title, art=art),
-        title='#'))
-
-    # Create a list of Directories from A to Z
-    for pname in map(chr, range(ord('A'), ord('Z')+1)):
+    # Create a list of Directories from (#, A to Z)
+    for pname in ['#'] + map(chr, range(ord('A'), ord('Z')+1)):
         oc.add(DirectoryObject(
             key=Callback(DirectoryList,
-                page=1, pname=pname.lower(), category=pname, base_url=url, type_title=title, art=art),
+                page=1, pname=pname.lower() if not pname == '#' else '0',
+                category=pname, base_url=url, type_title=title, art=art),
             title=pname))
 
     Logger('Built #, A-Z... Directories')
@@ -851,7 +862,6 @@ def AlphabetList(url, title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/genres')
 def GenreList(url, title, art):
     """Create Genre Directory for each kiss site"""
@@ -863,34 +873,26 @@ def GenreList(url, title, art):
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
-    # For loop to pull out valid Genres
-    genre_list = set([])
+    # Generate Valid Genres based on Prefs['adult']
     for genre in html.xpath('//div[@class="barContent"]//a'):
         genre_href = genre.get('href')
-        if "Genre" in genre_href and not "Movie" in genre_href:
-            genre_list.add(genre_href)
+        if 'Genre' in genre_href and not 'Movie' in genre_href:
+            if not Prefs['adult']:
+                if genre_href.replace('/Genre/', '') in ADULT_LIST:
+                    continue
+                else:
+                    pass
+            # name used for title2
+            category = html.xpath('//div[@class="barContent"]//a[@href="%s"]/text()' %genre_href)[0].replace('\n', '').strip()
 
-    if not Prefs['adult']:
-        adult_genre_list = set(['/Genre/' + g for g in ADULT_LIST])
-        clean_genre_list = sorted(genre_list.difference(adult_genre_list))
-    else:
-        clean_genre_list = sorted(genre_list)
-
-    for genre in clean_genre_list:
-        # name used internally
-        pname = genre
-        # name used for title2
-        category = html.xpath('//div[@class="barContent"]//a[@href="%s"]/text()' %genre)[0].replace('\n', '').strip()
-
-        oc.add(DirectoryObject(
-            key=Callback(DirectoryList,
-                page=1, pname=pname, category=category, base_url=url, type_title=title, art=art),
-            title=category))
+            oc.add(DirectoryObject(
+                key=Callback(DirectoryList,
+                    page=1, pname=genre_href, category=category, base_url=url, type_title=title, art=art),
+                title=category))
 
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/countries')
 def CountryList(url, title, art):
     """Create Country Directory for KissAsian"""
@@ -915,7 +917,6 @@ def CountryList(url, title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/directory')
 def DirectoryList(page, pname, category, base_url, type_title, art):
     """
@@ -1103,7 +1104,6 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         return MessageContainer(header=type_title, message='%s list is empty' %category)
 
 ####################################################################################################
-
 @route(PREFIX + '/homedirectorylist')
 def HomePageList(tab, category, base_url, type_title, art):
     """KissCartoon and KissAsian have 'Top' list on home page. This returns those list."""
@@ -1171,7 +1171,6 @@ def HomePageList(tab, category, base_url, type_title, art):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/item', item_info=dict)
 def ItemPage(item_info):
     """Create the Media Page with the Video(s)/Chapter(s) section and a Bookmark option Add/Remove"""
@@ -1231,20 +1230,25 @@ def ItemPage(item_info):
     # Test if the Dict does have the 'Bookmarks' section
     if Dict['Bookmarks']:
         # test if item already in bookmarks
-        bm_match = False
         if type_title in Dict['Bookmarks']:
-            for category in Dict['Bookmarks'][type_title]:
-                if item_sys_name == category[type_title]:
-                    bm_match = True
+            for i, category in enumerate(Dict['Bookmarks'][type_title]):
+                Log('bookmarks = %s' %category)
+                if not item_sys_name == category[type_title] and len(Dict['Bookmarks'][type_title]) != i+1:
+                    continue
+                elif item_sys_name == category[type_title]:
+                    # provide a way to remove Item from bookmarks list
+                    oc.add(DirectoryObject(
+                        key=Callback(RemoveBookmark, item_info=item_info),
+                        title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
+                        summary = 'Remove \"%s\" from your Bookmarks list.' % item_title_decode))
                     break  # Stop for loop if match found
-
-        # If Item found in 'Bookmarks'
-        if bm_match:
-            # provide a way to remove Item from bookmarks list
-            oc.add(DirectoryObject(
-                key=Callback(RemoveBookmark, item_info=item_info),
-                title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
-                summary = 'Remove \"%s\" from your Bookmarks list.' % item_title_decode))
+                # Item not in 'Bookmarks' yet, so lets parse it for adding!
+                elif len(Dict['Bookmarks'][type_title]) == i+1:
+                    # provide a way to add Item to the bookmarks list
+                    oc.add(DirectoryObject(
+                        key = Callback(AddBookmark, item_info=item_info),
+                        title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
+                        summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
         # Item not in 'Bookmarks' yet, so lets parse it for adding!
         else:
             # provide a way to add Item to the bookmarks list
@@ -1263,7 +1267,6 @@ def ItemPage(item_info):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/itemsubpage', item_info=dict)
 def ItemSubPage(item_info):
     """Create the Item Sub Page with Video or Chapter list"""
@@ -1357,7 +1360,6 @@ def ItemSubPage(item_info):
         return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/videodetail', video_info=dict, item_info=dict)
 def VideoDetail(video_info, item_info):
     """
@@ -1440,7 +1442,6 @@ def VideoDetail(video_info, item_info):
     return oc
 
 ####################################################################################################
-
 @route(PREFIX + '/search')
 def Search(query=''):
     """Set up Search for kiss(anime, asian, cartoon, manga)"""
@@ -1485,7 +1486,6 @@ def Search(query=''):
             'There are no search results for \"%s\". Try being less specific or make sure at least one source is selected in Preferences.' %query)
 
 ####################################################################################################
-
 @route(PREFIX + '/searchpage')
 def SearchPage(type_title, search_url, art):
     """
@@ -1552,7 +1552,6 @@ def SearchPage(type_title, search_url, art):
             """ %(query, type_title))
 
 ####################################################################################################
-
 @route(PREFIX + '/addbookmark', item_info=dict)
 def AddBookmark(item_info):
     """Adds Item to the bookmarks list"""
@@ -1573,6 +1572,13 @@ def AddBookmark(item_info):
 
     # setup html for parsing
     html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
+
+    # Genres
+    genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
+    if genres:
+        genres = ' '.join([g.replace(' ', '_') for g in genres])
+    else:
+        genres = ''
 
     # if no cover url then try and find one on the item page
     if not cover_url:
@@ -1679,7 +1685,7 @@ def AddBookmark(item_info):
 
     new_bookmark = {
         type_title: item_sys_name, 'item_title': item_title, 'cover_file': image_file,
-        'cover_url': cover_url, 'summary': summary, 'page_url': page_url}
+        'cover_url': cover_url, 'summary': summary, 'genres': genres, 'page_url': page_url}
 
     Logger('new bookmark to add\n%s' % new_bookmark)
 
@@ -1698,32 +1704,28 @@ def AddBookmark(item_info):
     # check if the category key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
     # if so then append new bookmark to one of those categories
     elif type_title in Dict['Bookmarks'].keys():
-        # fail safe for when clients are out of sync and it trys to add
-        # the bookmark in duplicate
-        for bookmark in Dict['Bookmarks'][type_title]:
-            if not bookmark[type_title] == new_bookmark[type_title]:
-                match = False
-            else:
-                match = True
-                break
+        # fail safe for when clients are out of sync and it trys to add the bookmark in duplicate
+        for i, bookmark in enumerate(Dict['Bookmarks'][type_title]):
+            if not bookmark[type_title] == new_bookmark[type_title] and len(Dict['Bookmarks'][type_title]) != i+1:
+                continue
+            # Bookmark already exist, don't add in duplicate
+            elif bookmark[type_title] == new_bookmark[type_title]:
+                Logger('bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
+                return MessageContainer(header=item_title_decode,
+                    message='\"%s\" is already in your bookmarks.' % item_title_decode)
+            # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
+            elif len(Dict['Bookmarks'][type_title]) == i+1:
+                temp = {}
+                temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
+                Dict['Bookmarks'][type_title] = temp[type_title]
+                Logger('bookmark \"%s\" has been appended to your %s bookmarks' %(item_title_decode, type_title), kind='Info')
 
-        if match:
-            Logger('bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
-            return MessageContainer(header=item_title_decode,
-                message='\"%s\" is already in your bookmarks.' % item_title_decode)
-        # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
-        else:
-            temp = {}
-            temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
-            Dict['Bookmarks'][type_title] = temp[type_title]
-            Logger('bookmark \"%s\" has been appended to your %s bookmarks' %(item_title_decode, type_title), kind='Info')
+                # Update Dict to include new Item
+                Dict.Save()
 
-            # Update Dict to include new Item
-            Dict.Save()
-
-            # Provide feedback that the Item has been added to bookmarks
-            return MessageContainer(header=item_title_decode,
-                message='\"%s\" has been added to your bookmarks.' % item_title_decode)
+                # Provide feedback that the Item has been added to bookmarks
+                return MessageContainer(header=item_title_decode,
+                    message='\"%s\" has been added to your bookmarks.' % item_title_decode)
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({type_title: [new_bookmark]})
@@ -1737,7 +1739,6 @@ def AddBookmark(item_info):
             message='\"%s\" has been added to your bookmarks.' % item_title_decode)
 
 ####################################################################################################
-
 @route(PREFIX + '/removebookmark', item_info=dict)
 def RemoveBookmark(item_info):
     """Removes item from the bookmarks list using the item as a key"""
@@ -1757,6 +1758,7 @@ def RemoveBookmark(item_info):
     for i in xrange(len(bm)):
         # remove item's data from 'Bookmarks' list
         if bm[i][type_title] == item_sys_name:
+            # if caching covers, then don't remove cover file
             if Prefs['cache_covers']:
                 bm.pop(i)
             else:
@@ -1779,7 +1781,6 @@ def RemoveBookmark(item_info):
             message='\"%s\" has been removed from your bookmarks.' % item_title_decode)
 
 ####################################################################################################
-
 @route(PREFIX + '/clearbookmarks')
 def ClearBookmarks(type_title):
     """Remove 'Bookmarks' Section(s) from Dict. Note: This removes all bookmarks in list"""
@@ -1813,10 +1814,19 @@ def ClearBookmarks(type_title):
     return BookmarksMain(title='My Bookmarks', status=status)
 
 ####################################################################################################
-
-@route(PREFIX + '/cache-covers')
-def CacheCovers():
+@route(PREFIX + '/cache-covers', start=bool)
+def CacheCovers(start=False):
     """Cache covers depending on prefs settings. Will remove or add covers if it can."""
+
+    if not Dict['cache_covers_key']:
+        Dict['cache_covers_key'] = Prefs['cache_covers']
+        Dict['cache_bookmark_covers_key'] = Prefs['cache_bookmark_covers']
+
+    if (Prefs['cache_bookmark_covers'] == Dict['cache_bookmark_covers_key'] and
+        Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False):
+        Dict.Save()
+        Logger('Skipping Caching Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
+        return
 
     if not Prefs['cache_bookmark_covers'] and not Prefs['cache_covers']:
         # remove any cached covers from Dict['Bookmarks']
@@ -1900,8 +1910,9 @@ def CacheCovers():
     return
 
 ####################################################################################################
-
 def CacheAllCovers(category, qevent, page=1):
+    """Cache All, or any one of the Categories"""
+
     if category == 'Drama':
         ncategory = 'Asian'
     else:
@@ -1948,11 +1959,12 @@ def CacheAllCovers(category, qevent, page=1):
         Dict.Save()
         sleep(5)  # wait 5 seconds before starting next Threaded instance of CacheAllCovers for next Category
         qevent.set()  # set Event object to True for 'for loop' in CacheCoverQ()
-        Log.Info('%s Finished caching covers. Set qevent to %s, so next category can start caching covers.' %(category, qevent.is_set()))
+        Log.Info(
+            '%s Finished caching covers. Set qevent to %s, so next category can start caching covers.'
+            %(category, qevent.is_set()))
         return
 
 ####################################################################################################
-
 @route(PREFIX + '/save-cover-image', count=int)
 def SaveCoverImage(image_url, count=0):
     """Save image to Cover Image Path and return the file name"""
@@ -1969,7 +1981,9 @@ def SaveCoverImage(image_url, count=0):
                     base_url = tnode[1]
                     break
 
-            Logger('Old %s URL parsed from page! URL Domain changed to %s' %(type_title, base_url), kind='Warn', force=True)
+            Logger(
+                'Old %s URL parsed from page! URL Domain changed to %s'
+                %(type_title, base_url), kind='Warn', force=True)
 
         content_url = base_url + '/' + url_node[3]
     else:
@@ -2004,7 +2018,9 @@ def SaveCoverImage(image_url, count=0):
         elif r.status_code == 503 and count < 3:
             count += 1
             timer = float(Util.RandomInt(5,10)) + Util.Random()
-            Logger('%s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i' %(r.status_code, timer, count), kind='Warn', force=True)
+            Logger(
+                '%s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i'
+                %(r.status_code, timer, count), kind='Warn', force=True)
             Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
         else:
             Logger('status code for image url = %s' %r.status_code)
@@ -2015,7 +2031,6 @@ def SaveCoverImage(image_url, count=0):
         return image_file
 
 ####################################################################################################
-
 @route(PREFIX + '/remove-cover-image')
 def RemoveCoverImage(image_file):
     """Remove Cover Image"""
@@ -2032,7 +2047,48 @@ def RemoveCoverImage(image_file):
     return
 
 ####################################################################################################
+def UpdateLegacyBookmark(bm_info=dict):
+    """
+    Update Old Bookmark to new Style of bookmarks.
+    Update includes "Genres" for now, will add more here later if need be
+    """
 
+    type_title = bm_info['type_title']
+    item_title = bm_info['item_title']
+    item_title_decode = StringCode(string=item_title, code='decode')
+    page_url = bm_info['page_url']
+
+    html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(bm_info['base_url']))
+
+    genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
+    if genres:
+        genres = ' '.join([g.replace(' ', '_') for g in genres])
+    else:
+        genres = ''
+
+    new_bookmark = {
+        type_title: bm_info['item_sys_name'], 'item_title': item_title,
+        'cover_file': bm_info['cover_file'], 'cover_url': bm_info['cover_url'],
+        'summary': bm_info['short_summary'], 'genres': genres, 'page_url': page_url}
+
+    bm = Dict['Bookmarks'][type_title]
+    for i in xrange(len(bm)):
+        if bm[i][type_title] == new_bookmark[type_title]:
+            Log.Debug('*' * 80)
+
+            bm[i].update(new_bookmark)
+            Logger('* %s Bookmark \"%s\" Updated' %(type_title, item_title_decode), kind='Info', force=True)
+
+            Log.Debug('* updated bookmark = %s' %bm[i])
+            Log.Debug('*' * 80)
+            break
+
+    # Update Dict to include new Item
+    Dict.Save()
+
+    return
+
+####################################################################################################
 @route(PREFIX + '/string-code', string=str, code=str)
 def StringCode(string, code):
     """Handle String Coding"""
@@ -2046,7 +2102,6 @@ def StringCode(string, code):
     return string_code
 
 ####################################################################################################
-
 @route(PREFIX + '/dirsize')
 def GetDirSize(start_path='.'):
     """Get Directory Size in Megabytes or Gigabytes. Returns String rounded to 3 decimal places"""
@@ -2084,7 +2139,6 @@ def GetDirSize(start_path='.'):
         return 'Error'
 
 ####################################################################################################
-
 @route(PREFIX + '/cftest')
 def SetUpCFTest():
     """setup test for cfscrape"""
@@ -2110,7 +2164,6 @@ def SetUpCFTest():
     return
 
 ####################################################################################################
-
 @route(PREFIX + '/auto-cache')
 def BackgroundAutoCache():
     """Auto Cache Headers"""
@@ -2147,10 +2200,26 @@ def BackgroundAutoCache():
         Logger('\n----------Headers will be cached independently when needed from now on----------', kind='Info', force=True)
         pass
 
-    return ValidatePrefs()
+    return ValidatePrefs(start=True)
 
 ####################################################################################################
+@route(PREFIX + '/update')
+def PerformUpdate():
+    """Setup Updater"""
 
+    return updater.PerformUpdate()
+
+####################################################################################################
+def RestartChannel():
+    """Try to Restart the KissNetwork Channel"""
+
+    try:
+        # touch Contents/Code/__init__.py
+        os.utime(os.path.join(Common.BUNDLE_PATH, 'Contents', 'Code', '__init__.py'), None)
+    except Exception, e:
+        Log.Error(e)
+
+####################################################################################################
 @route(PREFIX + '/logger', force=bool)
 def Logger(message, force=False, kind=None):
     """Setup logging options based on prefs, indirect because it has no return"""
