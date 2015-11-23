@@ -537,7 +537,9 @@ def DevToolsC(title=None, header=None, message=None):
             category = title.split('_')[0]
             Log('\n----------Start Caching all %s Cover Images----------' %category)
 
-            test = Thread.Create(CacheAllCovers, category=category, page=1)
+            qevent = Thread.Event()  # create new Event object
+            qevent.set()
+            test = Thread.Create(CacheAllCovers, category=category, qevent=qevent, page=1)
             Log('\n\n%s\n\n' %test)
             message = 'All %s Cover Images are being Cached' %category
 
@@ -661,8 +663,8 @@ def DevToolsBM(title=None, header=None, message=None):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/validateprefs', start=bool)
-def ValidatePrefs(start=False):
+@route(PREFIX + '/validateprefs', start=bool, skip=bool)
+def ValidatePrefs(start=False, skip=False):
     """Set the sorting options for displaying all lists"""
 
     # load prefs into dict for use later
@@ -690,7 +692,7 @@ def ValidatePrefs(start=False):
           then delete all cached thumbs and remove Dict['cache_files']
     Created as Thread so it will run in the background
     """
-    Thread.Create(CacheCovers, start=start)
+    Thread.Create(CacheCovers, start=start, skip=skip)
 
 ####################################################################################################
 @route(PREFIX + '/bookmarks', status=dict)
@@ -1828,7 +1830,7 @@ def ClearBookmarks(type_title):
 
 ####################################################################################################
 @route(PREFIX + '/cache-covers', start=bool)
-def CacheCovers(start=False):
+def CacheCovers(start=False, skip=True):
     """Cache covers depending on prefs settings. Will remove or add covers if it can."""
 
     if not Dict['cache_covers_key']:
@@ -1836,7 +1838,7 @@ def CacheCovers(start=False):
         Dict['cache_bookmark_covers_key'] = Prefs['cache_bookmark_covers']
 
     if (Prefs['cache_bookmark_covers'] == Dict['cache_bookmark_covers_key'] and
-        Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False):
+        Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False or skip == True):
         Dict.Save()
         Logger('Skipping Caching Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
         return
@@ -2170,9 +2172,11 @@ def BackgroundAutoCache():
 
     if not Dict['patch_anime_domain']:
         start = False
+        skip = True
         ResetCustomDict('Domain_Dict')
         Dict['patch_anime_domain'] = True
     else:
+        skip = False
         start = True
 
     # setup urls for setting headers
@@ -2207,7 +2211,7 @@ def BackgroundAutoCache():
         Logger('\n----------Headers will be cached independently when needed from now on----------', kind='Info', force=True)
         pass
 
-    return ValidatePrefs(start=start)
+    return ValidatePrefs(start=start, skip=skip)
 
 ####################################################################################################
 @route(PREFIX + '/update')
