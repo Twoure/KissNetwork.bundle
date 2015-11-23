@@ -778,7 +778,6 @@ def BookmarksSub(type_title, art):
         cover = Common.CorrectCoverImage(bookmark['cover_file'])
         cover_file = cover
         if bookmark['cover_url'] and 'kiss' in bookmark['cover_url']:
-            Log('* cover_url = %s' %bookmark['cover_url'])
             cover_url = Common.GetBaseURL(bookmark['cover_url']) + '/' + Common.CorrectCoverImage(bookmark['cover_url'].split('/', 3)[3])
         else:
             cover_url = None
@@ -820,6 +819,12 @@ def BookmarksSub(type_title, art):
         #   by updating
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
+            if cover_url:
+                if ('kissanime' in cover_url) and not ('https' in cover_url):
+                    bm_info = item_info.copy()
+                    bm_info.update({'type_title': type_title})
+                    ftimer = float(Util.RandomInt(0,30)) + Util.Random()
+                    Thread.CreateTimer(interval=ftimer, f=UpdateLegacyBookmark, bm_info=bm_info)
         else:
             bm_info = item_info.copy()
             bm_info.update({'type_title': type_title})
@@ -1840,6 +1845,10 @@ def CacheCovers(start=False, skip=True):
     if (Prefs['cache_bookmark_covers'] == Dict['cache_bookmark_covers_key'] and
         Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False or skip == True):
         Dict.Save()
+        # Attempt to update Anime Bookmarks to new domain and genres
+        if skip == True:
+            Thread.Create(BookmarksSub, type_title='Anime', art='anime-art.jpg')
+            Logger('Attempting to update Anime Bookmarks', kind='Debug', force=True)
         Logger('Skipping Caching Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
         return
 
