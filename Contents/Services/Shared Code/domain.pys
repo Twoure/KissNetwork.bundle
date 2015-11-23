@@ -50,7 +50,7 @@ def SetDomainURL(string, domain=None, count=0):
     Log('string = %s' %string)
 
     if string == 'anime':
-        test_one = 'http://kissanime.com'
+        test_one = 'https://kissanime.to'  # updated test to match current site
     elif string == 'asian':
         test_one = 'http://kissasian.com'
     elif string == 'cartoon':
@@ -66,7 +66,7 @@ def SetDomainURL(string, domain=None, count=0):
     data = r
     for item in data['set-cookie'].split(';'):
         if 'domain' in item:
-            r_domain = 'http://' + item.split('=')[1].lstrip('.')
+            r_domain = ('http://' if not 'https' in test_one else 'https://')  + item.split('=')[1].lstrip('.')
             if r_domain == test_one:
                 Log('Domain %s is the same as original %s' %(r_domain, test_one))
                 type_title = GetTypeTitle(test_one)

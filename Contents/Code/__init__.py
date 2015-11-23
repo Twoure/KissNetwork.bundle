@@ -390,6 +390,29 @@ def About():
     return oc
 
 ####################################################################################################
+def ResetCustomDict(file_to_reset):
+    """
+    Reset Cusom Dictionaries
+    Valid for only "Header_Dict" and "Domain_Dict"
+    """
+
+    Log('\n----------Backing up %s File to %s.backup----------' %(file_to_reset, file_to_reset))
+    file_path = Core.storage.join_path(Core.storage.data_path, file_to_reset)
+
+    # create backup of file being removed
+    Core.storage.copy(file_path, file_path + '.backup')
+    Log('\n----------Removing %s File----------' %file_to_reset)
+    Core.storage.remove_tree(file_path)
+    if file_to_reset == 'Domain_Dict':
+        Domain.CreateDomainDict()
+    elif file_to_reset == 'Header_Dict':
+        Headers.CreateHeadersDict()
+
+    Log('\n----------Reset %s----------\n----------New values for %s written to:\n%s' %(file_to_reset, file_to_reset, file_path))
+
+    return file_path
+
+####################################################################################################
 @route(PREFIX + '/devtools')
 def DevTools(file_to_reset=None, header=None, message=None):
     """
@@ -402,16 +425,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
     if file_to_reset:
         header = 'Developer Tools'
         if file_to_reset == 'Domain_Dict':
-            Log('\n----------Backing up %s File to %s.backup----------' %(file_to_reset, file_to_reset))
-            file_path = Core.storage.join_path(Core.storage.data_path, file_to_reset)
-
-            # create backup of file being removed
-            Core.storage.copy(file_path, file_path + '.backup')
-            Log('\n----------Removing %s File----------' %file_to_reset)
-            Core.storage.remove_tree(file_path)
-            Domain.CreateDomainDict()
-
-            Log('\n----------Reset %s----------\n----------New values for %s written to:\n%s' %(file_to_reset, file_to_reset, file_path))
+            ResetCustomDict(file_to_reset)
             message = 'Reset %s. New values for %s written' %(file_to_reset, file_to_reset)
 
             return DevTools(header=header, message=message)
@@ -465,17 +479,8 @@ def DevToolsH(title=None, header=None, message=None):
     if title:
         header = 'Header Tools'
         if title == 'Header_Dict':
-            Log('\n----------Backing up %s File to %s.backup----------' %(title, title))
-            file_path = Core.storage.join_path(Core.storage.data_path, title)
-
-            # create backup of file being removed
-            Core.storage.copy(file_path, file_path + '.backup')
-            Log('\n----------Removing %s File----------' %title)
-            Core.storage.remove_tree(file_path)
-            Headers.CreateHeadersDict()
-
-            Log('\n----------Reset %s----------\n----------New values for %s written to:\n%s' %(title, title, file_path))
-            message = 'Reset %s. New values for %s written' %(title, title)
+            Thread.Create(ResetCustomDict, file_to_reset=title)
+            message = 'Resetting %s. New values for %s will be written soon' %(title, title)
 
             return DevToolsH(header=header, message=message)
         elif ( title == 'Anime' or title == 'Cartoon'
@@ -769,7 +774,12 @@ def BookmarksSub(type_title, art):
 
         # setup cover depending of Prefs
         cover = Common.CorrectCoverImage(bookmark['cover_file'])
-        cover_url = Common.CorrectCoverImage(bookmark['cover_url'])
+        cover_file = cover
+        if bookmark['cover_url'] and 'kiss' in bookmark['cover_url']:
+            Log('* cover_url = %s' %bookmark['cover_url'])
+            cover_url = Common.GetBaseURL(bookmark['cover_url']) + '/' + Common.CorrectCoverImage(bookmark['cover_url'].split('/', 3)[3])
+        else:
+            cover_url = None
         # if any Prefs set to cache then try and get the thumb
         if Prefs['cache_bookmark_covers'] or Prefs['cache_covers']:
             # check if the thumb is already cached
@@ -777,7 +787,7 @@ def BookmarksSub(type_title, art):
                 cover = R(cover)
                 cover_list_bool.append(True)
             # thumb not cached, set thumb to caching cover and save thumb in background
-            else:
+            elif cover_url:
                 cover_list_bool.append(False)
                 cover = R(CACHE_COVER_ICON)
                 if len(Dict['Bookmarks'][type_title]) <= 50:
@@ -785,6 +795,9 @@ def BookmarksSub(type_title, art):
                 else:
                     ftimer = float(Util.RandomInt(0,30)) + Util.Random()
                     Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=cover_url)
+            # No cover url found, Will create thumb for this later
+            else:
+                cover = None
         # no Prefs to cache thumb, set thumb to None
         else:
             cover_list_bool.append(False)
@@ -795,10 +808,10 @@ def BookmarksSub(type_title, art):
             'item_title': item_title,
             'short_summary': summary,
             'cover_url': cover_url,
-            'cover_file': cover_url.rsplit('/')[-1] if cover_url else None,
+            'cover_file': cover_file,
             'type_title': type_title,
-            'base_url': 'http://' + bookmark['page_url'].rsplit('/')[2],
-            'page_url': bookmark['page_url'],
+            'base_url': Common.GetBaseURL(bookmark['page_url']),
+            'page_url': Common.GetBaseURL(bookmark['page_url']) + '/' + bookmark['page_url'].split('/', 3)[3],
             'art': art}
 
         # get genre info, provide legacy support for older Bookmarks
@@ -1970,22 +1983,7 @@ def SaveCoverImage(image_url, count=0):
     """Save image to Cover Image Path and return the file name"""
 
     if 'kiss' in image_url:
-        url_node = image_url.split('/', 3)
-        base_url = 'http://' + url_node[2]
-        type_title = Common.GetTypeTitle(base_url)
-        # test image url for correct domain
-        if not (type_title, base_url) in Common.BASE_URL_LIST_T:
-            # set image base url to new domain
-            for tnode in Common.BASE_URL_LIST_T:
-                if tnode[0] == type_title:
-                    base_url = tnode[1]
-                    break
-
-            Logger(
-                'Old %s URL parsed from page! URL Domain changed to %s'
-                %(type_title, base_url), kind='Warn', force=True)
-
-        content_url = base_url + '/' + url_node[3]
+        content_url = Common.GetBaseURL(image_url) + '/' + image_url.split('/', 3)[3]
     else:
         content_url = image_url
 
@@ -2056,7 +2054,9 @@ def UpdateLegacyBookmark(bm_info=dict):
     type_title = bm_info['type_title']
     item_title = bm_info['item_title']
     item_title_decode = StringCode(string=item_title, code='decode')
-    page_url = bm_info['page_url']
+    base_url = bm_info['base_url']
+    page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
+    cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
 
     html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(bm_info['base_url']))
 
@@ -2068,7 +2068,7 @@ def UpdateLegacyBookmark(bm_info=dict):
 
     new_bookmark = {
         type_title: bm_info['item_sys_name'], 'item_title': item_title,
-        'cover_file': bm_info['cover_file'], 'cover_url': bm_info['cover_url'],
+        'cover_file': bm_info['cover_file'], 'cover_url': cover_url,
         'summary': bm_info['short_summary'], 'genres': genres, 'page_url': page_url}
 
     bm = Dict['Bookmarks'][type_title]
@@ -2168,6 +2168,13 @@ def SetUpCFTest():
 def BackgroundAutoCache():
     """Auto Cache Headers"""
 
+    if not Dict['patch_anime_domain']:
+        start = False
+        ResetCustomDict('Domain_Dict')
+        Dict['patch_anime_domain'] = True
+    else:
+        start = True
+
     # setup urls for setting headers
     url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
     if not Dict['First Headers Cached']:
@@ -2200,7 +2207,7 @@ def BackgroundAutoCache():
         Logger('\n----------Headers will be cached independently when needed from now on----------', kind='Info', force=True)
         pass
 
-    return ValidatePrefs(start=True)
+    return ValidatePrefs(start=start)
 
 ####################################################################################################
 @route(PREFIX + '/update')

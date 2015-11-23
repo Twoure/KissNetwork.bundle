@@ -47,13 +47,15 @@ def GetTypeTitle(url):
 def GetBaseURL(url):
     """ Get base url for headers """
 
-    base_url = 'http://' + url.split('/')[2]
-    type_title = GetTypeTitle(base_url)
+    type_title = GetTypeTitle(url)
+    base_url = ('http://' if not type_title == 'Anime' else 'https://') + url.split('/')[2]
     if not (type_title, base_url) in BASE_URL_LIST_T:
         for node in BASE_URL_LIST:
             if node[0] == type_title:
                 base_url = node[1]
                 break
+
+        Log.Warn('* Old %s URL parsed from page! URL Domain changed to %s' %(type_title, base_url))
 
     return base_url
 

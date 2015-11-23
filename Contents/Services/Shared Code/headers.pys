@@ -30,17 +30,6 @@ def CFTest():
     return str(cookie)
 
 ####################################################################################################
-def GetTypeTitle(url):
-    """ Get type title from URL """
-
-    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct type_title
-    if type_title == 'Asian':
-        type_title = 'Drama'
-
-    return type_title
-
-####################################################################################################
 def CreateHeadersDict():
     """Genreate Header Dict Data, then send to SaveHeaderDict()"""
 
