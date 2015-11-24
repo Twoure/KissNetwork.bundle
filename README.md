@@ -18,7 +18,7 @@ KissNetwork
     - [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally)
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
-  - [About / Help](#about-help)
+  - [About / Help](#about--help)
     - [Developer Tools](#developer-tools)
       - [Bookmark Tools](#bookmark-tools)
       - [Header Tools](#header-tools)
@@ -117,7 +117,7 @@ Current Version: `1.0.0`
 - Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
 
 ##### Enable Developer Tools
-- Hide/Un-Hide Developer Tools Menu located in "About / Help" section
+- Hide/Un-Hide Developer Tools Menu located in [About / Help](#about--help) section
 
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
