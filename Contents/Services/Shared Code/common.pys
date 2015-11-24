@@ -73,6 +73,11 @@ def CorrectCoverImage(string):
     """Correct Cover Image file name"""
 
     if string:
+        if 'kiss' in string and 'http' in string:
+            string = GetBaseURL(string) + '/' + string.split('/', 3)[3]
+        elif 'cdn.myanimelist.net' in string:
+            string = 'http://' + string.split('/', 2)[2]
+
         name, ext = os.path.splitext(string)
         ext_l = ext.lower()
 

@@ -777,8 +777,8 @@ def BookmarksSub(type_title, art):
         # setup cover depending of Prefs
         cover = Common.CorrectCoverImage(bookmark['cover_file'])
         cover_file = cover
-        if bookmark['cover_url'] and 'kiss' in bookmark['cover_url']:
-            cover_url = Common.GetBaseURL(bookmark['cover_url']) + '/' + Common.CorrectCoverImage(bookmark['cover_url'].split('/', 3)[3])
+        if bookmark['cover_url']:
+            cover_url = Common.CorrectCoverImage(bookmark['cover_url'])
         else:
             cover_url = None
         # if any Prefs set to cache then try and get the thumb
@@ -1601,7 +1601,9 @@ def AddBookmark(item_info):
         genres = ''
 
     # if no cover url then try and find one on the item page
-    if not cover_url:
+    if cover_url:
+        cover_url = Common.CorrectCoverImage(cover_url)
+    else:
         try:
             cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
             if not 'http' in cover_url:
@@ -2067,9 +2069,25 @@ def UpdateLegacyBookmark(bm_info=dict):
     item_title_decode = StringCode(string=item_title, code='decode')
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
-    cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
 
     html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(bm_info['base_url']))
+
+    if bm_info['cover_url'] and base_url in bm_info['cover_url']:
+        cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
+    elif base_url in bm_info['cover_url']:
+        try:
+            cover_url = base_url + '/' + Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href').split('/', 3)[3])
+            if not 'http' in cover_url:
+                cover_url = None
+        except:
+            cover_url = None
+    else:
+        try:
+            cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+            if not 'http' in cover_url:
+                cover_url = None
+        except:
+            cover_url = None
 
     genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
     if genres:
