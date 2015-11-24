@@ -1,7 +1,7 @@
 KissNetwork
 ===========
 
-##Table Of Contents
+## Table Of Contents
 - [Introduction](#introduction)
   - [Version](#version)
   - [Features](#features)
@@ -33,21 +33,21 @@ KissNetwork
   - [Bookmarks](#bookmarks)
 - [About](#about)
 
-##Introduction
+## Introduction
 
-This is a plugin that creates a new channel in Plex Media Server to view content from these websites: [Kissanime.com](http://kissanime.com/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), and [Kissmanga.com](http://kissmanga.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
+This is a plugin that creates a new channel in [Plex Media Server](https://plex.tv/) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), and [Kissmanga.com](http://kissmanga.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
 [Table Of Contents](#table-of-contents)
 
-##Version
+## Version
 
 Current Version: `1.0.0`
 
 [Table Of Contents](#table-of-contents)
 
-##Features
+## Features
 
 - Watch video content across all Kiss sites (quality ranges from 360p to 1080p)
 - Choose which Kiss sites to view content, hide others
@@ -58,9 +58,9 @@ Current Version: `1.0.0`
 
 [Table Of Contents](#table-of-contents)
 
-##Channel Support
+## Channel Support
 
-#####**Plex Media Server:**
+##### Plex Media Server:
 - JavaScript Runtime Required:
     - Recomended Node.js or V8 (with or without the PyV8 module)
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
@@ -69,7 +69,7 @@ Current Version: `1.0.0`
   - Ubuntu 14.04 LTS: PMS version 0.9.12.19
   - Windows 7 & 10: PMS version 0.9.12.13
 
-#####**Plex Clients:**
+##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
   - Android (4.4.2)
@@ -80,48 +80,48 @@ Current Version: `1.0.0`
 
 [Table Of Contents](#table-of-contents)
 
-##Install
+## Install
 
-- [Download](https://github.com/Twoure/KissNetwork.bundle/archive/master.zip) and install it by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
-- Unzip and rename the folder to "KissNetwork.bundle"
-- Copy KissNetwork.bundle into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
-- ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
+- [Download](https://github.com/Twoure/KissNetwork.bundle/archive/master.zip) and install KissNetwork by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
+  - Unzip and rename the folder to "KissNetwork.bundle"
+  - Copy KissNetwork.bundle into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
+  - ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
 
 [Table Of Contents](#table-of-contents)
 
-##Operation
+## Operation
 
-###Preferences
+### Preferences
 
-#####**Sort List by...**
+##### Sort List by...
 - Set list order for "All", "Alphabets", "Genres", and "Movies"
 
-#####**View Kiss(anime, asian, cartoon, manga)**
+##### View Kiss(anime, asian, cartoon, manga)
 - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
 
-#####**Cache All Covers Locally**
+##### Cache All Covers Locally
 - Overrides [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally) function
 - If enabled, will download and index cover images
 - If disabled, will remove all downloaded images from computer. If "Cache Bookmark Covers Locally" is True, then bookmark covers will be kept from deletion.
 
-#####**Cache Bookmark Covers Locally**
+##### Cache Bookmark Covers Locally
 - If enabled AND "Cache All Covers Locally" is False, will download cover images and only display them in your "My Bookmarks" list.
 - If disabled AND 'Cache All Covers Locally" is False, will delete all bookmarked covers from computer.
 
-#####**Allow Adult Content**
+##### Allow Adult Content
 - Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
 
-#####**Enable Developer Tools**
+##### Enable Developer Tools
 - Hide/Un-Hide Developer Tools Menu located in "About / Help" section
 
-#####**Enable Debug Logging**
+##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
 
 [Table Of Contents](#table-of-contents)
 
-###About / Help
+### About / Help
 
-#####**Developer Tools**
+##### Developer Tools
 - [**Bookmark Tools**](#bookmark-tools)
 - [**Header Tools**](#header-tools)
 - [**Cover Cache Tools**](#cover-cache-tools)
@@ -129,18 +129,18 @@ Current Version: `1.0.0`
 - **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test. It is testing for a valid JavaScript Runtime
 - **Restart KissNetwork Channel:** Will restart KissNetwork Channel in PMS, but will not refresh URL Service Code.
 
-#####**Bookmark Tools**
+##### Bookmark Tools
 - **Toggle Hiding "Clear Bookmarks" Function:** For those of us who accidentally delete our bookmarks but don't mean to
 - **Reset "All" Bookmarks:** Same as "Clear All Bookmarks"
 - **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
 - **Reset... :** Same for Drama, Cartoon, and Manga
 
-#####**Header Tools**
+##### Header Tools
 - **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
 - **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
 - **Update... :** Same for Drama, Cartoon, and Manga
 
-#####**Cover Cache Tools**
+##### Cover Cache Tools
 - **Cache All Covers:** Download cover images from all sites.  Background process.
 - **Cache All Anime Covers:** Download All Anime covers only.  Do not download covers from the other sites.
 - **Cache All... :** Same for Drama, Cartoon, and Manga
@@ -148,9 +148,9 @@ Current Version: `1.0.0`
 
 [Table Of Contents](#table-of-contents)
 
-##Issues
+## Issues
 
-#####General
+##### General
 - Cookie cache times keep changing. I try and keep these up-to-date, untill I create a checker for valid cookie cache times.
 - First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
 - If the headers are not set before Plex Framework tries to scrape the site then an error message will popup saying you need to wait until the headers are set.
@@ -158,7 +158,7 @@ Current Version: `1.0.0`
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 - Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
 
-#####Kiss(anime, asian, cartoon, manga)
+##### Kiss(anime, asian, cartoon, manga)
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
 - Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
 - Cover art does not load for Videos
@@ -167,22 +167,22 @@ Current Version: `1.0.0`
 - Kissmanga is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
 - Cookie timeouts change too often, cannot parse expire time yet
 
-#####Chromecast
+##### Chromecast
 - does not work for Photo Albums but does for Videos, don't know why yet.  Assuming it has to do with how the Photo Albums are created.
 
-#####Plex Home Theater
+##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
 
 [Table Of Contents](#table-of-contents)
 
-##Plans
+## Plans
 
-#####General
+##### General
 - Might look into grouping seasons of the same show for the directory list
 - Implement some kind of Password protection for choosing which sites to display
 - Continue Improving Metadata
 
-#####Bookmarks
+##### Bookmarks
 - Add option to add all seasons at once for a show
 - Group seasons into one show
 - Create separate directories for TV and Movies
@@ -190,7 +190,7 @@ Current Version: `1.0.0`
 
 [Table Of Contents](#table-of-contents)
 
-##About
+## About
 
 Hey you, you scrolled to the end of the page! [Yeah](http://i.imgur.com/ZGfN8eb.gif)
 
