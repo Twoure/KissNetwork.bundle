@@ -23,9 +23,10 @@ KissNetwork
       - [Bookmark Tools](#bookmark-tools)
       - [Header Tools](#header-tools)
       - [Cover Cache Tools](#cover-cache-tools)
+  - [Updater](#updater)
 - [Issues](#issues)
   - [General](#general)
-  - [Kiss(anime, asian, cartoon, manga)](#kissanime-asian-cartoon-manga)
+  - [Kiss(Anime, Asian, Cartoon, Manga)](#kissanime-asian-cartoon-manga)
   - [Chromecast](#chromecast)
   - [Plex Home Theater](#plex-home-theater)
 - [Plans](#plans)
@@ -96,7 +97,7 @@ Current Version: `1.0.0`
 ##### Sort List by...
 - Set list order for "All", "Alphabets", "Genres", and "Movies"
 
-##### View Kiss(anime, asian, cartoon, manga)
+##### View Kiss(Anime, Asian, Cartoon, Manga)
 - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
 
 ##### Cache All Covers Locally
@@ -146,6 +147,11 @@ Current Version: `1.0.0`
 - **Cache All... :** Same for Drama, Cartoon, and Manga
 - **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
 
+### Updater
+
+- Update button visible only when update avalible
+- Checks KissNetwork.bundle Github [atom feed](https://github.com/Twoure/KissNetwork.bundle/commits/master.atom) every 12 hours.
+
 [Table Of Contents](#table-of-contents)
 
 ## Issues
@@ -158,7 +164,7 @@ Current Version: `1.0.0`
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 - Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
 
-##### Kiss(anime, asian, cartoon, manga)
+##### Kiss(Anime, Asian, Cartoon, Manga)
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
 - Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
 - Cover art does not load for Videos
