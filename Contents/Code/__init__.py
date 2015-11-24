@@ -1848,9 +1848,10 @@ def CacheCovers(start=False, skip=True):
         Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False or skip == True):
         Dict.Save()
         # Attempt to update Anime Bookmarks to new domain and genres
-        if skip == True:
-            Thread.Create(BookmarksSub, type_title='Anime', art='anime-art.jpg')
-            Logger('Attempting to update Anime Bookmarks', kind='Debug', force=True)
+        if skip == True and Dict['Bookmarks']:
+            if 'Anime' in Dict['Bookmarks'].keys():
+                Thread.Create(BookmarksSub, type_title='Anime', art='anime-art.jpg')
+                Logger('Attempting to update Anime Bookmarks', kind='Debug', force=True)
         Logger('Skipping Caching Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
         return
 
