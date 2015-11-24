@@ -1,7 +1,7 @@
 KissNetwork
 ===========
 
-## Table Of Contents
+## Table of Contents
 - [Introduction](#introduction)
   - [Version](#version)
   - [Features](#features)
@@ -40,13 +40,13 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Version
 
 Current Version: `1.0.0`
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Features
 
@@ -57,11 +57,11 @@ Current Version: `1.0.0`
 - Create custom Bookmarks
 - Search all Kiss sites for videos/manga
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## [Changelog](Changelog.md)
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Channel Support
 
@@ -83,7 +83,7 @@ Current Version: `1.0.0`
 - Not Working:
   - Chromecast (Pictures)
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Install
 
@@ -92,7 +92,7 @@ Current Version: `1.0.0`
   - Copy KissNetwork.bundle into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
   - ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Operation
 
@@ -122,7 +122,7 @@ Current Version: `1.0.0`
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ### About / Help
 
@@ -156,7 +156,7 @@ Current Version: `1.0.0`
 - Update button visible only when update avalible
 - Checks KissNetwork.bundle Github [atom feed](https://github.com/Twoure/KissNetwork.bundle/commits/master.atom) every 12 hours.
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Issues
 
@@ -183,7 +183,7 @@ Current Version: `1.0.0`
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## Plans
 
@@ -198,7 +198,7 @@ Current Version: `1.0.0`
 - Create separate directories for TV and Movies
 - Might move bookmarks to own file like I did with Header_Dict
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
 
 ## About
 
@@ -210,4 +210,4 @@ Little background to this project.  I decided it was time I start learning some 
 
 This prompted me to make [KissNetwork.bundle](https://github.com/Twoure/KissNetwork.bundle).  I've tried to use Plex's built in framework as much as possible in hopes of maximizing cross platform compatibility.  It has been a fun project so far and has gotten me more comfortable with Python.  Have fun with it and let me know of any other issues or suggestions of how to make this faster and more user friendly.
 
-[Table Of Contents](#table-of-contents)
+[Table of Contents](#table-of-contents)
