@@ -59,6 +59,10 @@ Current Version: `1.0.0`
 
 [Table Of Contents](#table-of-contents)
 
+## [Changelog](Changelog.md)
+
+[Table Of Contents](#table-of-contents)
+
 ## Channel Support
 
 ##### Plex Media Server:
