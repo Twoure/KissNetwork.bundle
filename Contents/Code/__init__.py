@@ -1423,10 +1423,14 @@ def VideoDetail(video_info, item_info):
     # test if video link is hosted on OneDrive
     # currently the URL Service is not setup to handle OneDrive Links
     onedrive_test = html.xpath('//div[@id="centerDivVideo"]//iframe')
+    quality_test = html.xpath('//select[@id="selectQuality"]/option')
     if onedrive_test:
         if "onedrive" in onedrive_test[0].get('src'):
             return MessageContainer(header='Error',
                 message='OneDrive Videos Not Yet Supported. Try another source if avalible.')
+    elif not quality_test:
+        return MessageContainer('Warning',
+            'This video is broken, Kiss%s is working to fix it.' %item_info['type_title'])
 
     # Movie
     if video_type == 'movie':
