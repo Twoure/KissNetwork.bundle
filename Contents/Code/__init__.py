@@ -1,6 +1,6 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v1.0.0                                 #
+#                               KissNetwork Plex Channel -- v1.0.1                                 #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framework
@@ -29,7 +29,7 @@ import requests
 # set global variables
 PREFIX = '/video/kissnetwork'
 TITLE = L('title')
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 
 # KissAnime

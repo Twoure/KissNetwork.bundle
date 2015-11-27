@@ -1,4 +1,8 @@
-#ChangeLog
+# ChangeLog
+
+##### 1.0.1
+- _11/27/15_
+- Update: Added check for broken or missing videos
 
 ##### 1.0.0
 - _11/24/15_
