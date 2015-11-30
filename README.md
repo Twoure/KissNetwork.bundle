@@ -3,7 +3,6 @@ KissNetwork
 
 ## Table of Contents
 - [Introduction](#introduction)
-  - [Version](#version)
   - [Features](#features)
   - [Changelog](Changelog.md)
 - [Channel Support](#channel-support)
@@ -39,12 +38,6 @@ KissNetwork
 This is a plugin that creates a new channel in [Plex Media Server](https://plex.tv/) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), and [Kissmanga.com](http://kissmanga.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
-
-[Table of Contents](#table-of-contents)
-
-## Version
-
-Current Version: `1.0.2`
 
 [Table of Contents](#table-of-contents)
 

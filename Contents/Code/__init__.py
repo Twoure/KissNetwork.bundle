@@ -57,9 +57,6 @@ MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
 MANGA_ART = 'art-manga.jpg'
 MANGA_ICON = 'icon-manga.png'
 
-# setup all url list
-BASE_URL_LIST = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
-
 # set background art and icon defaults
 MAIN_ART = 'art-main.jpg'
 MAIN_ICON = 'icon-default.png'
@@ -181,12 +178,10 @@ def MainMenu():
         oc.add(DirectoryObject(
             key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
             title='Anime', thumb=anime_thumb, art=anime_art))
-    """
     if Prefs['kisscartoon']:
         oc.add(DirectoryObject(
             key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART),
             title='Cartoons', thumb=cartoon_thumb, art=cartoon_art))
-    """
     if Prefs['kissasian']:
         oc.add(DirectoryObject(
             key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART),
@@ -1269,9 +1264,9 @@ def ItemPage(item_info):
     else:
         # Item not in 'Bookmarks' yet, so lets parse it for adding!
         oc.add(DirectoryObject(
-            key = Callback(AddBookmark, item_info=item_info),
-            title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
-            summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
+            key=Callback(AddBookmark, item_info=item_info),
+            title='Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
+            summary='Add \"%s\" to your Bookmarks list.' % item_title_decode))
 
     return oc
 
@@ -1464,8 +1459,7 @@ def Search(query=''):
 
     oc = ObjectContainer(title2=title2)
     # create list of search URL's
-    #all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
-    all_search_urls = [ANIME_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
+    all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
 
     # format each search url and send to 'SearchPage'
     # can't check each url here, would take too long since behind cloudflare and timeout the server
@@ -2217,8 +2211,6 @@ def BackgroundAutoCache():
         start = True
 
     # setup urls for setting headers
-    url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, MANGA_BASE_URL]
-    #url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
     if not Dict['First Headers Cached']:
         Logger('\n----------Running Background Auto-Cache----------', force=True)
 
@@ -2226,7 +2218,7 @@ def BackgroundAutoCache():
             Logger('\n----------Header Dictionary already found, writing new Headers to old Dictionary----------', force=True)
 
             # get headers for each url
-            for url in url_list:
+            for url in Common.BASE_URL_LIST:
                 Headers.GetHeadersForURL(url)
 
         else:
@@ -2241,7 +2233,7 @@ def BackgroundAutoCache():
         Dict['Headers Auto Cached'] = True
         Dict.Save()
     else:
-        for url in url_list:
+        for url in Common.BASE_URL_LIST:
             Logger('\n----------Checking %s headers----------' %url, kind='Info', force=True)
             Headers.GetHeadersForURL(url)
 

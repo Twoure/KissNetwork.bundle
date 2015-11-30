@@ -36,9 +36,7 @@ def CreateHeadersDict():
     Log.Debug('Headers dictionary not yet created. Creating new Header Dict and filling in data')
 
     # Get cookies for URLs and save to Header Dict for future use.
-    #for i, (type_title, base_url) in enumerate(Common.BASE_URL_LIST_T):
-    base_url_list_t = [(Common.GetTypeTitle(url), url) for url in [b_url_list for b_url_list in Common.BASE_URL_LIST if not 'cartoon' in b_url_list]]
-    for i, (type_title, base_url) in enumerate(base_url_list_t):
+    for i, (type_title, base_url) in enumerate(Common.BASE_URL_LIST_T):
         cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=Common.USER_AGENT)
         if i == 0:
             temp_dict = {

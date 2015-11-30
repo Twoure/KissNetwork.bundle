@@ -1,5 +1,9 @@
 # ChangeLog
 
+##### 1.0.3
+- _11/30/15_
+- Added _KissCartoon_ back in. KissCartoon site fixed cookie issue
+
 ##### 1.0.2
 - _11/30/15_
 - Fixes:
