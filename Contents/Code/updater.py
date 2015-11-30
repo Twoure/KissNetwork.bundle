@@ -43,6 +43,8 @@ KEY_DATA_ZIPBALL = 'zipball_url'
 
 CHECK_INTERVAL = CACHE_1HOUR * 12
 
+Common = SharedCodeService.common
+
 
 class Updater:
     info = None
@@ -61,6 +63,7 @@ class Updater:
                 summary=u'%s\n%s' % (L(
                     'updater.install'
                 ), self.update['info']),
+                thumb=R('icon-update.png') if not Client.Platform in Common.LIST_VIEW_CLIENTS else None
             ))
 
     def NormalizeVersion(self, version):
