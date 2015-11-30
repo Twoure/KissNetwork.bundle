@@ -1,5 +1,14 @@
 # ChangeLog
 
+##### 1.0.2
+- _11/30/15_
+- Fixes:
+  - Removed _KissCartoon_ until cookie issue solved
+  - Fixed int error in service code
+- Udate/New
+  - Changed to different updater
+  - Optimized bookmark code
+
 ##### 1.0.1
 - _11/27/15_
 - Update: Added check for broken or missing videos

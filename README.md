@@ -44,7 +44,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ## Version
 
-Current Version: `1.0.1`
+Current Version: `1.0.2`
 
 [Table of Contents](#table-of-contents)
 

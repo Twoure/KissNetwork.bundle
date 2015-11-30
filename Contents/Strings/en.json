@@ -1,7 +1,9 @@
 {
   "title": "KissNetwork",
 
-  "updater.label.updating":     "Updating ...",
-  "updater.label.update-now":   "Update Now",
-  "updater.response.updating":  "Please wait while the channel is updating."
+  "updater.success": "Success",
+  "updater.error": "Error",
+  "updater.update_available": "Update available: %s",
+  "updater.install": "Install latest version of the channel.",
+  "updater.updated": "Channel updated to version %s"
 }

@@ -1,11 +1,12 @@
 ####################################################################################################
 #                                                                                                  #
-#                               KissNetwork Plex Channel -- v1.0.1                                 #
+#                                   KissNetwork Plex Channel                                       #
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framework
-import os, sys, shutil, io, urllib, updater
+import os, sys, shutil, io, urllib
 from time import sleep
+from updater import Updater
 
 # import Shared Service Code
 Headers = SharedCodeService.headers
@@ -73,9 +74,6 @@ SEARCH_ICON = 'icon-search.png'
 PREFS_ICON = 'icon-prefs.png'
 CACHE_COVER_ICON = 'icon-cache-cover.png'
 ABOUT_ICON = 'icon-about.png'
-
-# setup updater repo and branch
-updater.init(repo = 'Twoure/KissNetwork.bundle', branch = 'master')
 
 ####################################################################################################
 def Start():
@@ -176,17 +174,19 @@ def MainMenu():
     status = Dict['Bookmark_Deleted']
     Dict.Save()
 
+    Updater(PREFIX + '/updater', oc)
+
     # set up Main Menu depending on what sites are picked in the Prefs menu
     if Prefs['kissanime']:
         oc.add(DirectoryObject(
             key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
             title='Anime', thumb=anime_thumb, art=anime_art))
-
+    """
     if Prefs['kisscartoon']:
         oc.add(DirectoryObject(
             key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART),
             title='Cartoons', thumb=cartoon_thumb, art=cartoon_art))
-
+    """
     if Prefs['kissasian']:
         oc.add(DirectoryObject(
             key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART),
@@ -204,7 +204,6 @@ def MainMenu():
     oc.add(InputDirectoryObject(
         key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
         thumb=search_thumb))
-    updater.add_button_to(oc, PerformUpdate)
 
     return oc
 
@@ -377,13 +376,17 @@ def About():
     else:
         cache_string = d
 
+    plist = Plist.ObjectFromString(Core.storage.load(
+        Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
+    version = plist['CFBundleVersion']
+
     if Prefs['devtools']:
         oc.add(DirectoryObject(key=Callback(DevTools),
             title='Developer Tools',
             summary='WARNING!!\nDeveloper Tools.  Make sure you understand what these do before using.'))
 
     oc.add(DirectoryObject(key=Callback(About),
-        title='Version %s' %VERSION, summary='Current Channel Version'))
+        title='Version %s' %version, summary='Current Channel Version'))
     oc.add(DirectoryObject(key=Callback(About),
         title=cache_string, summary='Number of Images Cached | Total Images Cached Size'))
 
@@ -399,10 +402,12 @@ def ResetCustomDict(file_to_reset):
     Log('\n----------Backing up %s File to %s.backup----------' %(file_to_reset, file_to_reset))
     file_path = Core.storage.join_path(Core.storage.data_path, file_to_reset)
 
-    # create backup of file being removed
-    Core.storage.copy(file_path, file_path + '.backup')
-    Log('\n----------Removing %s File----------' %file_to_reset)
-    Core.storage.remove_tree(file_path)
+    if Core.storage.file_exists(file_path):
+        # create backup of file being removed
+        Core.storage.copy(file_path, file_path + '.backup')
+        Log('\n----------Removing %s File----------' %file_to_reset)
+        Core.storage.remove_tree(file_path)
+
     if file_to_reset == 'Domain_Dict':
         Domain.CreateDomainDict()
     elif file_to_reset == 'Header_Dict':
@@ -494,9 +499,15 @@ def DevToolsH(title=None, header=None, message=None):
 
             message = 'Updated %s Headers.' %title
             return DevTools(header=header, message=message)
+        elif title == 'test':
+            sub_list = Test()
+            message = 'list =\n%s' %sub_list
+            return DevTools(header=header, message=message)
     else:
         pass
 
+    #oc.add(DirectoryObject(key=Callback(DevToolsH, title='test'),
+        #title='test', summary='test'))
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
         summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
@@ -1248,41 +1259,19 @@ def ItemPage(item_info):
         (page_category.lower(), item_title_decode)))
 
     # Test if the Dict does have the 'Bookmarks' section
-    if Dict['Bookmarks']:
-        # test if item already in bookmarks
-        if type_title in Dict['Bookmarks']:
-            for i, category in enumerate(Dict['Bookmarks'][type_title]):
-                #Log('bookmarks = %s' %category)
-                if not item_sys_name == category[type_title] and len(Dict['Bookmarks'][type_title]) != i+1:
-                    continue
-                elif item_sys_name == category[type_title]:
-                    # provide a way to remove Item from bookmarks list
-                    oc.add(DirectoryObject(
-                        key=Callback(RemoveBookmark, item_info=item_info),
-                        title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
-                        summary = 'Remove \"%s\" from your Bookmarks list.' % item_title_decode))
-                    break  # Stop for loop if match found
-                # Item not in 'Bookmarks' yet, so lets parse it for adding!
-                elif len(Dict['Bookmarks'][type_title]) == i+1:
-                    # provide a way to add Item to the bookmarks list
-                    oc.add(DirectoryObject(
-                        key = Callback(AddBookmark, item_info=item_info),
-                        title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
-                        summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
-        # Item not in 'Bookmarks' yet, so lets parse it for adding!
-        else:
-            # provide a way to add Item to the bookmarks list
-            oc.add(DirectoryObject(
-                key = Callback(AddBookmark, item_info=item_info),
-                title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
-                summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
-    # No 'Bookmarks' section in Dict yet, so don't look for Item in 'Bookmarks'
-    else:
-        # provide a way to add Item to bookmarks list
+    bm = Dict['Bookmarks']
+    if ((True if [b[type_title] for b in bm[type_title] if b[type_title] == item_sys_name] else False) if type_title in bm.keys() else False) if bm else False:
+        # provide a way to remove Item from bookmarks list
         oc.add(DirectoryObject(
-            key=Callback(AddBookmark, item_info=item_info),
-            title='Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
-            summary='Add \"%s\" to your Bookmarks list.' % item_title_decode))
+            key=Callback(RemoveBookmark, item_info=item_info),
+            title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
+            summary = 'Remove \"%s\" from your Bookmarks list.' % item_title_decode))
+    else:
+        # Item not in 'Bookmarks' yet, so lets parse it for adding!
+        oc.add(DirectoryObject(
+            key = Callback(AddBookmark, item_info=item_info),
+            title = 'Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
+            summary = 'Add \"%s\" to your Bookmarks list.' % item_title_decode))
 
     return oc
 
@@ -1475,7 +1464,8 @@ def Search(query=''):
 
     oc = ObjectContainer(title2=title2)
     # create list of search URL's
-    all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
+    #all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
+    all_search_urls = [ANIME_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
 
     # format each search url and send to 'SearchPage'
     # can't check each url here, would take too long since behind cloudflare and timeout the server
@@ -1715,11 +1705,13 @@ def AddBookmark(item_info):
 
     Logger('new bookmark to add\n%s' % new_bookmark)
 
+    bm = Dict['Bookmarks']
+
     # Test if the Dict has the 'Bookmarks' section yet
-    if not Dict['Bookmarks']:
+    if not bm:
         # Create new 'Bookmarks' section and fill with the first bookmark
         Dict['Bookmarks'] = {type_title: [new_bookmark]}
-        Logger('Inital bookmark list created\n%s' % Dict['Bookmarks'])
+        Logger('Inital bookmark list created\n%s' %bm)
 
         # Update Dict to include new 'Bookmarks' section
         Dict.Save()
@@ -1729,29 +1721,26 @@ def AddBookmark(item_info):
             message='\"%s\" has been added to your bookmarks.' % item_title_decode)
     # check if the category key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
     # if so then append new bookmark to one of those categories
-    elif type_title in Dict['Bookmarks'].keys():
+    elif type_title in bm.keys():
         # fail safe for when clients are out of sync and it trys to add the bookmark in duplicate
-        for i, bookmark in enumerate(Dict['Bookmarks'][type_title]):
-            if not bookmark[type_title] == new_bookmark[type_title] and len(Dict['Bookmarks'][type_title]) != i+1:
-                continue
+        if (True if [b[type_title] for b in bm[type_title] if b[type_title] == item_sys_name] else False):
             # Bookmark already exist, don't add in duplicate
-            elif bookmark[type_title] == new_bookmark[type_title]:
-                Logger('bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
-                return MessageContainer(header=item_title_decode,
-                    message='\"%s\" is already in your bookmarks.' % item_title_decode)
-            # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
-            elif len(Dict['Bookmarks'][type_title]) == i+1:
-                temp = {}
-                temp.setdefault(type_title, Dict['Bookmarks'][type_title]).append(new_bookmark)
-                Dict['Bookmarks'][type_title] = temp[type_title]
-                Logger('bookmark \"%s\" has been appended to your %s bookmarks' %(item_title_decode, type_title), kind='Info')
+            Logger('bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
+            return MessageContainer(header=item_title_decode,
+                message='\"%s\" is already in your bookmarks.' % item_title_decode)
+        # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
+        else:
+            temp = {}
+            temp.setdefault(type_title, bm[type_title]).append(new_bookmark)
+            Dict['Bookmarks'][type_title] = temp[type_title]
+            Logger('bookmark \"%s\" has been appended to your %s bookmarks' %(item_title_decode, type_title), kind='Info')
 
-                # Update Dict to include new Item
-                Dict.Save()
+            # Update Dict to include new Item
+            Dict.Save()
 
-                # Provide feedback that the Item has been added to bookmarks
-                return MessageContainer(header=item_title_decode,
-                    message='\"%s\" has been added to your bookmarks.' % item_title_decode)
+            # Provide feedback that the Item has been added to bookmarks
+            return MessageContainer(header=item_title_decode,
+                message='\"%s\" has been added to your bookmarks.' % item_title_decode)
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({type_title: [new_bookmark]})
@@ -1844,6 +1833,9 @@ def ClearBookmarks(type_title):
 def CacheCovers(start=False, skip=True):
     """Cache covers depending on prefs settings. Will remove or add covers if it can."""
 
+    bm = Dict['Bookmarks']
+    cf = Dict['cover_files']
+
     if not Dict['cache_covers_key']:
         Dict['cache_covers_key'] = Prefs['cache_covers']
         Dict['cache_bookmark_covers_key'] = Prefs['cache_bookmark_covers']
@@ -1852,8 +1844,8 @@ def CacheCovers(start=False, skip=True):
         Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False or skip == True):
         Dict.Save()
         # Attempt to update Anime Bookmarks to new domain and genres
-        if skip == True and Dict['Bookmarks']:
-            if 'Anime' in Dict['Bookmarks'].keys():
+        if skip == True and bm:
+            if 'Anime' in bm.keys():
                 Thread.Create(BookmarksSub, type_title='Anime', art='anime-art.jpg')
                 Logger('Attempting to update Anime Bookmarks', kind='Debug', force=True)
         Logger('Skipping Caching Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
@@ -1862,31 +1854,29 @@ def CacheCovers(start=False, skip=True):
     if not Prefs['cache_bookmark_covers'] and not Prefs['cache_covers']:
         # remove any cached covers from Dict['Bookmarks']
         # unless Prefs['cache_covers'] is true, then keep cached covers
-        if Dict['cover_files']:
-            for cover in Dict['cover_files']:
-                RemoveCoverImage(image_file=Dict['cover_files'][cover])
+        if cf:
+            for cover in cf:
+                RemoveCoverImage(image_file=cf[cover])
 
             del Dict['cover_files']
             Dict.Save()
             Logger('Removed cached covers using Dict[\'cover_files\'] list as key, and removed Dict[\'cover_files\'] once finished.', kind='Info')
-        elif Dict['Bookmarks']:
-            for key in Dict['Bookmarks'].keys():
-                for bm in Dict['Bookmarks'][key]:
-                    RemoveCoverImage(image_file=bm['cover_file'])
+        elif bm:
+            [[RemoveCoverImage(image_file=bbm['cover_file']) for bbm in bm[key]] for key in bm.keys()]
 
             Logger('No Dict[\'cover_files\'] found, Removed cached covers using Dict[\'Bookmarks\'] list as key.', kind='Info')
     elif not Prefs['cache_covers'] and Prefs['cache_bookmark_covers']:
         # remove cached covers not in Dict['Bookmarks']
         # and save covers from Dict['Bookmarks'] in not already saved
         bookmark_cache = set([])
-        if Dict['Bookmarks']:
-            for key in Dict['Bookmarks'].keys():
-                for bm in Dict['Bookmarks'][key]:
-                    bm_count = len(Dict['Bookmarks'][key])
-                    if bm['cover_file'] and bm['cover_url']:
-                        bookmark_cache.add(bm['cover_file'])
-                        if 'kiss' in bm['cover_url']:
-                            thumb = Common.CorrectCoverImage(bm['cover_url'])
+        if bm:
+            for key in bm.keys():
+                for sbm in bm[key]:
+                    bm_count = len(bm[key])
+                    if sbm['cover_file'] and sbm['cover_url']:
+                        bookmark_cache.add(sbm['cover_file'])
+                        if 'kiss' in sbm['cover_url']:
+                            thumb = Common.CorrectCoverImage(sbm['cover_url'])
                             if thumb:
                                 cover_file = thumb.rsplit('/')[-1]
                                 if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
@@ -1895,31 +1885,31 @@ def CacheCovers(start=False, skip=True):
                                     ftimer = float(Util.RandomInt(0,30)) + Util.Random()
                                     Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
                                 elif Common.CoverImageFileExist(cover_file):
-                                    Logger('file %s already exist' %bm['cover_file'], kind='Info')
+                                    Logger('file %s already exist' %sbm['cover_file'], kind='Info')
                                 else:
-                                    Log.Error('%s | %s | Unknown Error Occurred' %(bm['cover_file'], bm['cover_url']))
+                                    Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
                             else:
-                                Log.Error('%s | %s | Unknown Error Occurred' %(bm['cover_file'], bm['cover_url']))
+                                Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
 
         Logger('Caching Bookmark Cover images if they have not been already.', kind='Info')
-        if Dict['cover_files']:
-            cover_cache = set([c for c in Dict['cover_files']])
+        if cf:
+            cover_cache = set([c for c in cf])
             cover_cache_diff = cover_cache.difference(bookmark_cache)
             for cover in cover_cache_diff:
-                RemoveCoverImage(image_file=Dict['cover_files'][cover])
+                RemoveCoverImage(image_file=cf[cover])
                 del Dict['cover_files'][cover]
 
             Logger('Removed cached covers using Dict[\'cover_files\'] list as key, and removed Dict[\'cover_files\'] once finished.', kind='Info')
             Logger('But kept Bookmarks cached covers.', kind='Info')
     elif Prefs['cache_covers']:
         # cache bookmark covers from Dict['Bookmarks']
-        if Dict['Bookmarks']:
-            for key in Dict['Bookmarks'].keys():
-                for bm in Dict['Bookmarks'][key]:
-                    bm_count = len(Dict['Bookmarks'][key])
-                    if bm['cover_file'] and bm['cover_url']:
-                        if 'kiss' in bm['cover_url']:
-                            thumb = Common.CorrectCoverImage(bm['cover_url'])
+        if bm:
+            for key in bm.keys():
+                for sbm in bm[key]:
+                    bm_count = len(bm[key])
+                    if sbm['cover_file'] and sbm['cover_url']:
+                        if 'kiss' in sbm['cover_url']:
+                            thumb = Common.CorrectCoverImage(sbm['cover_url'])
                             if thumb:
                                 cover_file = thumb.rsplit('/')[-1]
                                 if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
@@ -1928,17 +1918,32 @@ def CacheCovers(start=False, skip=True):
                                     ftimer = float(Util.RandomInt(0,30)) + Util.Random()
                                     Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
                                 elif Common.CoverImageFileExist(cover_file):
-                                    Logger('file %s already exist' %bm['cover_file'], kind='Info')
+                                    Logger('file %s already exist' %sbm['cover_file'], kind='Info')
                                 else:
-                                    Log.Error('%s | %s | Unknown Error Occurred' %(bm['cover_file'], bm['cover_url']))
+                                    Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
                             else:
-                                Log.Error('%s | %s | Unknown Error Occurred' %(bm['cover_file'], bm['cover_url']))
+                                Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
 
         Logger('Caching Bookmark Cover images if they have not been already.', kind='Info')
         Logger('All covers cached set to True.', kind='Info')
 
     Dict.Save()
     return
+
+####################################################################################################
+def Test():
+    Logger('*' * 80)
+    bm = Dict['Bookmarks']
+    test = []
+    if [[((test.append(Common.CorrectCoverImage(sbm['cover_url'])) if 'kiss' in sbm['cover_url'] else None) if (sbm['cover_file'] and sbm['cover_url']) else None) for sbm in bm[key]] for key in bm.keys()] if bm else []:
+        Logger('* we have bookmarks')
+    else:
+        Logger('* no bookmarks')
+
+    Logger('* test list = %s' %test)
+    Logger('*' * 80)
+
+    return test
 
 ####################################################################################################
 def CacheAllCovers(category, qevent, page=1):
@@ -2212,7 +2217,8 @@ def BackgroundAutoCache():
         start = True
 
     # setup urls for setting headers
-    url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
+    url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, MANGA_BASE_URL]
+    #url_list = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL]
     if not Dict['First Headers Cached']:
         Logger('\n----------Running Background Auto-Cache----------', force=True)
 
@@ -2244,13 +2250,6 @@ def BackgroundAutoCache():
         pass
 
     return ValidatePrefs(start=start, skip=skip)
-
-####################################################################################################
-@route(PREFIX + '/update')
-def PerformUpdate():
-    """Setup Updater"""
-
-    return updater.PerformUpdate()
 
 ####################################################################################################
 def RestartChannel():

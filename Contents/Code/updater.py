@@ -1,79 +1,154 @@
-UPDATED_AT = 'updater.updated_at'
-Common = SharedCodeService.common
+# -*- coding: utf-8 -*-
+#
+# Plex Plugin Updater
+# $Id$
+#
+# Universal plugin updater module for Plex Server Channels that
+# implement automatic plugins updates from remote config.
+# Support Github API by default
+#
+# https://github.com/kolsys/plex-channel-updater
+#
+# Copyright (c) 2014, KOL
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of the <organization> nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
 
-class GithubStrategy(object):
-    def __init__(self, repo, branch = 'master'):
-        super(GithubStrategy, self).__init__()
-        self.repo        = repo
-        self.branch      = branch
-        self.archive_url = 'https://github.com/%s/archive/%s.zip'  % (repo, branch)
-        self.atom_url    = 'https://github.com/%s/commits/%s.atom' % (repo, branch)
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+# DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-    @property
-    def updated_at(self):
-        ttl     = 43200 # 12 hours
-        feed    = RSS.FeedFromURL(self.atom_url, cacheTime = ttl)
-        updated = Datetime.ParseDate(feed.entries[0].updated)
+KEY_PLIST_VERSION = 'CFBundleVersion'
+KEY_PLIST_URL = 'PlexPluginVersionUrl'
 
-        return updated.replace(tzinfo = None)
+KEY_DATA_VERSION = 'tag_name'
+KEY_DATA_DESC = 'body'
+KEY_DATA_ZIPBALL = 'zipball_url'
 
-    def perform_update(self):
-        archive = Archive.ZipFromURL(self.archive_url)
-        for name in archive.Names():
-            data    = archive[name]
-            parts   = name.split('/')
-            shifted = Core.storage.join_path(*parts[1:])
-            full    = Core.storage.join_path(Core.bundle_path, shifted)
+CHECK_INTERVAL = CACHE_1HOUR * 12
 
-            if '/.' in name: continue
 
-            if name.endswith('/'):
-                Core.storage.ensure_dirs(full)
-            else:
-                Core.storage.save(full, data)
+class Updater:
+    info = None
+    update = None
 
-        del archive
+    def __init__(self, prefix, oc):
 
-strategy = GithubStrategy
-instance = None
-def init(**kwargs):
-    global instance
-    instance = strategy(**kwargs)
+        if self.InitBundleInfo() and self.IsUpdateAvailable():
+            Route.Connect(prefix, self.DoUpdate)
+            oc.add(DirectoryObject(
+                key=Callback(self.DoUpdate),
+                title=u'%s' % F(
+                    'updater.update_available',
+                    self.update['version']
+                ),
+                summary=u'%s\n%s' % (L(
+                    'updater.install'
+                ), self.update['info']),
+            ))
 
-def updated_at():
-    if UPDATED_AT in Dict:
-        return Dict[UPDATED_AT]
-    else:
-        return None
+    def NormalizeVersion(self, version):
+        if version[:1] == 'v':
+            version = version[1:]
+        return version
 
-def update_available():
-    last_updated = updated_at()
-    if last_updated is None:
-        return True
-    else:
-        return last_updated < instance.updated_at
+    def ParseVersion(self, version):
 
-def PerformUpdate():
-    threaded_update_if_available()
-    return ObjectContainer(
-        header  = L('updater.label.updating'),
-        message = L('updater.response.updating')
-    )
+        try:
+            return tuple(map(int, (version.split('.'))))
+        except:
+            # String comparison by default
+            return version
 
-def update_if_available():
-    if update_available():
-        Dict[UPDATED_AT] = instance.updated_at
-        Dict.Save()
-        instance.perform_update()
+    def IsUpdateAvailable(self):
+        try:
+            info = JSON.ObjectFromURL(
+                self.info['url'],
+                cacheTime=CHECK_INTERVAL,
+                timeout=5
+            )
+            version = self.NormalizeVersion(info[KEY_DATA_VERSION])
+            dist_url = info[KEY_DATA_ZIPBALL]
 
-@thread
-def threaded_update_if_available():
-    update_if_available()
+        except:
+            return False
 
-def add_button_to(container, cb):
-    if update_available():
-        container.add(DirectoryObject(
-            title = L('updater.label.update-now'),
-            key   = Callback(cb),
-            thumb = R('icon-update.png') if not Client.Platform in Common.LIST_VIEW_CLIENTS else None
-        ))
+        if self.ParseVersion(version) > self.ParseVersion(
+            self.info['version']
+        ):
+            self.update = {
+                'version': version,
+                'url': dist_url,
+                'info': info[KEY_DATA_DESC] if KEY_DATA_DESC in info else '',
+            }
+
+        return bool(self.update)
+
+    def InitBundleInfo(self):
+        try:
+            plist = Plist.ObjectFromString(Core.storage.load(
+                Core.storage.abs_path(
+                    Core.storage.join_path(
+                        Core.bundle_path,
+                        'Contents',
+                        'Info.plist'
+                    )
+                )
+            ))
+            self.info = {
+                'version': plist[KEY_PLIST_VERSION],
+                'url': plist[KEY_PLIST_URL],
+            }
+        except:
+            pass
+
+        return bool(self.info)
+
+    def DoUpdate(self):
+        try:
+            zip_data = Archive.ZipFromURL(self.update['url'])
+            bundle_path = Core.storage.abs_path(Core.bundle_path)
+
+            for name in zip_data.Names():
+                data = zip_data[name]
+                parts = name.split('/')
+                shifted = Core.storage.join_path(*parts[1:])
+                full = Core.storage.join_path(bundle_path, shifted)
+
+                if '/.' in name:
+                    continue
+
+                if name.endswith('/'):
+                    Core.storage.ensure_dirs(full)
+                else:
+                    Core.storage.save(full, data)
+            del zip_data
+
+            return ObjectContainer(
+                header=u'%s' % L('updater.success'),
+                message=u'%s' % F(
+                    'updater.updated',
+                    self.update['version']
+                )
+            )
+        except Exception as e:
+            return ObjectContainer(
+                header=u'%s' % L('updater.error'),
+                message=u'%s' % e
+            )
