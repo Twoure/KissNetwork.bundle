@@ -1,5 +1,12 @@
 # ChangeLog
 
+#### 1.0.4
+- _12/02/15_
+- Fixes:
+  - KissCartoon Top Pages show page url
+- Update/New:
+  - New: Default Artwork for Search
+
 ##### 1.0.3
 - _11/30/15_
 - Added _KissCartoon_ back in. KissCartoon site fixed cookie issue

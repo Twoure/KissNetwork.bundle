@@ -79,6 +79,8 @@ def Start():
 
     DirectoryObject.thumb = R(MAIN_ICON)
 
+    InputDirectoryObject.art = R(MAIN_ART)
+
     HTTP.CacheTime = 0
     HTTP.Headers['User-Agent'] = Common.USER_AGENT
 
@@ -1157,7 +1159,7 @@ def HomePageList(tab, category, base_url, type_title, art):
         except:
             thumb = None
             cover_file = None
-        page_url = base_url + '/' + page_node
+        page_url = base_url + (page_node if page_node.startswith('/') else '/' + page_node)
 
         item_info = {
             'item_sys_name': item_sys_name,
@@ -1399,7 +1401,7 @@ def VideoDetail(video_info, item_info):
 
     oc = ObjectContainer(title2=title, art=R(art))
 
-    Logger('vido url in video detail section = %s' %url)
+    Logger('video url in video detail section = %s' %url)
 
     # setup html for parsing
     html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
@@ -1926,6 +1928,11 @@ def CacheCovers(start=False, skip=True):
 
 ####################################################################################################
 def Test():
+    """
+    Testing bookmark cache stuff
+    Trying to get rid of so many nested for loops and if/else statments
+    """
+
     Logger('*' * 80)
     bm = Dict['Bookmarks']
     test = []
