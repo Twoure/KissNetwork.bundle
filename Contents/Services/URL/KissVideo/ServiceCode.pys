@@ -3,7 +3,7 @@
 """Kiss(anime, cartoon, and drama) Service code"""
 
 # import system modules
-import base64
+import base64, urllib2
 
 # import Shared Service Code
 import headers as Headers
@@ -430,7 +430,9 @@ def PlayVideo(url, **kwargs):
 
     Log.Info('PlayVideo url = %s' %path)
 
-    return IndirectResponse(VideoClipObject, key=path)
+    vurl = urllib2.urlopen(path).url
+
+    return IndirectResponse(VideoClipObject, key=vurl)
 
 ########################################################################################
 def FindPartElement(array=list, string=str):
