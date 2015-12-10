@@ -1,6 +1,10 @@
 # ChangeLog
 
-#### 1.0.4
+##### 1.0.5
+- _12/10/15_
+- Expand PlayVideo URL in KissVideo ServiceCode.  Returns direct link now instead of redirect.
+
+##### 1.0.4
 - _12/02/15_
 - Fixes:
   - KissCartoon Top Pages show page url

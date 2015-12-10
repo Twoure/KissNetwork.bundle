@@ -156,7 +156,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### General
 - Cookie cache times keep changing. I try and keep these up-to-date, untill I create a checker for valid cookie cache times.
 - First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
-- If the headers are not set before Plex Framework tries to scrape the site then an error message will popup saying you need to wait until the headers are set.
+- If the headers are not set before Plex Framework tries to scrape the site then an error will occur.
 - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 - Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
@@ -182,8 +182,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### General
 - Might look into grouping seasons of the same show for the directory list
-- Implement some kind of Password protection for choosing which sites to display
+- Implement some kind of Password protection for choosing which sites to display, or Adult stuff
 - Continue Improving Metadata
+- Currently Working on moving service code into main code, that way not polling the site so much for metadata and can have continuous play for episodes in a season.
 
 ##### Bookmarks
 - Add option to add all seasons at once for a show
