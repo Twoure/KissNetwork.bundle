@@ -222,6 +222,7 @@ def KissAnime(url, title, art):
         key=Callback(DirectoryList,
             page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
         title='Movies'))
+    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
@@ -260,6 +261,8 @@ def KissAsian(url, title, art):
         key=Callback(DirectoryList,
             page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
         title='Movies'))
+    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
+    oc.add(DirectoryObject(key=Callback(TopList, url=url, type_title=title, art=art), title='Top'))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
@@ -268,18 +271,6 @@ def KissAsian(url, title, art):
         key=Callback(DirectoryList,
             page=1, pname='/Newest', category='New Drama', base_url=url, type_title=title, art=art),
         title='New Drama'))
-    oc.add(DirectoryObject(
-        key=Callback(HomePageList,
-            tab='day', category='Top Day', base_url=url, type_title=title, art=art),
-        title='Top Day'))
-    oc.add(DirectoryObject(
-        key=Callback(HomePageList,
-            tab='week', category='Top Week', base_url=url, type_title=title, art=art),
-        title='Top Week'))
-    oc.add(DirectoryObject(
-        key=Callback(HomePageList,
-            tab='month', category='Top Month', base_url=url, type_title=title, art=art),
-        title='Top Month'))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
@@ -304,6 +295,8 @@ def KissCartoon(url, title, art):
         key=Callback(DirectoryList,
             page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
         title='Movies'))
+    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
+    oc.add(DirectoryObject(key=Callback(TopList, url=url, type_title=title, art=art), title='Top'))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
@@ -312,18 +305,6 @@ def KissCartoon(url, title, art):
         key=Callback(DirectoryList,
             page=1, pname='/Newest', category='New Cartoon', base_url=url, type_title=title, art=art),
         title='New Cartoon'))
-    oc.add(DirectoryObject(
-        key=Callback(HomePageList,
-            tab='day', category='Top Day', base_url=url, type_title=title, art=art),
-        title='Top Day'))
-    oc.add(DirectoryObject(
-        key=Callback(HomePageList,
-            tab='week', category='Top Week', base_url=url, type_title=title, art=art),
-        title='Top Week'))
-    oc.add(DirectoryObject(
-        key=Callback(HomePageList,
-            tab='month', category='Top Month', base_url=url, type_title=title, art=art),
-        title='Top Month'))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
@@ -344,6 +325,7 @@ def KissManga(url, title, art):
         key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
     oc.add(DirectoryObject(
         key=Callback(GenreList, url=url, title=title, art=art), title='Genres'))
+    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
@@ -356,6 +338,43 @@ def KissManga(url, title, art):
         key=Callback(DirectoryList,
             page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
         title='Most Popular'))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/status-list')
+def StatusList(type_title, url, art):
+    """
+    Setup Status List for each site
+    Ongoing and Completed list
+    """
+
+    oc = ObjectContainer(title2=type_title, art=R(art))
+    s_list = ['Ongoing', 'Completed']
+    for s in s_list:
+        oc.add(DirectoryObject(
+            key=Callback(DirectoryList,
+                page=1, pname='/Status/%s' %s, category=s, base_url=url, type_title=type_title, art=art),
+            title=s))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/top-list')
+def TopList(type_title, url, art):
+    """
+    Setup Top list for Cartoon and Drama
+    Top Today, Week, Month
+    """
+
+    oc = ObjectContainer(title2=type_title, art=R(art))
+    t_list = ['Top Day', 'Top Week', 'Top Month']
+    for t in t_list:
+        tab = t.split('Top')[1].strip().lower()
+        oc.add(DirectoryObject(
+            key=Callback(HomePageList,
+                tab=tab, category=t, base_url=url, type_title=type_title, art=art),
+            title=t))
 
     return oc
 
@@ -966,17 +985,20 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         item_url = base_url + '/%sList%s?page=%s' % (type_title, pname, page)
     # Sort order 'A-Z'
     elif Dict['s_opt'] == None:
-        if "Genre" in pname or "Country" in pname:
-            # Genre Specific
+        if ('Genre' in pname or 'Country' in pname
+            or 'Ongoing' in pname or 'Completed' in pname):
+            # Genre, Country, Ongoing, or Completed Specific
             item_url = base_url + '%s?page=%s' % (pname, page)
         elif "All" in pname:
+            # All list
             item_url = base_url + '/%sList?page=%s' % (type_title, page)
         else:
-            # No Genre
+            # No Genre, Country, Ongoing, or Completed
             item_url = base_url + '/%sList?c=%s&page=%s' % (type_title, pname, page)
     # Sort order for all options except 'A-Z'
-    elif "Genre" in pname or "Country" in pname:
-        # Genre Specific with Prefs
+    elif ('Genre' in pname or 'Country' in pname
+        or 'Ongoing' in pname or 'Completed' in pname):
+        # Specific with Prefs
         item_url = base_url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
     elif "All" in pname:
         Logger('dict s_opt = %s' %Dict['s_opt'])
@@ -1065,9 +1087,11 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             item_title_cleaned = Regex('[^a-zA-Z0-9 \n]').sub('', item_title)
 
             latest = item.xpath('./following-sibling::td')[0].text_content().strip().replace(item_title_cleaned, '')
-            latest = latest.replace('Read Online', '').replace('Watch Online', '').strip()
+            latest = latest.replace('Read Online', '').replace('Watch Online', '').lstrip('_').strip()
             if 'Completed' in latest:
                 title2 = '%s | %s Completed' %(item_title, type_title)
+            elif 'Not yet aired' in latest:
+                title2 = '%s | Not Yet Aired' %item_title
             else:
                 title2 = '%s | Latest %s' %(item_title, latest)
 

@@ -1,5 +1,12 @@
 # ChangeLog
 
+##### 1.0.6
+- _12/12/15_
+- Update/New:
+  - New: Status list, Ongoing and Completed
+  - Update: Moved Top list into own list
+  - Update: Removed _Latest_ from _Not Yet Aired_ title
+
 ##### 1.0.5
 - _12/10/15_
 - Expand PlayVideo URL in KissVideo ServiceCode.  Returns direct link now instead of redirect.
