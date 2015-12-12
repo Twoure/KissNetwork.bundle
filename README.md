@@ -92,7 +92,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ### Preferences
 
 ##### Sort List by...
-- Set list order for "All", "Alphabets", "Genres", and "Movies"
+- Set list order for "All", "Alphabets", "Country", "Genres", "Movies", "Ongoing", and "Completed"
 
 ##### View Kiss(Anime, Asian, Cartoon, Manga)
 - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
