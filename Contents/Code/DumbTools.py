@@ -1,7 +1,8 @@
 # DumbTools for Plex v1.1 by Cory <babylonstudio@gmail.com>
+import urllib2
+
 
 class DumbKeyboard:
-    #clients = ['Plex for iOS', 'Plex Media Player', 'Plex Web']
     clients = ['Plex for iOS', 'Plex Media Player']
     KEYS = list('abcdefghijklmnopqrstuvwxyz1234567890-=;[]\\\',./')
     SHIFT_KEYS = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+:{}|\"<>?')
@@ -85,11 +86,19 @@ class DumbKeyboard:
         kwargs.update(self.callback_args)
         return self.Callback(**kwargs)
 
+
 class DumbPrefs:
     clients = ['Plex for iOS', 'Plex Media Player', 'Plex Home Theater',
                'OpenPHT', 'Plex for Roku']
 
     def __init__(self, prefix, oc, title=None, thumb=None):
+        self.host = 'http://127.0.0.1:32400'
+        try:
+            self.CheckAuth()
+        except Exception as e:
+            Log.Error('DumbPrefs: this user cant access prefs: %s' % str(e))
+            return
+
         Route.Connect(prefix+'/dumbprefs/list', self.ListPrefs)
         Route.Connect(prefix+'/dumbprefs/listenum', self.ListEnum)
         Route.Connect(prefix+'/dumbprefs/set', self.Set)
@@ -98,7 +107,6 @@ class DumbPrefs:
                                title=title if title else L('Preferences'),
                                thumb=thumb))
         self.prefix = prefix
-        self.host = 'http://127.0.0.1:32400'
         self.GetPrefs()
 
     def GetHeaders(self):
@@ -106,18 +114,16 @@ class DumbPrefs:
         headers['Connection'] = 'close'
         return headers
 
+    def CheckAuth(self):
+        """ Only the main users token is accepted at /myplex/account """
+        headers = {'X-Plex-Token': Request.Headers.get('X-Plex-Token', '')}
+        req = urllib2.Request("%s/myplex/account" % self.host, headers=headers)
+        res = urllib2.urlopen(req)
+
     def GetPrefs(self):
-        try:
-            data = HTTP.Request("%s/:/plugins/%s/prefs" % (self.host,
-                                                           Plugin.Identifier),
-                                headers=self.GetHeaders(),
-                                immediate=True,
-                                cacheTime=0).content
-        except Exception as e:
-            Log(str(e))
-            prefs = []
-        else:
-            prefs = XML.ElementFromString(data).xpath('/MediaContainer/Setting')
+        data = HTTP.Request("%s/:/plugins/%s/prefs" % (self.host, Plugin.Identifier),
+                            headers=self.GetHeaders())
+        prefs = XML.ElementFromString(data).xpath('/MediaContainer/Setting')
 
         self.prefs = [{'id': pref.xpath("@id")[0],
                        'type': pref.xpath("@type")[0],
