@@ -64,14 +64,14 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
     - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 0.9.12.19
+  - Ubuntu 14.04 LTS: PMS version 0.9.15.1
   - Windows 7 & 10: PMS version 0.9.12.13
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
   - Android (4.4.2)
-  - Plex/Web (2.4.23)
+  - Plex/Web (2.5.3)
   - Chromecast (Videos)
 - Not Working:
   - Chromecast (Pictures)

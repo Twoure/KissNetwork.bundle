@@ -428,9 +428,22 @@ def PlayVideo(url, **kwargs):
 
     path = base64.b64decode(url)
 
-    Log.Info('PlayVideo url = %s' %path)
+    Log.Debug('*' * 80)
+    Log.Debug('* Client.Product     = %s' %Client.Product)
+    Log.Debug('* Client.Platform    = %s' %Client.Platform)
+    Log.Debug('* PlayVideo URL      = %s' %path)
 
-    vurl = urllib2.urlopen(path).url
+    try:
+        vurl = get_redirect_url(path)
+        Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+    except:
+        vurl = path
+        Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+
+    Log.Debug('*' * 80)
+
+    if not vurl:
+        raise Ex.MediaNotAvailable
 
     return IndirectResponse(VideoClipObject, key=vurl)
 
@@ -442,3 +455,12 @@ def FindPartElement(array=list, string=str):
         return True
     else:
         return False
+
+####################################################################################################
+def get_redirect_url(url):
+    """Expand Redirect URLs"""
+
+    opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
+    request = opener.open(url)
+
+    return request.url

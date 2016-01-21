@@ -7,6 +7,8 @@
 import os, sys, shutil, io, urllib
 from time import sleep
 from updater import Updater
+from DumbTools import DumbKeyboard
+from DumbTools import DumbPrefs
 
 # import Shared Service Code
 Headers = SharedCodeService.headers
@@ -196,11 +198,22 @@ def MainMenu():
 
     oc.add(DirectoryObject(
         key=Callback(BookmarksMain, title='My Bookmarks', status=status), title='My Bookmarks', thumb=bookmark_thumb))
-    oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
+
+    if Client.Product in DumbPrefs.clients:
+        DumbPrefs(PREFIX, oc, title='Preferences', thumb=prefs_thumb)
+    else:
+        oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
+
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
-    oc.add(InputDirectoryObject(
-        key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
-        thumb=search_thumb))
+
+    if Client.Product in DumbKeyboard.clients:
+        DumbKeyboard(PREFIX, oc, Search, dktitle='Search', dkthumb=R(SEARCH_ICON))
+    else:
+        oc.add(InputDirectoryObject(
+            key=Callback(Search), title='Search', prompt='Search for...', thumb=search_thumb
+            ))
+            #key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
+            #thumb=search_thumb))
 
     return oc
 
