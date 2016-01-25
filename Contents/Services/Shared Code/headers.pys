@@ -118,7 +118,7 @@ def GetHeadersForURL(url, update=False):
         'referer': header_data[type_title]['referer']
         }
 
-    Log.Debug('\n----------Header for %s Loaded----------' %base_url)
+    Log.Debug('\n----------Header for %s Loaded----------\n%s' %(base_url, headers_to_return))
 
     return headers_to_return
 
@@ -151,4 +151,4 @@ def LoadHeaderDict():
         Log.Debug('header dict file not found')
         Log.Debug('creating new header dict file')
 
-        return CreateHeaderDict()
+        return CreateHeadersDict()

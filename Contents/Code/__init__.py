@@ -1059,6 +1059,12 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     # parse url for each Item and pull out its title, summary, and cover image
     # took some time to figure out how to get the javascript info
     listing = html.xpath('//table[@class="listing"]//td[@title]')
+    if not listing:
+        listing = html.xpath('//div[@class="item"]')
+    if type_title == 'Drama' and ('Search' not in pname):
+        drama_test = True
+    else:
+        drama_test = False
     listing_count = len(listing)
     allowed_count = 200
     Logger('%i items in Directory List.' %listing_count, kind='Info')
@@ -1068,9 +1074,16 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             '%i found.  Directory can only list up to %i items.  Please narrow your Search Criteria.' %(listing_count, allowed_count))
 
     for item in listing:
-        title_html = HTML.ElementFromString(item.get('title'))
+        if not drama_test:
+            title_html = HTML.ElementFromString(item.get('title'))
+        else:
+            title_html = item
+            drama_title_html = HTML.ElementFromString(item.get('title'))
         try:
-            thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
+            if not drama_test:
+                thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
+            else:
+                thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
             if not 'http' in thumb:
                 Log.Debug('thumb missing valid url. | %s' %thumb)
                 Log.Debug('thumb xpath = %s' %title_html.xpath('//img/@src'))
@@ -1083,7 +1096,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             thumb = None
             cover_file = None
 
-        summary = title_html.xpath('//p/text()')[0].strip()
+        if not drama_test:
+            summary = title_html.xpath('//p/text()')[0].strip()
+        else:
+            summary = drama_title_html.xpath('//p[@class="description"]/text()')[0].strip()
 
         a_node = item.xpath('./a')[0]
 
@@ -1093,13 +1109,22 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         Logger('\nitem_url_base = %s\nitem_sys_name = %s\nitem_url_final = %s' %(item_url_base, item_sys_name, item_url_final))
         Logger('thumb = %s' %thumb, kind='Info')
 
-        item_title = a_node.text.strip()
+        if not drama_test:
+            item_title = a_node.text.strip()
+        else:
+            item_title = a_node.xpath('./span[@class="title"]/text()')[0].strip()
         if 'Movie' in pname:
             title2 = item_title
         else:
             item_title_cleaned = Regex('[^a-zA-Z0-9 \n]').sub('', item_title)
 
-            latest = item.xpath('./following-sibling::td')[0].text_content().strip().replace(item_title_cleaned, '')
+            if not drama_test:
+                latest = item.xpath('./following-sibling::td')[0].text_content().strip().replace(item_title_cleaned, '')
+            else:
+                try:
+                    latest = item.xpath('./div[@class="ep-bg"]/a')[0].text_content()
+                except:
+                    latest = drama_title_html.xpath('./p')[1].text_content().split(' ')[1]
             latest = latest.replace('Read Online', '').replace('Watch Online', '').lstrip('_').strip()
             if 'Completed' in latest:
                 title2 = '%s | %s Completed' %(item_title, type_title)
@@ -1121,32 +1146,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             }
 
         # if thumb is hosted on kiss site then cache locally if Prefs Cache all covers
-        if 'kiss' in thumb:
-            if Prefs['cache_covers']:
-                if cover_file:
-                    # check if file already exist
-                    if Common.CoverImageFileExist(cover_file) and cover_file in Dict['cover_files']:
-                        Logger('cover file name = %s' %cover_file)
-                        cover = R(cover_file)
-                    # if no file then set thumb to caching cover icon and save thumb
-                    elif Common.CoverImageFileExist(cover_file) and not cover_file in Dict['cover_files']:
-                        Logger('cover file name = %s' %cover_file)
-                        Logger('cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
-                        Dict['cover_files'].update({cover_file: cover_file})
-                        cover = R(cover_file)
-                    else:
-                        Logger('cover not yet saved, saving %s now' %cover_file)
-                        cover = R(CACHE_COVER_ICON)
-                        Thread.Create(SaveCoverImage, image_url=thumb)
-                else:
-                    # no cover file, set cover to None
-                    cover = None
-            else:
-                # not caching covers, set cover to None
-                cover = None
-        else:
-            # cover not hosted on kiss site, so set thumb to cover url
-            cover = thumb
+        cover = GetThumb(cover_url=thumb, cover_file=cover_file)
 
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
@@ -1209,23 +1209,7 @@ def HomePageList(tab, category, base_url, type_title, art):
             'page_url': page_url,
             'art': art
             }
-
-        if 'kiss' in thumb:
-            if Prefs['cache_covers']:
-                if cover_file:
-                    if Common.CoverImageFileExist(cover_file):
-                        Logger('cover file name = %s' %cover_file)
-                        cover = R(cover_file)
-                    else:
-                        Logger('cover not yet saved, saving %s now' %cover_file)
-                        cover = R(CACHE_COVER_ICON)
-                        Thread.Create(SaveCoverImage, image_url=thumb)
-                else:
-                    cover = None
-            else:
-                cover = None
-        else:
-            cover = thumb
+        cover = GetThumb(cover_url=thumb, cover_file=cover_file)
 
         # send results to ItemPage
         oc.add(DirectoryObject(
@@ -1422,19 +1406,22 @@ def VideoDetail(video_info, item_info):
     url = video_info['video_page_url']
     video_type = video_info['video_type']
     cover_file = item_info['cover_file']
-    if Prefs['cache_covers']:
-        if cover_file:
-            if Common.CoverImageFileExist(cover_file):
-                Logger('cover file name = %s' %cover_file)
-                cover = R(cover_file)
+    if 'kiss' in item_info['cover_url']:
+        if Prefs['cache_covers']:
+            if cover_file:
+                if Common.CoverImageFileExist(cover_file):
+                    Logger('cover file name = %s' %cover_file)
+                    cover = R(cover_file)
+                else:
+                    Logger('cover not yet saved, saving %s now' %cover_file)
+                    cover = R(CACHE_COVER_ICON)
+                    Thread.Create(SaveCoverImage, image_url=thumb)
             else:
-                Logger('cover not yet saved, saving %s now' %cover_file)
-                cover = R(CACHE_COVER_ICON)
-                Thread.Create(SaveCoverImage, image_url=thumb)
+                cover = None
         else:
             cover = None
     else:
-        cover = None
+        cover = item_info['cover_url']
 
     oc = ObjectContainer(title2=title, art=R(art))
 
@@ -2293,9 +2280,39 @@ def RestartChannel():
 
     try:
         # touch Contents/Code/__init__.py
-        os.utime(os.path.join(Common.BUNDLE_PATH, 'Contents', 'Code', '__init__.py'), None)
+        #os.utime(os.path.join(Common.BUNDLE_PATH, 'Contents', 'Code', '__init__.py'), None)
+        plist_path = Core.storage.join_path(Common.BUNDLE_PATH, "Contents", "Info.plist")
+        Core.storage.utime(plist_path, None)
+        return True
     except Exception, e:
         Log.Error(e)
+        return False
+
+####################################################################################################
+def GetThumb(cover_url, cover_file):
+    """
+    Get Thumb
+    Return cover file or save new cover and return cover caching icon
+    """
+
+    cover = None
+    if 'kiss' in cover_url:
+        if Prefs['cache_covers'] and cover_file:
+            Logger('* cover file name = %s' %cover_file)
+            if Common.CoverImageFileExist(cover_file) and cover_file in Dict['cover_files']:
+                cover = R(cover_file)
+            elif Common.CoverImageFileExist(cover_file) and cover_file not in Dict['cover_files']:
+                Logger('* cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
+                Dict['cover_files'].update({cover_file: cover_file})
+                cover = R(cover_file)
+            else:
+                Logger('* cover not yet saved, saving %s now' %cover_file)
+                cover = R(CACHE_COVER_ICON)
+                Thread.Create(SaveCoverImage, image_url=cover_url)
+    elif 'http' in cover_url:
+        cover = cover_url
+
+    return cover
 
 ####################################################################################################
 @route(PREFIX + '/logger', force=bool)

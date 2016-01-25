@@ -65,12 +65,14 @@ def MetadataObjectForURL(url):
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
     #pms normally has a timestamp at end of image request, but don't think need it here.
     #if channel is acting up then I'll switch back to timestamp version
-    if cover_file:
+    if cover_file and 'kiss' in cover_url:
         if Common.CoverImageFileExist(cover_file):
             #thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/' + cover_file
             thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%s' %(cover_file, str(time_stamp))
         else:
             thumb = None
+    else:
+        thumb = cover_url
 
     # Get art background
     #art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg' %Common.GetTypeTitle(url).lower()

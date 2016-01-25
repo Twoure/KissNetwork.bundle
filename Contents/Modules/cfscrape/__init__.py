@@ -112,7 +112,8 @@ def get_tokens(url, user_agent=None):
 
     return ( {
                  "__cfduid": resp.cookies.get("__cfduid", ""),
-                 "cf_clearance": scraper.cookies.get("cf_clearance", "")
+                 "cf_clearance": scraper.cookies.get("cf_clearance", ""),
+                 "ASP.NET_SessionId": resp.cookies.get("ASP.NET_SessionId", "")
              },
              user_agent
            )
