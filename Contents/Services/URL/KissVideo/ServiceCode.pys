@@ -435,12 +435,15 @@ def PlayVideo(url, **kwargs):
     Log.Debug('* Client.Platform    = %s' %Client.Platform)
     Log.Debug('* PlayVideo URL      = %s' %path)
 
+    """
     try:
         vurl = get_redirect_url(path)
         Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
     except:
         vurl = path
         Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+    """
+    vurl = path
 
     Log.Debug('*' * 80)
 
