@@ -81,7 +81,7 @@ def CorrectCoverImage(string):
         name, ext = os.path.splitext(string)
         ext_l = ext.lower()
 
-        if ext_l == '.jpg' or ext_l == '.png' or ext_l == '.gif':
+        if (ext_l == '.jpg') or (ext_l == '.jpeg') or (ext_l == '.png') or (ext_l == '.gif'):
             string = name + ext_l
         else:
             if ext_l == '.jp' or ext_l == '.pn':
