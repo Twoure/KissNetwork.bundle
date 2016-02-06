@@ -19,7 +19,7 @@ def MetadataObjectForURL(url):
     added here - the object's key and rating_key properties will be synthesised based on the URL.
     """
 
-    title = url.rsplit('?')[0].rsplit('/')[-1]
+    title = url.rsplit('?', 1)[0].rsplit('/')[-1]
 
     return PhotoAlbumObject(key=Callback(GetPhotos, url=url), title=title)
 

@@ -29,53 +29,59 @@ def MetadataObjectForURL(url):
 
     video_href = '/' + url.split('/', 3)[3]
     video_id = video_href.split('=')[-1]
-    Log('video href = %s | video id = %s' %(video_href, video_id))
+    Log.Debug('*' * 80)
+    Log.Debug('* video href = %s' %video_href)
+    Log.Debug('* video id   = %s' %video_id)
     url = url.rsplit('/', 1)[0]
     source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
 
-    Log.Info('MetadataObjectForURL url = %s' %url)
+    Log.Debug('* MetadataObjectForURL url = %s' %url)
+    Log.Debug('*' * 80)
 
     # setup html for parsing
     html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
+    Log.Debug('*' * 80)
 
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
     title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "%s")]/../a/text()' %video_id)[0]
     title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
     other_names = html.xpath('//p[span[@class="info"]="Other name:"]/a/text()')
-    Log.Debug('other names = %s' %other_names)
+    Log.Debug('* other names = %s' %other_names)
     genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
-    Log.Debug('genres = %s' %genres)
+    Log.Debug('* genres = %s' %genres)
     view_text = html.xpath('//p[span[@class="info"]="Status:"]')[0].text_content()[:100].replace(',', '')
     views = int(Regex('(?s).*(?:Views:).(\d+)').search(view_text).group(1))
-    Log.Debug('views = %i' %views)
+    Log.Debug('* views = %i' %views)
     countries = html.xpath('//p[span[@class="info"]="Country:"]/a/text()')
-    Log.Debug('countries = %s' %countries)
+    Log.Debug('* countries = %s' %countries)
     date_aired = html.xpath('//p[span[@class="info"]="Date aired:"]/text()')
-    Log.Debug('date aired = %s' %date_aired)
-
-    Log.Debug('\nshow_name_raw | %s\ntitle_raw | %s\ntitle | %s' %(show_name_raw, title_raw, title))
+    Log.Debug('* date aired = %s' %date_aired)
+    Log.Debug('* show_name_raw = %s' %show_name_raw)
+    Log.Debug('* title_raw = %s' %title_raw.strip())
+    Log.Debug('* title = %s' %title)
 
     # setup thumb and art for video
     cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
-    if not 'http' in cover_url:
-        Log.Error('cover url not a valid picture url | %s' %cover_url)
-        cover_file = None
-    else:
+    if 'kiss' in cover_url:
         cover_file = cover_url.rsplit('/')[-1]
-    time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
-    #pms normally has a timestamp at end of image request, but don't think need it here.
-    #if channel is acting up then I'll switch back to timestamp version
-    if cover_file and 'kiss' in cover_url:
-        if Common.CoverImageFileExist(cover_file):
-            #thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/' + cover_file
-            thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%s' %(cover_file, str(time_stamp))
-        else:
-            thumb = None
+    elif 'http' in cover_url:
+        cover_file = cover_url.split('/', 3)[3].replace('/', '_')
     else:
+        Log.Error('*' * 80)
+        Log.Error('* cover url not a valid picture url | %s' %cover_url)
+        Log.Error('*' * 80)
+        cover_file = None
+
+    time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+
+    if Common.CoverImageFileExist(cover_file):
+        thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%s' %(cover_file, str(time_stamp))
+    elif cover_url:
         thumb = cover_url
+    else:
+        thumb = None
 
     # Get art background
-    #art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg' %Common.GetTypeTitle(url).lower()
     art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg?t=%s' %(Common.GetTypeTitle(url).lower(), str(time_stamp))
 
 
@@ -83,7 +89,7 @@ def MetadataObjectForURL(url):
     summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
     # if summary found in <p> after <p><span>Summary:</span></p>
     if summary:
-        Log.Info('summary in <p>')
+        Log.Debug('* summary in <p>')
         p_list = html.xpath('//div[@id="container"]//p')
         p_num = len(p_list)
         match = int(0)
@@ -101,32 +107,32 @@ def MetadataObjectForURL(url):
                     sum_list.append(sum_text)
 
         if len(sum_list) > 1:
-            Log.Info('summary was in %i <p>\'s' %int(len(sum_list)))
+            Log.Debug('* summary was in %i <p>\'s' %int(len(sum_list)))
             summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip().replace('\n\n\n', '\n')
         else:
             if len(sum_list) == 1:
-                Log.Info('summary was in the only <p>')
+                Log.Debug('* summary was in the only <p>')
                 summary = sum_list[0]
             else:
-                Log.Info('no summary found in <p>\'s, setting to \"None\"')
+                Log.Debug('* no summary found in <p>\'s, setting to \"None\"')
                 summary = None
     else:
         summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
         # if summary found in <p><span> after <p><span>Summary:</span></p>
         if summary:
-            Log.Info('summary is in <p><span>')
+            Log.Debug('* summary is in <p><span>')
             summary = summary[0].text_content().strip()
         else:
             summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/table//td')
             # if summary found in own <table>
             if summary:
-                Log.Info('summary is in own <table>')
+                Log.Debug('* summary is in own <table>')
                 summary = summary[0].text_content().strip()
             else:
                 summary = html.xpath('//div[@id="container"]//div[@class="bigBarContainer"]/div[@class="barContent"]/div/div')
                 # if summary found in own <div>
                 if summary:
-                    Log.Info('summary is in own <div>')
+                    Log.Debug('* summary is in own <div>')
                     summary = summary[0].text_content().strip()
                 else:
                     summary = html.xpath('//p[span[@class="info"]="Summary:"]')
@@ -135,22 +141,24 @@ def MetadataObjectForURL(url):
                         summary = summary[0].text_content().strip()
                         test = Regex('(?s)Summary\:.+?([\S].+)').search(summary)
                         if test:
-                            Log.Info('summary is in <p><span>Summary:</span>summary</p>')
+                            Log.Debug('* summary is in <p><span>Summary:</span>summary</p>')
                             summary = test.group(1).strip()
                         else:
-                            Log.Info('no summary found, setting summary to \"None\"')
+                            Log.Debug('* no summary found, setting summary to \"None\"')
                             summary = None
                     else:
                         # if no summary found then set to 'None'
-                        Log.Info('no summary found, setting summary to \"None\"')
+                        Log.Debug('* no summary found, setting summary to \"None\"')
                         summary = None
 
     if summary:
-        Log.Debug('summary = %s' %summary)
+        Log.Debug('* summary = %s' %summary)
+        Log.Debug('*' * 80)
 
     # setup MovieObject
     if 'movie' in title.lower() or 'Movie' in genres and not 'episode' in title.lower():
-        Log.Info('this is a movie')
+        Log.Debug('* this is a movie')
+        Log.Debug('*' * 80)
 
         # remove 'Movie' from genre list
         genre_list = [g for g in genres if not g == 'Movie']
@@ -181,7 +189,7 @@ def MetadataObjectForURL(url):
             summary=summary)
     # setup EpisodeObject
     elif 'episode' in title.lower():
-        Log.Info('this is a TV Show')
+        Log.Debug('* this is a TV Show')
 
         show_title = None
         season_number = None
@@ -335,13 +343,14 @@ def MetadataObjectForURL(url):
         if date_aired:
             try:
                 date_aired = date_aired[1].lower().split('to')[0].split('-')[0].strip()
-                Log('date aired = %s' %date_aired)
+                Log.Debug('* date aired = %s' %date_aired)
                 date = Datetime.ParseDate(date_aired)
-                Log('date = %s' %str(date))
+                Log.Debug('* date = %s' %str(date))
             except:
                 date = None
         else:
             date = None
+        Log.Debug('*' * 80)
 
         return EpisodeObject(
             title=new_title,
@@ -356,7 +365,8 @@ def MetadataObjectForURL(url):
             summary=summary)
     # setup VideoClibObject in case video has no episode or movie data
     else:
-        Log.Info('show not defined, so returned general video clip')
+        Log.Debug('* show not defined, so returned general video clip')
+        Log.Debug('*' * 80)
 
         if date_aired:
             try:
@@ -391,21 +401,24 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
-    Log.Info('MediaObjectsForURL url = %s' %url)
+    Log.Debug('* MediaObjectsForURL url = %s' %url)
+    Log.Debug('*' * 80)
 
     # setup html for parsing
     html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
     mo = []
 
     if "(Dub)" in html.xpath('//head/title/text()')[0]:
-        Log.Info('language = English')
+        Log.Debug('* language = English')
         AudioStreamObject.language_code = Locale.Language.English
     elif "(Sub)" in html.xpath('//head/title/text()')[0]:
-        Log.Info('language = Japanese')
+        Log.Debug('* language = Japanese')
         AudioStreamObject.language_code = Locale.Language.Japanese
     else:
-        Log.Info('No Language set. Setting to Unknown')
+        Log.Debug('* No Language set. Setting to Unknown')
         AudioStreamObject.language_code = Locale.Language.Unknown
+
+    Log.Debug('*' * 80)
 
     # create media objects for each video quality
     for node in html.xpath('//select[@id="selectQuality"]/option'):
@@ -426,7 +439,7 @@ def MediaObjectsForURL(url):
 ########################################################################################
 @indirect
 def PlayVideo(url, **kwargs):
-    """Log the url and return the decoded base64 url"""
+    """Log the Client Product, Platform and base64 decoded PlayVideo URL"""
 
     path = base64.b64decode(url)
 

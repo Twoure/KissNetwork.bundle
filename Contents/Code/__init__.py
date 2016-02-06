@@ -4,7 +4,12 @@
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framework
-import os, sys, shutil, io, urllib
+import os
+import sys
+import shutil
+import io
+import urllib
+import urllib2
 from time import sleep
 from updater import Updater
 from DumbTools import DumbKeyboard
@@ -1091,7 +1096,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                 thumb = None
                 cover_file = None
             else:
-                cover_file = thumb.rsplit('/')[-1]
+                if thumb:
+                    cover_file = thumb.rsplit('/')[-1]
+                else:
+                    cover_file = None
         except:
             thumb = None
             cover_file = None
@@ -1342,8 +1350,9 @@ def ItemSubPage(item_info):
                 node = media.xpath('./a')
 
                 # url for Video/Chapter
-                media_page_url = page_url + '/' + node[0].get('href').rsplit('/')[-1]
-                #Logger('%s Page URL = %s' % (s_removed_page_category, media_page_url))
+                mpu_node = node[0].get('href').split('/')[-1].rsplit('?', 1)
+                media_page_url = page_url + '/' + urllib2.quote((mpu_node[0]).encode("utf8")) + '?' + mpu_node[1]
+                #Logger('* %s Page URL = %s' % (s_removed_page_category, media_page_url))
 
                 # title for Video/Chapter, cleaned
                 raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_decode, '')
@@ -1351,7 +1360,7 @@ def ItemSubPage(item_info):
                     media_title = raw_title.replace('Watch Online', '').strip()
                 else:
                     media_title = raw_title.replace('Read Online', '').strip()
-                #Logger('%s Title = %s' % (s_removed_page_category, media_title))
+                #Logger('* %s Title = %s' % (s_removed_page_category, media_title))
 
                 a.append((media_page_url, media_title))
             else:
@@ -1401,27 +1410,15 @@ def VideoDetail(video_info, item_info):
     summary = item_info['short_summary']
     if summary:
         summary = StringCode(string=summary, code='decode')
-    thumb = item_info['cover_url']
     art = item_info['art']
+    #url = urllib2.unquote(video_info['video_page_url']).decode("utf8")
     url = video_info['video_page_url']
+    Log.Debug('*' * 80)
+    Log.Debug('* url before = %s' %video_info['video_page_url'])
+    Log.Debug('* url after  = %s' %url)
+    Log.Debug('*' * 80)
     video_type = video_info['video_type']
-    cover_file = item_info['cover_file']
-    if 'kiss' in item_info['cover_url']:
-        if Prefs['cache_covers']:
-            if cover_file:
-                if Common.CoverImageFileExist(cover_file):
-                    Logger('cover file name = %s' %cover_file)
-                    cover = R(cover_file)
-                else:
-                    Logger('cover not yet saved, saving %s now' %cover_file)
-                    cover = R(CACHE_COVER_ICON)
-                    Thread.Create(SaveCoverImage, image_url=thumb)
-            else:
-                cover = None
-        else:
-            cover = None
-    else:
-        cover = item_info['cover_url']
+    cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
 
     oc = ObjectContainer(title2=title, art=R(art))
 
@@ -1549,8 +1546,10 @@ def SearchPage(type_title, search_url, art):
                 if not 'http' in cover_url:
                     cover_url = None
                     cover_file = None
-                else:
+                elif 'kiss' in cover_url:
                     cover_file = cover_url.rsplit('/')[-1]
+                else:
+                    cover_file = None
             except:
                 cover_url = None
                 cover_file = None
@@ -1624,6 +1623,20 @@ def AddBookmark(item_info):
                 cover_url = None
         except:
             cover_url = None
+    # Option to store covers locally as files
+    if cover_url:
+        try:
+            image_file = cover_url.split('/', 3)[3].replace('/', '_')
+        except:
+            image_file = None
+        if Prefs['cache_covers'] or Prefs['cache_bookmark_covers']:
+            if not Common.CoverImageFileExist(image_file):
+                try:
+                    image_file = SaveCoverImage(cover_url)
+                except:
+                    image_file = None
+    else:
+        image_file = None
 
     # set full summary
     summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
@@ -1699,25 +1712,6 @@ def AddBookmark(item_info):
         summary = StringCode(string=summary, code='encode')
 
     # setup new bookmark json data to add to Dict
-    # Option to store covers locally as files
-    if Prefs['cache_covers'] or Prefs['cache_bookmark_covers'] and cover_url:
-        image_file = cover_url.rsplit('/')[-1]
-        if Common.CoverImageFileExist(image_file):
-            pass
-        else:
-            try:
-                try:
-                    image_file = SaveCoverImage(cover_url)
-                except:
-                    image_file = cover_url.rsplit('/')[-1]
-            except:
-                image_file = None
-    # still set file name (if can) for later
-    else:
-        try:
-            image_file = cover_url.rsplit('/')[-1]
-        except:
-            image_file = None
 
     new_bookmark = {
         type_title: item_sys_name, 'item_title': item_title, 'cover_file': image_file,
@@ -1788,8 +1782,8 @@ def RemoveBookmark(item_info):
 
     # index 'Bookmarks' list
     bm = Dict['Bookmarks'][type_title]
-    Logger('bookmarks = %s' %bm)
-    Logger('bookmark lenght = %s' %len(bm))
+    #Logger('bookmarks = %s' %bm)
+    Logger('bookmark length = %s' %len(bm))
     for i in xrange(len(bm)):
         # remove item's data from 'Bookmarks' list
         if bm[i][type_title] == item_sys_name:
@@ -1894,22 +1888,20 @@ def CacheCovers(start=False, skip=True):
                 for sbm in bm[key]:
                     bm_count = len(bm[key])
                     if sbm['cover_file'] and sbm['cover_url']:
-                        bookmark_cache.add(sbm['cover_file'])
-                        if 'kiss' in sbm['cover_url']:
-                            thumb = Common.CorrectCoverImage(sbm['cover_url'])
-                            if thumb:
-                                cover_file = thumb.rsplit('/')[-1]
-                                if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
-                                    Thread.Create(SaveCoverImage, image_url=thumb)
-                                elif not Common.CoverImageFileExist(cover_file):
-                                    ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                                    Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
-                                elif Common.CoverImageFileExist(cover_file):
-                                    Logger('file %s already exist' %sbm['cover_file'], kind='Info')
-                                else:
-                                    Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
-                            else:
-                                Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
+                        cover_file = sbm['cover_file']
+                        bookmark_cache.add(cover_file)
+                        thumb = Common.CorrectCoverImage(sbm['cover_url'])
+                        if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
+                            Thread.Create(SaveCoverImage, image_url=thumb)
+                        elif not Common.CoverImageFileExist(cover_file):
+                            ftimer = float(Util.RandomInt(0,30)) + Util.Random()
+                            Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
+                        elif Common.CoverImageFileExist(cover_file):
+                            Logger('file %s already exist' %cover_file, kind='Info')
+                        else:
+                            Log.Error('%s | %s | Unknown Error Occurred' %(cover_file, thumb))
+                    else:
+                        Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
 
         Logger('Caching Bookmark Cover images if they have not been already.', kind='Info')
         if cf:
@@ -1928,21 +1920,19 @@ def CacheCovers(start=False, skip=True):
                 for sbm in bm[key]:
                     bm_count = len(bm[key])
                     if sbm['cover_file'] and sbm['cover_url']:
-                        if 'kiss' in sbm['cover_url']:
-                            thumb = Common.CorrectCoverImage(sbm['cover_url'])
-                            if thumb:
-                                cover_file = thumb.rsplit('/')[-1]
-                                if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
-                                    Thread.Create(SaveCoverImage, image_url=thumb)
-                                elif not Common.CoverImageFileExist(cover_file):
-                                    ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                                    Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
-                                elif Common.CoverImageFileExist(cover_file):
-                                    Logger('file %s already exist' %sbm['cover_file'], kind='Info')
-                                else:
-                                    Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
-                            else:
-                                Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
+                        cover_file = sbm['cover_file']
+                        thumb = Common.CorrectCoverImage(sbm['cover_url'])
+                        if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
+                            Thread.Create(SaveCoverImage, image_url=thumb)
+                        elif not Common.CoverImageFileExist(cover_file):
+                            ftimer = float(Util.RandomInt(0,30)) + Util.Random()
+                            Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
+                        elif Common.CoverImageFileExist(cover_file):
+                            Logger('file %s already exist' %cover_file, kind='Info')
+                        else:
+                            Log.Error('%s | %s | Unknown Error Occurred' %(cover_file, thumb))
+                    else:
+                        Log.Error('%s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
 
         Logger('Caching Bookmark Cover images if they have not been already.', kind='Info')
         Logger('All covers cached set to True.', kind='Info')
@@ -1976,38 +1966,54 @@ def CacheAllCovers(category, qevent, page=1):
 
     if category == 'Drama':
         ncategory = 'Asian'
+        drama_test = True
     else:
         ncategory = category
+        drama_test = False
     base_url = Common.Domain_Dict[ncategory]
     item_url = base_url + '/%sList?page=%s' % (category, page)
 
     html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
 
     nextpg_node = None
-    # parse html for 'last' and 'next' page numbers
+    # parse html for 'next' page node
     for node in html.xpath('///div[@class="pagination pagination-left"]//li/a'):
         if "Next" in node.text:
             nextpg_node = str(node.get('href'))  # pull out next page if exist
             break
 
-    for item in html.xpath('//table[@class="listing"]//td/@title'):
-        title_html = HTML.ElementFromString(item)
+    listing = html.xpath('//table[@class="listing"]//td[@title]')
+    if not listing:
+        listing = html.xpath('//div[@class="item"]')
+
+    for item in listing:
+        if not drama_test:
+            title_html = HTML.ElementFromString(item.get('title'))
+        else:
+            title_html = item
+            drama_title_html = HTML.ElementFromString(item.get('title'))
+
         try:
-            thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
-            if not 'http' in thumb:
+            if drama_test:
+                thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
+            else:
+                thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
+            if 'kiss' in thumb:
+                cover_file = thumb.rsplit('/')[-1]
+            elif 'http' in thumb:
+                cover_file = thumb.split('/', 3)[3].replace('/', '_')
+            else:
                 Log.Debug('thumb missing valid url. | %s' %thumb)
                 Log.Debug('thumb xpath = %s' %title_html.xpath('//img/@src'))
                 Log.Debug('item name | %s | %s' %(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
                 thumb = None
                 cover_file = None
-            else:
-                cover_file = thumb.rsplit('/')[-1]
         except:
             thumb = None
             cover_file = None
 
         if thumb:
-            if not Common.CoverImageFileExist(cover_file):
+            if (not Common.CoverImageFileExist(cover_file)) and ('kiss' in thumb):
                 timer = float(Util.RandomInt(0,30)) + Util.Random()
                 Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=thumb)
 
@@ -2032,10 +2038,11 @@ def SaveCoverImage(image_url, count=0):
 
     if 'kiss' in image_url:
         content_url = Common.GetBaseURL(image_url) + '/' + image_url.split('/', 3)[3]
+        image_file = content_url.rsplit('/')[-1]
     else:
         content_url = image_url
+        image_file = image_url.split('/', 3)[3].replace('/', '_')
 
-    image_file = content_url.rsplit('/')[-1]
     path = Core.storage.join_path(Common.RESOURCES_PATH, image_file)
     Logger('image file path = %s' %path)
 
@@ -2067,7 +2074,7 @@ def SaveCoverImage(image_url, count=0):
             Logger(
                 '%s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i'
                 %(r.status_code, timer, count), kind='Warn', force=True)
-            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
+            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count, name=name)
         else:
             Logger('status code for image url = %s' %r.status_code)
             Logger('image url not found | %s' %content_url, force=True, kind='Error')
@@ -2296,21 +2303,24 @@ def GetThumb(cover_url, cover_file):
     """
 
     cover = None
-    if 'kiss' in cover_url:
+    if not cover_url:
+        return cover
+    elif 'kiss' in cover_url:
         if Prefs['cache_covers'] and cover_file:
             Logger('* cover file name = %s' %cover_file)
-            if Common.CoverImageFileExist(cover_file) and cover_file in Dict['cover_files']:
-                cover = R(cover_file)
-            elif Common.CoverImageFileExist(cover_file) and cover_file not in Dict['cover_files']:
-                Logger('* cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
-                Dict['cover_files'].update({cover_file: cover_file})
-                cover = R(cover_file)
+            if Common.CoverImageFileExist(cover_file):
+                if cover_file in Dict['cover_files']:
+                    cover = R(cover_file)
+                else:
+                    Logger('* cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
+                    Dict['cover_files'].update({cover_file: cover_file})
+                    cover = R(cover_file)
             else:
                 Logger('* cover not yet saved, saving %s now' %cover_file)
                 cover = R(CACHE_COVER_ICON)
                 Thread.Create(SaveCoverImage, image_url=cover_url)
     elif 'http' in cover_url:
-        cover = cover_url
+        cover = Common.CorrectCoverImage(cover_url)
 
     return cover
 
