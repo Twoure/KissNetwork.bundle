@@ -1,5 +1,18 @@
 # ChangeLog
 
+##### 1.0.8
+- _02/05/16_
+- Fixes:
+  - KissCartoon Covers, and any other covers no longer hosted on kiss sites
+  - Bookmark Covers
+  - CreateHeadersDict()
+  - KissAsian directory list
+  - KissManga special characters in Page URL
+- Update:
+  - Added ASP.Net_SessionId to cfscraper
+  - Removed URL expand.  Was expanding the wrong IP for remote play
+  - Changed KissCartoon cookie cache time from 7 days to 5 days
+
 ##### 1.0.7
 - _01/21/16_
 - New:
