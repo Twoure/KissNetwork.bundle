@@ -14,6 +14,7 @@ from time import sleep
 from updater import Updater
 from DumbTools import DumbKeyboard
 from DumbTools import DumbPrefs
+import AuthTools
 
 # import Shared Service Code
 Headers = SharedCodeService.headers
@@ -206,7 +207,7 @@ def MainMenu():
 
     if Client.Product in DumbPrefs.clients:
         DumbPrefs(PREFIX, oc, title='Preferences', thumb=prefs_thumb)
-    else:
+    elif AuthTools.Auth():
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
@@ -217,8 +218,6 @@ def MainMenu():
         oc.add(InputDirectoryObject(
             key=Callback(Search), title='Search', prompt='Search for...', thumb=search_thumb
             ))
-            #key=Callback(Search), title='Search', summary='Search KissNetwork', prompt='Search for...',
-            #thumb=search_thumb))
 
     return oc
 
@@ -414,7 +413,7 @@ def About():
         Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
     version = plist['CFBundleVersion']
 
-    if Prefs['devtools']:
+    if Prefs['devtools'] and AuthTools.Auth():
         oc.add(DirectoryObject(key=Callback(DevTools),
             title='Developer Tools',
             summary='WARNING!!\nDeveloper Tools.  Make sure you understand what these do before using.'))
@@ -1411,12 +1410,7 @@ def VideoDetail(video_info, item_info):
     if summary:
         summary = StringCode(string=summary, code='decode')
     art = item_info['art']
-    #url = urllib2.unquote(video_info['video_page_url']).decode("utf8")
     url = video_info['video_page_url']
-    Log.Debug('*' * 80)
-    Log.Debug('* url before = %s' %video_info['video_page_url'])
-    Log.Debug('* url after  = %s' %url)
-    Log.Debug('*' * 80)
     video_type = video_info['video_type']
     cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
 

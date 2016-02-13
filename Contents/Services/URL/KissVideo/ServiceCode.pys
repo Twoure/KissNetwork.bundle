@@ -8,6 +8,7 @@ import base64, urllib2
 # import Shared Service Code
 import headers as Headers
 import common as Common
+import subprefs as SubPrefs
 
 ########################################################################################
 def NormalizeURL(url):
@@ -432,7 +433,7 @@ def MediaObjectsForURL(url):
             video_codec=VideoCodec.H264,
             audio_codec=AudioCodec.AAC,
             audio_channels=2,
-            optimized_for_streaming = True))
+            optimized_for_streaming=True))
 
     return mo
 
@@ -442,21 +443,23 @@ def PlayVideo(url, **kwargs):
     """Log the Client Product, Platform and base64 decoded PlayVideo URL"""
 
     path = base64.b64decode(url)
+    vurl = path
 
     Log.Debug('*' * 80)
     Log.Debug('* Client.Product     = %s' %Client.Product)
     Log.Debug('* Client.Platform    = %s' %Client.Platform)
     Log.Debug('* PlayVideo URL      = %s' %path)
 
-    """
-    try:
-        vurl = get_redirect_url(path)
-        Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
-    except:
-        vurl = path
-        Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
-    """
-    vurl = path
+    for pref in SubPrefs.GetPrefs('com.plexapp.plugins.kissnetwork'):
+        if (pref['id'] == 'samsung_fix') and (pref['value'] == 'true'):
+            Log.Debug('* Samsung Fix ON')
+            Log.Debug('* Note: Videos will NO longer play outside the network connection.')
+            try:
+                vurl = get_redirect_url(path)
+                Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+            except:
+                Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+            break
 
     Log.Debug('*' * 80)
 
@@ -475,10 +478,10 @@ def FindPartElement(array=list, string=str):
         return False
 
 ####################################################################################################
-def get_redirect_url(url):
+def get_redirect_url(rurl):
     """Expand Redirect URLs"""
 
     opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
-    request = opener.open(url)
+    request = opener.open(rurl)
 
     return request.url

@@ -43,6 +43,12 @@
     "default": "False"
   },
   {
+    "id": "samsung_fix",
+    "label": "Samsung Fix (disables remote play)",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "adult",
     "label": "Allow Adult Content",
     "type": "bool",
