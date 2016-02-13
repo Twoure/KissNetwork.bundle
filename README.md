@@ -4,7 +4,7 @@ KissNetwork
 ## Table of Contents
 - [Introduction](#introduction)
   - [Features](#features)
-  - [Changelog](Changelog.md)
+  - [Changelog](Changelog.md#changelog)
 - [Channel Support](#channel-support)
   - [Plex Media Server](#plex-media-server)
   - [Plex Clients](#plex-clients)
@@ -54,7 +54,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 [Table of Contents](#table-of-contents)
 
-## [Changelog](Changelog.md)
+## [Changelog](Changelog.md#changelog)
 
 [Table of Contents](#table-of-contents)
 
