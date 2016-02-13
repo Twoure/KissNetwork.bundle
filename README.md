@@ -64,7 +64,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
     - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 0.9.15.2
+  - Ubuntu 14.04 LTS: PMS version 0.9.15.3
   - Windows 7 & 10: PMS version 0.9.12.13
 
 ##### Plex Clients:
@@ -80,9 +80,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ## Install
 
-- [Download](https://github.com/Twoure/KissNetwork.bundle/archive/master.zip) and install KissNetwork by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
+- [Download](https://github.com/Twoure/KissNetwork.bundle/releases) the latest release and install **KissNetwork** by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
   - Unzip and rename the folder to "KissNetwork.bundle"
-  - Copy KissNetwork.bundle into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
+  - Copy "KissNetwork.bundle" into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
   - ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
 
 [Table of Contents](#table-of-contents)
@@ -105,6 +105,10 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Cache Bookmark Covers Locally
 - If enabled AND "Cache All Covers Locally" is False, will download cover images and only display them in your "My Bookmarks" list.
 - If disabled AND 'Cache All Covers Locally" is False, will delete all bookmarked covers from computer.
+
+##### Samsung Fix (disables remote play)
+- Enables URL Redirect Function, allowing videos to play in the Samsung Plex App
+- If enabled, then videos will not load outside the local network (i.e. remote play disabled)
 
 ##### Allow Adult Content
 - Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.

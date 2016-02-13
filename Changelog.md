@@ -1,5 +1,14 @@
 # ChangeLog
 
+##### 1.0.9
+- _02/13/2016_
+- Fixes:
+  - Added Sumsung Fix to Preferences
+    - Adds back URL Redirect function, but disables remote play
+    - If enabled, videos will only work within the host network
+- Updates:
+  - Preferences and DevTools only available to Admin Plex Account
+
 ##### 1.0.8
 - _02/05/16_
 - Fixes:
