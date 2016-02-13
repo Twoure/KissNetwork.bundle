@@ -3,7 +3,7 @@
 ##### 1.0.9
 - _02/13/2016_
 - Fixes:
-  - Added Sumsung Fix to Preferences
+  - Added Samsung Fix to Preferences
     - Adds back URL Redirect function, but disables remote play
     - If enabled, videos will only work within the host network
 - Updates:
