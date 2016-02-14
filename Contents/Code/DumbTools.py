@@ -88,8 +88,7 @@ class DumbKeyboard:
 
 
 class DumbPrefs:
-    clients = ['Plex for iOS', 'Plex Media Player', 'Plex Home Theater',
-               'OpenPHT', 'Plex for Roku']
+    clients = ['Plex for iOS', 'Plex Media Player', 'OpenPHT', 'Plex for Roku']
 
     def __init__(self, prefix, oc, title=None, thumb=None):
         self.host = 'http://127.0.0.1:32400'
