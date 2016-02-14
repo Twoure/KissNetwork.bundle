@@ -8,12 +8,12 @@ import os
 import sys
 import shutil
 import io
-import urllib
 import urllib2
 from time import sleep
 from updater import Updater
 from DumbTools import DumbKeyboard
 from DumbTools import DumbPrefs
+import messages
 import AuthTools
 
 # import Shared Service Code
@@ -80,6 +80,8 @@ PREFS_ICON = 'icon-prefs.png'
 CACHE_COVER_ICON = 'icon-cache-cover.png'
 ABOUT_ICON = 'icon-about.png'
 
+MC = messages.NewMessageContainer(PREFIX, TITLE)
+
 ####################################################################################################
 def Start():
     ObjectContainer.art = R(MAIN_ART)
@@ -91,6 +93,10 @@ def Start():
 
     HTTP.CacheTime = 0
     HTTP.Headers['User-Agent'] = Common.USER_AGENT
+
+    Log.Debug('*' * 80)
+    Log.Debug('* Platform.OS        = %s' %Platform.OS)
+    Log.Debug('*' * 80)
 
     # setup background auto cache of headers
     Dict['First Headers Cached'] = False
@@ -120,6 +126,11 @@ def Start():
 def MainMenu():
     """Create the Main Menu"""
 
+    Log.Debug('*' * 80)
+    Log.Debug('* Client.Product     = %s' %Client.Product)
+    Log.Debug('* Client.Platform    = %s' %Client.Platform)
+    Log.Debug('*' * 80)
+
     # if cfscrape failed then stop the channel, and return error message.
     SetUpCFTest()
     if Dict['cfscrape_test']:
@@ -133,8 +144,7 @@ def MainMenu():
             Once JavaScript Runtime installed, Restart channel
             """
             )
-        return MessageContainer(
-            'Error',
+        return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
 
     oc = ObjectContainer(title2=TITLE, no_cache=True)
@@ -752,8 +762,8 @@ def BookmarksMain(title, status):
     # check for 'Bookmarks' section in Dict
     if not Dict['Bookmarks']:
         # if no 'Bookmarks' section the return pop up
-        return MessageContainer(header=title,
-            message='No Bookmarks yet. Get out there and start adding some!!!')
+        return MC.message_container(title,
+            'No Bookmarks yet. Get out there and start adding some!!!')
     # create boomark directory based on category
     else:
         for key in sorted(Dict['Bookmarks'].keys()):
@@ -791,8 +801,8 @@ def BookmarksMain(title, status):
             return oc
         else:
             # Give error message
-            return MessageContainer(header='Error',
-                message='At least one source must be selected in Preferences to view Bookmarks')
+            return MC.message_container('Error',
+                'At least one source must be selected in Preferences to view Bookmarks')
 
 ####################################################################################################
 @route(PREFIX + '/bookmarkssub')
@@ -800,8 +810,8 @@ def BookmarksSub(type_title, art):
     """Load Bookmarked items from Dict"""
 
     if not type_title in Dict['Bookmarks'].keys():
-        return MessageContainer(header='Error',
-            message='%s Bookmarks list is dirty. Use About/Help > Dev Tools > Bookmark Tools > Reset %s Bookmarks' %(type_title, type_title))
+        return MC.message_container('Error',
+            '%s Bookmarks list is dirty. Use About/Help > Dev Tools > Bookmark Tools > Reset %s Bookmarks' %(type_title, type_title))
 
     oc = ObjectContainer(title2='My Bookmarks | %s' % type_title, art=R(art))
     Logger('category %s' %type_title)
@@ -1073,8 +1083,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     allowed_count = 200
     Logger('%i items in Directory List.' %listing_count, kind='Info')
     if listing_count > allowed_count and 'Search' in pname:
-        return MessageContainer(
-            'Error',
+        return MC.message_container('Error',
             '%i found.  Directory can only list up to %i items.  Please narrow your Search Criteria.' %(listing_count, allowed_count))
 
     for item in listing:
@@ -1173,7 +1182,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         Dict.Save()
         return oc
     else:
-        return MessageContainer(header=type_title, message='%s list is empty' %category)
+        return MC.message_container(type_title, '%s list is empty' %category)
 
 ####################################################################################################
 @route(PREFIX + '/homedirectorylist')
@@ -1258,8 +1267,8 @@ def ItemPage(item_info):
             if len(matching_list) > 0:
                 warning_string = ', '.join(list(matching_list))
                 Logger('\n----------Adult Content Blocked: %s----------' %warning_string, force=True, kind='Info')
-                return MessageContainer(header='Warning',
-                    message='Adult Content Blocked: %s' %warning_string)
+                return MC.message_container('Warning',
+                    'Adult Content Blocked: %s' %warning_string)
 
     # page category stings depending on media
     if not 'Manga' in type_title:
@@ -1337,8 +1346,8 @@ def ItemSubPage(item_info):
 
     # if no shows, then none have been added yet
     if not episode_list:
-        return MessageContainer(header='Warning',
-            message='%s \"%s\" Not Yet Aired.' %(type_title, item_title_decode))
+        return MC.message_container('Warning',
+            '%s \"%s\" Not Yet Aired.' %(type_title, item_title_decode))
     else:
         # parse html for media url, title and date added
         a = []
@@ -1427,10 +1436,10 @@ def VideoDetail(video_info, item_info):
     quality_test = html.xpath('//select[@id="selectQuality"]/option')
     if onedrive_test:
         if "onedrive" in onedrive_test[0].get('src'):
-            return MessageContainer(header='Error',
-                message='OneDrive Videos Not Yet Supported. Try another source if avalible.')
+            return MC.message_container('Error',
+                'OneDrive Videos Not Yet Supported. Try another source if avalible.')
     elif not quality_test:
-        return MessageContainer('Warning',
+        return MC.message_container('Warning',
             'This video is broken, Kiss%s is working to fix it.' %item_info['type_title'])
 
     # Movie
@@ -1507,7 +1516,7 @@ def Search(query=''):
     if len(oc) > 0:
         return oc
     else:
-        return MessageContainer('Search',
+        return MC.message_container('Search',
             'There are no search results for \"%s\". Try being less specific or make sure at least one source is selected in Preferences.' %query)
 
 ####################################################################################################
@@ -1572,7 +1581,7 @@ def SearchPage(type_title, search_url, art):
     else:
         Logger('Search returned no results.', kind='Warn')
         query = search_url.rsplit('=')[-1]
-        return MessageContainer('Search',
+        return MC.message_container('Search',
             """
             There are no search results for \"%s\" in \"%s\" Category.
             Try being less specific.
@@ -1725,8 +1734,8 @@ def AddBookmark(item_info):
         Dict.Save()
 
         # Provide feedback that the Item has been added to bookmarks
-        return MessageContainer(header=item_title_decode,
-            message='\"%s\" has been added to your bookmarks.' % item_title_decode)
+        return MC.message_container(item_title_decode,
+            '\"%s\" has been added to your bookmarks.' %item_title_decode)
     # check if the category key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
     # if so then append new bookmark to one of those categories
     elif type_title in bm.keys():
@@ -1734,8 +1743,8 @@ def AddBookmark(item_info):
         if (True if [b[type_title] for b in bm[type_title] if b[type_title] == item_sys_name] else False):
             # Bookmark already exist, don't add in duplicate
             Logger('bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
-            return MessageContainer(header=item_title_decode,
-                message='\"%s\" is already in your bookmarks.' % item_title_decode)
+            return MC.message_container(item_title_decode,
+                '\"%s\" is already in your bookmarks.' %item_title_decode)
         # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
         else:
             temp = {}
@@ -1747,8 +1756,8 @@ def AddBookmark(item_info):
             Dict.Save()
 
             # Provide feedback that the Item has been added to bookmarks
-            return MessageContainer(header=item_title_decode,
-                message='\"%s\" has been added to your bookmarks.' % item_title_decode)
+            return MC.message_container(item_title_decode,
+                '\"%s\" has been added to your bookmarks.' %item_title_decode)
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({type_title: [new_bookmark]})
@@ -1758,8 +1767,8 @@ def AddBookmark(item_info):
         Dict.Save()
 
         # Provide feedback that the Item has been added to bookmarks
-        return MessageContainer(header=item_title_decode,
-            message='\"%s\" has been added to your bookmarks.' % item_title_decode)
+        return MC.message_container(item_title_decode,
+            '\"%s\" has been added to your bookmarks.' %item_title_decode)
 
 ####################################################################################################
 @route(PREFIX + '/removebookmark', item_info=dict)
@@ -1800,8 +1809,8 @@ def RemoveBookmark(item_info):
         return ClearBookmarks(type_title)
     else:
         # Provide feedback that the Item has been removed from the 'Bookmarks' list
-        return MessageContainer(header=type_title,
-            message='\"%s\" has been removed from your bookmarks.' % item_title_decode)
+        return MC.message_container(type_title,
+            '\"%s\" has been removed from your bookmarks.' %item_title_decode)
 
 ####################################################################################################
 @route(PREFIX + '/clearbookmarks')
@@ -2159,10 +2168,10 @@ def StringCode(string, code):
     """Handle String Coding"""
 
     if code == 'encode':
-        string_code = urllib.quote(string.encode('utf8'))
+        string_code = urllib2.quote(string.encode('utf8'))
     elif code == 'decode':
         # Â artifact in Windows OS, don't know why, think it has to do with the Dict protocall
-        string_code = urllib.unquote(string).decode('utf8').replace('Â', '')
+        string_code = urllib2.unquote(string).decode('utf8').replace('Â', '')
 
     return string_code
 
