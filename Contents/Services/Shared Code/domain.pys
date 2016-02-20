@@ -6,7 +6,10 @@ Setup Domain names dynamically
 """
 
 # import section(s) not included in Plex Plug-In Framwork
-import sys, os, io, json
+import sys
+import os
+from io import open
+import json
 
 # constants
 BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
@@ -23,7 +26,10 @@ USER_AGENT = (
 # add custom modules to python path
 if MODULE_PATH not in sys.path:
     sys.path.append(MODULE_PATH)
-    Log.Debug('\n----------\n%s\n---^^^^---added to sys.path---^^^^---\n----------By domain.pys----------' %MODULE_PATH)
+    Log.Debug('*' * 80)
+    Log.Debug('* Module path below, added to sys.path, by domain.pys')
+    Log.Debug('* %s' %MODULE_PATH)
+    Log.Debug('*' * 80)
 
 # Import cfscrape from MODULE_PATH
 import requests
@@ -87,7 +93,7 @@ def SaveDomainDict(content=dict):
 
     Log.Debug('Saving Domains to file')
 
-    with io.open(DOMAIN_FILE, 'wb') as f:
+    with open(DOMAIN_FILE, 'wb') as f:
         json.dump(content, f, indent=4, sort_keys=True, separators=(',', ': '))
 
     Log.Debug('Domain Dictionary file has been saved')
@@ -113,7 +119,7 @@ def LoadDomainDict():
 
     if os.path.isfile(DOMAIN_FILE):
         Log.Info('loading domain dict in json format')
-        with io.open(DOMAIN_FILE) as data_file:
+        with open(DOMAIN_FILE) as data_file:
             data = json.load(data_file)
 
         return data

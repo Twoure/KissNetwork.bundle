@@ -448,18 +448,18 @@ def PlayVideo(url, **kwargs):
     Log.Debug('*' * 80)
     Log.Debug('* Client.Product     = %s' %Client.Product)
     Log.Debug('* Client.Platform    = %s' %Client.Platform)
+    Log.Debug('* Client.Version     = %s' %Client.Version)
     Log.Debug('* PlayVideo URL      = %s' %path)
 
-    for pref in SubPrefs.GetPrefs('com.plexapp.plugins.kissnetwork'):
-        if (pref['id'] == 'samsung_fix') and (pref['value'] == 'true'):
-            Log.Debug('* Samsung Fix ON')
-            Log.Debug('* Note: Videos will NO longer play outside the network connection.')
-            try:
-                vurl = get_redirect_url(path)
-                Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
-            except:
-                Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
-            break
+    prefs = SubPrefs.GetPrefs()
+    if prefs['samsung_fix'] == 'true':
+        Log.Debug('* Samsung Fix ON')
+        Log.Debug('* Note: Videos will NO longer play outside the network connection.')
+        try:
+            vurl = get_redirect_url(path)
+            Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+        except:
+            Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
 
     Log.Debug('*' * 80)
 

@@ -7,7 +7,7 @@
 import os
 import sys
 import shutil
-import io
+from io import open
 import urllib2
 from time import sleep
 from updater import Updater
@@ -28,9 +28,10 @@ module_path = Core.storage.join_path(
 
 if module_path not in sys.path:
     sys.path.append(module_path)
-    Log.Info(
-        '\n----------\n%s\n---^^^^---added to sys.path---^^^^---\n----------By __init__.py----------'
-        %module_path)
+    Log.Debug('*' * 80)
+    Log.Debug('* Module path below, added to sys.path, by __init__.py')
+    Log.Debug('* %s' %module_path)
+    Log.Debug('*' * 80)
 
 # import custom modules
 import requests
@@ -95,7 +96,9 @@ def Start():
     HTTP.Headers['User-Agent'] = Common.USER_AGENT
 
     Log.Debug('*' * 80)
-    Log.Debug('* Platform.OS        = %s' %Platform.OS)
+    Log.Debug('* Platform.OS            = %s' %Platform.OS)
+    Log.Debug('* Platform.OSVersion     = %s' %Platform.OSVersion)
+    Log.Debug('* Platform.ServerVersion = %s' %Platform.ServerVersion)
     Log.Debug('*' * 80)
 
     # setup background auto cache of headers
@@ -107,17 +110,18 @@ def Start():
     if Dict['cfscrape_test']:
         if Dict['Headers Auto Cached']:
             if not Dict['Headers Auto Cached']:
-                Log.Info('\n----------Caching Headers----------')
+                Log.Debug('* Caching Headers')
                 Thread.CreateTimer(5, BackgroundAutoCache)
             else:
-                Log.Info('\n----------Cookies already cached----------')
-                Log.Info('\n----------Checking Each URL Cache Time----------')
+                Log.Debug('* Cookies already cached')
+                Log.Debug('* Checking Each URL Cache Time')
                 Thread.CreateTimer(5, BackgroundAutoCache)
         else:
             Dict['Headers Auto Cached'] = False
             Dict.Save()
-            Log.Info('\n----------Caching Headers----------')
+            Log.Debug('* Caching Headers ')
             Thread.CreateTimer(5, BackgroundAutoCache)
+        Log.Debug('*' * 80)
     else:
         pass
 
@@ -127,16 +131,13 @@ def MainMenu():
     """Create the Main Menu"""
 
     Log.Debug('*' * 80)
-    Log.Debug('* Client.Product     = %s' %Client.Product)
-    Log.Debug('* Client.Platform    = %s' %Client.Platform)
-    Log.Debug('*' * 80)
+    Log.Debug('* Client.Product         = %s' %Client.Product)
+    Log.Debug('* Client.Platform        = %s' %Client.Platform)
+    Log.Debug('* Client.Version         = %s' %Client.Version)
 
     # if cfscrape failed then stop the channel, and return error message.
     SetUpCFTest()
-    if Dict['cfscrape_test']:
-        Log.Info('\n----------CFTest Previously Passed, not running again.----------')
-        pass
-    else:
+    if not Dict['cfscrape_test']:
         Log.Error(
             """
             ----------CFTest Failed----------
@@ -144,6 +145,7 @@ def MainMenu():
             Once JavaScript Runtime installed, Restart channel
             """
             )
+        Log.Debug('*' * 80)
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
 
@@ -2056,7 +2058,7 @@ def SaveCoverImage(image_url, count=0):
             r = requests.get(content_url, stream=True)
 
         if r.status_code == 200:
-            with io.open(path, 'wb') as f:
+            with open(path, 'wb') as f:
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
 
@@ -2233,7 +2235,8 @@ def SetUpCFTest():
                 """
                 )
     else:
-        Log.Info('\n----------CFTest Previously Passed, not running again.----------')
+        Log.Debug('* CFTest Previously Passed, not running again.')
+        Log.Debug('*' * 80)
 
     return
 
@@ -2251,12 +2254,13 @@ def BackgroundAutoCache():
         skip = False
         start = True
 
+    Log.Debug('*' * 80)
     # setup urls for setting headers
     if not Dict['First Headers Cached']:
-        Logger('\n----------Running Background Auto-Cache----------', force=True)
+        Logger('* Running Background Auto-Cache', force=True)
 
         if Core.storage.file_exists(Core.storage.join_path(Core.storage.data_path, 'Header_Dict')):
-            Logger('\n----------Header Dictionary already found, writing new Headers to old Dictionary----------', force=True)
+            Logger('* Header Dictionary already found, writing new Headers to old Dictionary', force=True)
 
             # get headers for each url
             for url in Common.BASE_URL_LIST:
@@ -2267,7 +2271,8 @@ def BackgroundAutoCache():
             Headers.CreateHeadersDict()
 
         # check to make sure each section/url has cookies now
-        Logger('\n----------All cookies----------\n%s' %Headers.LoadHeaderDict())
+        Logger('* All cookies')
+        Logger('* %s' %Headers.LoadHeaderDict())
 
         # Setup the Dict and save
         Dict['First Headers Cached'] = True
@@ -2275,12 +2280,13 @@ def BackgroundAutoCache():
         Dict.Save()
     else:
         for url in Common.BASE_URL_LIST:
-            Logger('\n----------Checking %s headers----------' %url, kind='Info', force=True)
+            Logger('* Checking %s headers' %url, kind='Info', force=True)
             Headers.GetHeadersForURL(url)
 
-        Logger('\n----------Completed Header Cache Check----------', kind='Info', force=True)
-        Logger('\n----------Headers will be cached independently when needed from now on----------', kind='Info', force=True)
+        Logger('* Completed Header Cache Check', force=True)
+        Logger('* Headers will be cached independently when needed from now on', force=True)
         pass
+    Log.Debug('*' * 80)
 
     return ValidatePrefs(start=start, skip=skip)
 
@@ -2290,7 +2296,6 @@ def RestartChannel():
 
     try:
         # touch Contents/Code/__init__.py
-        #os.utime(os.path.join(Common.BUNDLE_PATH, 'Contents', 'Code', '__init__.py'), None)
         plist_path = Core.storage.join_path(Common.BUNDLE_PATH, "Contents", "Info.plist")
         Core.storage.utime(plist_path, None)
         return True

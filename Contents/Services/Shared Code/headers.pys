@@ -6,7 +6,10 @@ Manipulate Headers for Kiss domains.
 """
 
 # import section(s) not included in Plex Plug-In Framwork
-import sys, os, io, json
+import sys
+import os
+from io import open
+import json
 import domain as Domain
 import common as Common
 
@@ -16,7 +19,10 @@ HEADER_FILE = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
 # add custom modules to python path
 if Common.MODULE_PATH not in sys.path:
     sys.path.append(Common.MODULE_PATH)
-    Log.Debug('\n----------\n%s\n---^^^^---added to sys.path---^^^^---\n----------By test.pys----------' % Common.MODULE_PATH)
+    Log.Debug('*' * 80)
+    Log.Debug('* Module path below, added to sys.path, by headers.pys')
+    Log.Debug('* %s' %Common.MODULE_PATH)
+    Log.Debug('*' * 80)
 
 # Import cfscrape from Common.MODULE_PATH
 import cfscrape
@@ -128,7 +134,7 @@ def SaveHeaderDict(content=dict):
 
     Log.Debug('Saving Header to file')
 
-    with io.open(HEADER_FILE, 'wb') as f:
+    with open(HEADER_FILE, 'wb') as f:
         json.dump(content, f, indent=4, sort_keys=True, separators=(',', ': '))
 
     Log.Debug('Header Dictionary file has been saved')
@@ -143,7 +149,7 @@ def LoadHeaderDict():
 
     if os.path.isfile(HEADER_FILE):
         Log.Info('loading header dict in json format')
-        with io.open(HEADER_FILE) as data_file:
+        with open(HEADER_FILE) as data_file:
             data = json.load(data_file)
 
         return data
