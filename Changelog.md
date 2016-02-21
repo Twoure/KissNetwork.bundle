@@ -3,7 +3,7 @@
 ##### 1.1.0
 - _02/20/2016_
 - Fixes:
-  - Samsung Fix reades Preferences file directly now (no token required)
+  - Samsung Fix reads Preferences file directly now (no token required)
 - Updates:
   - Added extra logging for Clients and Platform
 
