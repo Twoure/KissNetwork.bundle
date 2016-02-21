@@ -15,7 +15,7 @@ def GetPrefs():
     return prefs_dict
 
 def load_prefs():
-    prefs_path = os.path.join(Common.SUPPORT_PATH.split('Data')[0], 'Preferences', 'com.plexapp.plugins.kissnetwork.xml')
+    prefs_path = os.path.join(Common.BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Preferences', 'com.plexapp.plugins.kissnetwork.xml')
 
     f = open(prefs_path)
     prefs_string = f.read()
