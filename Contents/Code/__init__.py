@@ -14,7 +14,7 @@ from updater import Updater
 from DumbTools import DumbKeyboard
 from DumbTools import DumbPrefs
 import messages
-import AuthTools
+from AuthTools import CheckAdmin
 
 # import Shared Service Code
 Headers = SharedCodeService.headers
@@ -219,7 +219,7 @@ def MainMenu():
 
     if Client.Product in DumbPrefs.clients:
         DumbPrefs(PREFIX, oc, title='Preferences', thumb=prefs_thumb)
-    elif AuthTools.Auth():
+    elif CheckAdmin():
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
@@ -425,7 +425,7 @@ def About():
         Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
     version = plist['CFBundleVersion']
 
-    if Prefs['devtools'] and AuthTools.Auth():
+    if Prefs['devtools'] and CheckAdmin():
         oc.add(DirectoryObject(key=Callback(DevTools),
             title='Developer Tools',
             summary='WARNING!!\nDeveloper Tools.  Make sure you understand what these do before using.'))
