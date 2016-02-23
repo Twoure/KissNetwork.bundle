@@ -18,6 +18,7 @@ KissNetwork
     - [Samsung Fix (disables remote play)](#samsung-fix-disables-remote-play)
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
+    - [Auth Admin Through Plex.tv](#auth-admin-through-plextv)
     - [Enable Debug Logging](#enable-debug-logging)
   - [About / Help](#about--help)
     - [Developer Tools](#developer-tools)
@@ -113,10 +114,15 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - If enabled, then videos will not load outside the local network (i.e. remote play disabled)
 
 ##### Allow Adult Content
-- Attempt to block adult content from the kiss sites. If content blocked, then will removed adult themed genres from genre list and provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
+- Attempt to block adult content from the kiss sites. Removes adult themed genres from genre list if content blocked.  Will provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
 
 ##### Enable Developer Tools
 - Hide/Un-Hide Developer Tools Menu located in [About / Help](#about--help) section
+
+##### Auth Admin Through Plex.tv
+- Authenticate admin user through Plex.tv if Plex Media Server does not have Plex Home enabled
+- Enable  : Auth against `https://plex.tv/user/account`
+- Disable : Auth against `http://127.0.0.1:32400/myplex/account`
 
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
