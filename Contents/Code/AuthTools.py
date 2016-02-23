@@ -14,7 +14,9 @@ def CheckAdmin():
     Log.Debug('* Auth URL   = %s' %url)
 
     try:
-        req = urllib2.Request(url, headers={'X-Plex-Token': Request.Headers.get('X-Plex-Token', '')})
+        ptoken = Request.Headers.get('X-Plex-Token', '')
+        Log.Debug('* %sPlex Token is available for validation' %('' if ptoken else 'No '))
+        req = urllib2.Request(url, headers={'X-Plex-Token': ptoken})
         res = urllib2.urlopen(req)
         if res.read():
             Log.Debug('* Current User is Admin')
