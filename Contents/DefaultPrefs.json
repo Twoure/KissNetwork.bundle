@@ -8,7 +8,7 @@
   },
   {
     "id": "kissanime",
-    "label": "View Kissanime.com (Anime)",
+    "label": "View Kissanime.to (Anime)",
     "type": "bool",
     "default": "True"
   },
