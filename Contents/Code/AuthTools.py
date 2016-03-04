@@ -13,17 +13,23 @@ def CheckAdmin():
     Log.Debug('* Checking if user is Admin')
     Log.Debug('* Auth URL   = %s' %url)
 
-    try:
-        ptoken = Request.Headers.get('X-Plex-Token', '')
-        Log.Debug('* %sPlex Token is available for validation' %('' if ptoken else 'No '))
-        req = urllib2.Request(url, headers={'X-Plex-Token': ptoken})
-        res = urllib2.urlopen(req)
-        if res.read():
-            Log.Debug('* Current User is Admin')
-            Log.Debug('*' * 80)
-            return True
-    except Exception as e:
-        Log.Error('* Current User is NOT Admin')
-        Log.Error('* CheckAdmin: User denied access: %s' %str(e))
+    ptoken = Request.Headers.get('X-Plex-Token', '')
+    if not ptoken:
+        Log.Error('* NO Plex Token available for validation')
+        Log.Debug('* Assuming current user is Admin')
         Log.Debug('*' * 80)
-        return False
+        return True
+    else:
+        Log.Debug('* Plex Token is available for validation')
+        try:
+            req = urllib2.Request(url, headers={'X-Plex-Token': ptoken})
+            res = urllib2.urlopen(req)
+            if res.read():
+                Log.Debug('* Current User is Admin')
+                Log.Debug('*' * 80)
+                return True
+        except Exception as e:
+            Log.Error('* Current User is NOT Admin')
+            Log.Error('* CheckAdmin: User denied access: %s' %str(e))
+            Log.Debug('*' * 80)
+            return False

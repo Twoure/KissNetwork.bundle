@@ -16,15 +16,7 @@ import common as Common
 # constants
 HEADER_FILE = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
 
-# add custom modules to python path
-if Common.MODULE_PATH not in sys.path:
-    sys.path.append(Common.MODULE_PATH)
-    Log.Debug('*' * 80)
-    Log.Debug('* Module path below, added to sys.path, by headers.pys')
-    Log.Debug('* %s' %Common.MODULE_PATH)
-    Log.Debug('*' * 80)
-
-# Import cfscrape from Common.MODULE_PATH
+# Import cfscrape from Shared Libraries
 import cfscrape
 
 ####################################################################################################
