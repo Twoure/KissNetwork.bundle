@@ -1,5 +1,21 @@
 # ChangeLog
 
+##### 1.1.1
+- _03/04/2016_
+- Fixes:
+  - Samsung Fix, Prefs were not updated correctly, fixed this.
+  - OneDrive video error.  Still cannot play Onedrive videos.  Added popup to notify user.
+  - Headers only cache for selected site in Prefs now.
+    - The first time the channel ever runs it will still cache all headers.
+    - After first time ever run, it will then only cache the sites selected in Prefs
+  - AuthTools: fixed when user is not logged into server.
+- Updates:
+  - Split Developer code into it's own code
+  - Started to implement new Metadata function
+  - Condenced code
+  - If only one site is selected in Prefs, then That sites Menus return directly for Main Menu, Bookmarks, and Search
+  - Added 5 sec timeout to URL redirect function in KissVideo code.
+
 ##### 1.1.0
 - _02/20/2016_
 - Fixes:

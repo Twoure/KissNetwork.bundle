@@ -8,16 +8,8 @@ import base64, urllib2
 # import Shared Service Code
 import headers as Headers
 import common as Common
+import metadata as Metadata
 import subprefs as SubPrefs
-
-########################################################################################
-def NormalizeURL(url):
-    """
-    This function should return a 'normalised' version of the given URL.
-    Plex uses the URL
-    """
-
-    return url
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -87,74 +79,7 @@ def MetadataObjectForURL(url):
 
 
     # set full summary
-    summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
-    # if summary found in <p> after <p><span>Summary:</span></p>
-    if summary:
-        Log.Debug('* summary in <p>')
-        p_list = html.xpath('//div[@id="container"]//p')
-        p_num = len(p_list)
-        match = int(0)
-        for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-            if node.xpath('./span[@class="info"]="Summary:"'):
-                match = int(i) + 1
-                break
-
-        new_p_list = p_list[match:p_num]
-        sum_list = []
-        for node in new_p_list:
-            if node is not None:
-                sum_text = node.text_content().strip()
-                if sum_text:
-                    sum_list.append(sum_text)
-
-        if len(sum_list) > 1:
-            Log.Debug('* summary was in %i <p>\'s' %int(len(sum_list)))
-            summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip().replace('\n\n\n', '\n')
-        else:
-            if len(sum_list) == 1:
-                Log.Debug('* summary was in the only <p>')
-                summary = sum_list[0]
-            else:
-                Log.Debug('* no summary found in <p>\'s, setting to \"None\"')
-                summary = None
-    else:
-        summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
-        # if summary found in <p><span> after <p><span>Summary:</span></p>
-        if summary:
-            Log.Debug('* summary is in <p><span>')
-            summary = summary[0].text_content().strip()
-        else:
-            summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/table//td')
-            # if summary found in own <table>
-            if summary:
-                Log.Debug('* summary is in own <table>')
-                summary = summary[0].text_content().strip()
-            else:
-                summary = html.xpath('//div[@id="container"]//div[@class="bigBarContainer"]/div[@class="barContent"]/div/div')
-                # if summary found in own <div>
-                if summary:
-                    Log.Debug('* summary is in own <div>')
-                    summary = summary[0].text_content().strip()
-                else:
-                    summary = html.xpath('//p[span[@class="info"]="Summary:"]')
-                    # summary may be in <p><span>Summary:</span>summary</p>, ie text outside Summary span
-                    if summary:
-                        summary = summary[0].text_content().strip()
-                        test = Regex('(?s)Summary\:.+?([\S].+)').search(summary)
-                        if test:
-                            Log.Debug('* summary is in <p><span>Summary:</span>summary</p>')
-                            summary = test.group(1).strip()
-                        else:
-                            Log.Debug('* no summary found, setting summary to \"None\"')
-                            summary = None
-                    else:
-                        # if no summary found then set to 'None'
-                        Log.Debug('* no summary found, setting summary to \"None\"')
-                        summary = None
-
-    if summary:
-        Log.Debug('* summary = %s' %summary)
-        Log.Debug('*' * 80)
+    summary = Common.StringCode(string=Metadata.GetSummary(html), code='decode')
 
     # setup MovieObject
     if 'movie' in title.lower() or 'Movie' in genres and not 'episode' in title.lower():
@@ -452,7 +377,14 @@ def PlayVideo(url, **kwargs):
     Log.Debug('* PlayVideo URL      = %s' %path)
 
     prefs = SubPrefs.GetPrefs()
-    if prefs['samsung_fix'] == 'true':
+    if not 'samsung_fix' in prefs.keys():
+        samsung_fix = 'false'
+    else:
+        samsung_fix = prefs['samsung_fix']
+        if not samsung_fix:
+            samsung_fix = 'false'
+
+    if samsung_fix == 'true':
         Log.Debug('* Samsung Fix ON')
         Log.Debug('* Note: Videos will NO longer play outside the network connection.')
         try:
@@ -482,6 +414,6 @@ def get_redirect_url(rurl):
     """Expand Redirect URLs"""
 
     opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
-    request = opener.open(rurl)
+    request = opener.open(rurl, timeout=5)
 
     return request.url

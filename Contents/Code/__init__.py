@@ -14,24 +14,16 @@ from updater import Updater
 from DumbTools import DumbKeyboard
 from DumbTools import DumbPrefs
 import messages
-import AuthTools
+from AuthTools import CheckAdmin
+from DevTools import add_dev_tools
+from DevTools import SaveCoverImage
+from DevTools import SetUpCFTest
 
 # import Shared Service Code
 Headers = SharedCodeService.headers
 Domain = SharedCodeService.domain
 Common = SharedCodeService.common
-
-# add custom modules to python path
-module_path = Core.storage.join_path(
-    Core.app_support_path, Core.config.bundles_dir_name,
-    'KissNetwork.bundle', 'Contents', 'Modules')
-
-if module_path not in sys.path:
-    sys.path.append(module_path)
-    Log.Debug('*' * 80)
-    Log.Debug('* Module path below, added to sys.path, by __init__.py')
-    Log.Debug('* %s' %module_path)
-    Log.Debug('*' * 80)
+Metadata = SharedCodeService.metadata
 
 # import custom modules
 import requests
@@ -39,7 +31,6 @@ import requests
 # set global variables
 PREFIX = '/video/kissnetwork'
 TITLE = L('title')
-VERSION = '1.0.1'
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 
 # KissAnime
@@ -149,31 +140,34 @@ def MainMenu():
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
 
-    oc = ObjectContainer(title2=TITLE, no_cache=True)
+    admin = CheckAdmin()
+
+    oc = ObjectContainer(title2=TITLE, no_cache=admin)
+
+    cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
+
+    for i, (t, u) in enumerate(Common.BASE_URL_LIST_T):
+        thumb = 'icon-%s.png' %t.lower()
+        rthumb = None if cp_match else R(thumb)
+        art = 'art-%s.jpg' %t.lower()
+        rart = None if cp_match else R(art)
+        prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
+        new_data = {
+            'prefs_name': prefs_name, 'title': t, 'art': art,
+            'rart': rart, 'thumb': thumb, 'rthumb': rthumb, 'url': u
+            }
+        if i == 0:
+            data = [new_data]
+        else:
+            data.append(new_data)
 
     # set thumbs based on client
-    if Client.Platform in Common.LIST_VIEW_CLIENTS:
-        anime_thumb = None
-        anime_art = None
-        cartoon_thumb = None
-        cartoon_art = None
-        asian_thumb = None
-        asian_art = None
-        manga_thumb = None
-        manga_art = None
+    if cp_match:
         bookmark_thumb = None
         prefs_thumb = None
         search_thumb = None
         about_thumb = None
     else:
-        anime_thumb = R(ANIME_ICON)
-        anime_art = R(ANIME_ART)
-        cartoon_thumb = R(CARTOON_ICON)
-        cartoon_art = R(CARTOON_ART)
-        asian_thumb = R(ASIAN_ICON)
-        asian_art = R(ASIAN_ART)
-        manga_thumb = R(MANGA_ICON)
-        manga_art = R(MANGA_ART)
         bookmark_thumb = R(BOOKMARK_ICON)
         prefs_thumb = R(PREFS_ICON)
         search_thumb = R(SEARCH_ICON)
@@ -193,33 +187,33 @@ def MainMenu():
     status = Dict['Bookmark_Deleted']
     Dict.Save()
 
-    Updater(PREFIX + '/updater', oc)
+    if admin:
+        Updater(PREFIX + '/updater', oc)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
-    if Prefs['kissanime']:
-        oc.add(DirectoryObject(
-            key=Callback(KissAnime, url=ANIME_BASE_URL, title='Anime', art=ANIME_ART),
-            title='Anime', thumb=anime_thumb, art=anime_art))
-    if Prefs['kisscartoon']:
-        oc.add(DirectoryObject(
-            key=Callback(KissCartoon, url=CARTOON_BASE_URL, title='Cartoon', art=CARTOON_ART),
-            title='Cartoons', thumb=cartoon_thumb, art=cartoon_art))
-    if Prefs['kissasian']:
-        oc.add(DirectoryObject(
-            key=Callback(KissAsian, url=ASIAN_BASE_URL, title='Drama', art=ASIAN_ART),
-            title='Drama', thumb=asian_thumb, art=asian_art))
-
-    if Prefs['kissmanga']:
-        oc.add(DirectoryObject(
-            key=Callback(KissManga, url=MANGA_BASE_URL, title='Manga', art=MANGA_ART),
-            title='Manga', thumb=manga_thumb, art=manga_art))
+    prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga']
+    b_prefs_names = [p for p in prefs_names if Prefs[p]]
+    # present KissMain directly if no other sites selected
+    if len(b_prefs_names) == 1:
+        b_prefs_name = b_prefs_names[0]
+        p_data = [d for d in data if d['prefs_name'] == b_prefs_name][0]
+        KissMain(url=p_data['url'], title=p_data['title'], art=p_data['art'], ob=False, oc=oc)
+    else:
+        for d in sorted(data, key=lambda k: k['title']):
+            if Prefs[d['prefs_name']]:
+                oc.add(DirectoryObject(
+                    key=Callback(KissMain, url=d['url'], title=d['title'], art=d['art']),
+                    title=d['title'], thumb=d['rthumb'], art=d['rart']
+                    ))
 
     oc.add(DirectoryObject(
-        key=Callback(BookmarksMain, title='My Bookmarks', status=status), title='My Bookmarks', thumb=bookmark_thumb))
+        key=Callback(BookmarksMain, title='My Bookmarks', status=status), title='My Bookmarks',
+        thumb=bookmark_thumb
+        ))
 
     if Client.Product in DumbPrefs.clients:
         DumbPrefs(PREFIX, oc, title='Preferences', thumb=prefs_thumb)
-    elif AuthTools.Auth():
+    elif admin:
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
@@ -234,11 +228,14 @@ def MainMenu():
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/kissanime')
-def KissAnime(url, title, art):
-    """Create KissAnime Site Menu"""
+@route(PREFIX + '/kissmain', ob=bool)
+def KissMain(url, title, art, ob=True, oc=None):
+    """Create All Kiss Site Menu"""
 
-    oc = ObjectContainer(title2=title, art=R(art))
+    if ob:
+        oc = ObjectContainer(title2=title, art=R(art))
+    newest_c_title = 'New %s' %title
+
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='All', category='All', base_url=url, type_title=title, art=art),
@@ -247,129 +244,45 @@ def KissAnime(url, title, art):
         key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
     oc.add(DirectoryObject(
         key=Callback(GenreList, url=url, title=title, art=art), title='Genres'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
-        title='Movies'))
-    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
+
+    if title == 'Drama':
+        oc.add(DirectoryObject(
+            key=Callback(CountryList, url=url, title=title, art=art), title='Countries'))
+
+    if not title == 'Manga':
+        oc.add(DirectoryObject(
+            key=Callback(DirectoryList,
+                page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
+            title='Movies'))
+        oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art),
+            title='Status'))
+    if (title == 'Drama') or (title == 'Cartoon'):
+        oc.add(DirectoryObject(key=Callback(TopList, url=url, type_title=title, art=art),
+            title='Top'))
+
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
         title='Latest Update'))
+
+    if title == 'Anime':
+        newest_c_title = 'Recent Additions'
+        oc.add(DirectoryObject(
+            key=Callback(DirectoryList,
+                page=1, pname='/NewAndHot', category='New & Hot', base_url=url, type_title=title, art=art),
+            title='New & Hot'))
+
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
-            page=1, pname='/NewAndHot', category='New & Hot', base_url=url, type_title=title, art=art),
-        title='New & Hot'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Newest', category='Recent Additions', base_url=url, type_title=title, art=art),
-        title='Recent Additions'))
+            page=1, pname='/Newest', category=newest_c_title, base_url=url, type_title=title, art=art),
+        title=newest_c_title))
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
             page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
         title='Most Popular'))
 
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/kissasian')
-def KissAsian(url, title, art):
-    """Create KissAsian Site Menu"""
-
-    oc = ObjectContainer(title2=title, art=R(art))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
-    oc.add(DirectoryObject(
-        key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
-    oc.add(DirectoryObject(
-        key=Callback(CountryList, url=url, title=title, art=art), title='Countries'))
-    oc.add(DirectoryObject(
-        key=Callback(GenreList, url=url, title=title, art=art), title='Genres'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
-        title='Movies'))
-    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
-    oc.add(DirectoryObject(key=Callback(TopList, url=url, type_title=title, art=art), title='Top'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
-        title='Latest Update'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Newest', category='New Drama', base_url=url, type_title=title, art=art),
-        title='New Drama'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
-        title='Most Popular'))
-
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/kisscartoon')
-def KissCartoon(url, title, art):
-    """Create KissCartoon site Menu"""
-
-    oc = ObjectContainer(title2=title, art=R(art))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
-    oc.add(DirectoryObject(
-        key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
-    oc.add(DirectoryObject(
-        key=Callback(GenreList, url=url, title=title, art=art), title='Genres'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
-        title='Movies'))
-    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
-    oc.add(DirectoryObject(key=Callback(TopList, url=url, type_title=title, art=art), title='Top'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
-        title='Latest Update'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Newest', category='New Cartoon', base_url=url, type_title=title, art=art),
-        title='New Cartoon'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
-        title='Most Popular'))
-
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/kissmanga')
-def KissManga(url, title, art):
-    """Create KissManga site Menu"""
-
-    oc = ObjectContainer(title2=title, art=R(art))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='All', category='All', base_url=url, type_title=title, art=art), title='All'))
-    oc.add(DirectoryObject(
-        key=Callback(AlphabetList, url=url, title=title, art=art), title='Alphabets'))
-    oc.add(DirectoryObject(
-        key=Callback(GenreList, url=url, title=title, art=art), title='Genres'))
-    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art), title='Status'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/LatestUpdate', category='Latest Update', base_url=url, type_title=title, art=art),
-        title='Latest Update'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/Newest', category='New Manga', base_url=url, type_title=title, art=art),
-        title='New Manga'))
-    oc.add(DirectoryObject(
-        key=Callback(DirectoryList,
-            page=1, pname='/MostPopular', category='Most Popular', base_url=url, type_title=title, art=art),
-        title='Most Popular'))
-
-    return oc
-
+    if ob:
+        return oc
 ####################################################################################################
 @route(PREFIX + '/status-list')
 def StatusList(type_title, url, art):
@@ -420,301 +333,18 @@ def About():
         cache_string = 'N/A | Removing Files Still'
     else:
         cache_string = d
-
+    # Get Channel Version
     plist = Plist.ObjectFromString(Core.storage.load(
         Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
     version = plist['CFBundleVersion']
-
-    if Prefs['devtools'] and AuthTools.Auth():
-        oc.add(DirectoryObject(key=Callback(DevTools),
-            title='Developer Tools',
-            summary='WARNING!!\nDeveloper Tools.  Make sure you understand what these do before using.'))
+    # show developer tools if enabled in prefs and current user is admin
+    if Prefs['devtools'] and CheckAdmin():
+        add_dev_tools(oc)
 
     oc.add(DirectoryObject(key=Callback(About),
         title='Version %s' %version, summary='Current Channel Version'))
     oc.add(DirectoryObject(key=Callback(About),
         title=cache_string, summary='Number of Images Cached | Total Images Cached Size'))
-
-    return oc
-
-####################################################################################################
-def ResetCustomDict(file_to_reset):
-    """
-    Reset Cusom Dictionaries
-    Valid for only "Header_Dict" and "Domain_Dict"
-    """
-
-    Log('\n----------Backing up %s File to %s.backup----------' %(file_to_reset, file_to_reset))
-    file_path = Core.storage.join_path(Core.storage.data_path, file_to_reset)
-
-    if Core.storage.file_exists(file_path):
-        # create backup of file being removed
-        Core.storage.copy(file_path, file_path + '.backup')
-        Log('\n----------Removing %s File----------' %file_to_reset)
-        Core.storage.remove_tree(file_path)
-
-    if file_to_reset == 'Domain_Dict':
-        Domain.CreateDomainDict()
-    elif file_to_reset == 'Header_Dict':
-        Headers.CreateHeadersDict()
-
-    Log('\n----------Reset %s----------\n----------New values for %s written to:\n%s' %(file_to_reset, file_to_reset, file_path))
-
-    return file_path
-
-####################################################################################################
-@route(PREFIX + '/devtools')
-def DevTools(file_to_reset=None, header=None, message=None):
-    """
-    Includes "Bookmark Tools", "Header Tools" and "Cover Cache Tools"
-    Reset Domain_Dict and CloudFlare Test Key
-    """
-
-    oc = ObjectContainer(title2='Developer Tools', header=header, message=message)
-
-    if file_to_reset:
-        header = 'Developer Tools'
-        if file_to_reset == 'Domain_Dict':
-            ResetCustomDict(file_to_reset)
-            message = 'Reset %s. New values for %s written' %(file_to_reset, file_to_reset)
-
-            return DevTools(header=header, message=message)
-        elif file_to_reset == 'cfscrape_test':
-            Log('\n----------Deleting cfscrape test key from Channel Dict----------')
-            if Dict['cfscrape_test']:
-                del Dict['cfscrape_test']
-                Dict.Save()
-                SetUpCFTest()
-                message = 'Reset cfscrape Code Test'
-            else:
-                message = 'No Dict cfscrape Code Test Key to Remove'
-
-            return DevTools(header=header, message=message)
-        elif file_to_reset == 'restart_channel':
-            Log('\n----------Attempting to Restart KissNetwork Channel----------')
-            RestartChannel()
-            message = 'Restarting channel'
-            return DevTools(header=header, message=message)
-    else:
-        pass
-
-    oc.add(DirectoryObject(key=Callback(DevToolsBM),
-        title='Bookmark Tools',
-        summary='Tools to Clean dirty bookmarks dictionary, and Toggle "Clear Bookmarks".'))
-    oc.add(DirectoryObject(key=Callback(DevToolsH),
-        title='Header Tools',
-        summary='Tools to Reset "Header_Dict" or Update parts of "Header_Dict".'))
-    oc.add(DirectoryObject(key=Callback(DevToolsC),
-        title='Cover Cache Tools',
-        summary='Tools to Cache All Covers or just certain sites. Includes Tool to Clean Dirty Resources Directory.'))
-    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Domain_Dict'),
-        title='Reset Domain_Dict File',
-        summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
-    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
-        title='Reset Dict cfscrape Test Key',
-        summary='Delete previous test key so the channel can retest for a valid JavaScript Runtime.'))
-    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='restart_channel'),
-        title='Restart KissNetwork Channel',
-        summary='Should manually Restart the KissNetwork Channel.'))
-
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/devtools-headers')
-def DevToolsH(title=None, header=None, message=None):
-    """Tools to manipulate Headers"""
-
-    oc = ObjectContainer(title2='Header Tools', header=header, message=message)
-
-    if title:
-        header = 'Header Tools'
-        if title == 'Header_Dict':
-            Thread.Create(ResetCustomDict, file_to_reset=title)
-            message = 'Resetting %s. New values for %s will be written soon' %(title, title)
-
-            return DevToolsH(header=header, message=message)
-        elif ( title == 'Anime' or title == 'Cartoon'
-            or title == 'Drama' or title == 'Manga' ):
-            Log('\n----------Updating %s Headers in Header_Dict----------' %title)
-
-            for (h_name, h_url) in Common.BASE_URL_LIST_T:
-                if h_name == title:
-                    Headers.GetHeadersForURL(h_url, update=True)
-                    break
-
-            message = 'Updated %s Headers.' %title
-            return DevTools(header=header, message=message)
-        elif title == 'test':
-            sub_list = Test()
-            message = 'list =\n%s' %sub_list
-            return DevTools(header=header, message=message)
-    else:
-        pass
-
-    #oc.add(DirectoryObject(key=Callback(DevToolsH, title='test'),
-        #title='test', summary='test'))
-    oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
-        title='Reset Header_Dict File',
-        summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
-    for (name, url) in sorted(Common.BASE_URL_LIST_T):
-        oc.add(DirectoryObject(key=Callback(DevToolsH, title=name),
-            title='Update %s Headers' %name,
-            summary='Update %s Headers Only in the "Header_Dict" file.' %name))
-
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/devtools-cache')
-def DevToolsC(title=None, header=None, message=None):
-    """
-    Tools to Cache Cover Images
-    Reset/Clean Channel Resources Diretory
-    """
-    oc = ObjectContainer(title2='Cover Cache Tools', header=header, message=message)
-
-    if title:
-        header = 'Cover Cache Tools'
-        if title == 'resources_cache':
-            Log('\n----------Cleaning Dirty Resources Directory, and deleating Dict Keys if any----------')
-
-            for dirpath, dirnames, filenames in os.walk(Common.RESOURCES_PATH):
-                for f in filenames:
-                    # filter out default files
-                    if not Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
-                        fp = os.path.join(dirpath, f)
-                        Core.storage.remove(fp)
-            if Dict['cover_files']:
-                del Dict['cover_files']
-
-            message = 'Reset Resources Directory, and Deleted Dict[\'cover_files\']'
-            return DevToolsC(header=header, message=message)
-        elif ( title == 'Anime_cache' or title == 'Cartoon_cache'
-            or title == 'Drama_cache' or title == 'Manga_cache' ):
-            category = title.split('_')[0]
-            Log('\n----------Start Caching all %s Cover Images----------' %category)
-
-            qevent = Thread.Event()  # create new Event object
-            qevent.set()
-            test = Thread.Create(CacheAllCovers, category=category, qevent=qevent, page=1)
-            Log('\n\n%s\n\n' %test)
-            message = 'All %s Cover Images are being Cached' %category
-
-            return DevToolsC(header=header, message=message)
-        elif title == 'All_cache':
-            Log('\n----------Start Caching All Cover Images----------')
-
-            Thread.Create(CacheCoverQ)
-
-            message = 'All Cover Images are being Cached'
-            return DevToolsC(header=header, message=message)
-    else:
-        pass
-
-    for (name, url) in [('All', '')] + sorted(Common.BASE_URL_LIST_T):
-        oc.add(DirectoryObject(key=Callback(DevToolsC, title='%s_cache' %name),
-            title='Cache All %s Covers' %name if not name == 'All' else 'Cache All Covers',
-            summary='Download all %s Covers' %name if not name == 'All' else 'Download All Covers'))
-    oc.add(DirectoryObject(key=Callback(DevToolsC, title='resources_cache'),
-        title='Reset Resources Directory',
-        summary='Clean Dirty Image Cache in Resources Directory.'))
-
-    return oc
-
-####################################################################################################
-def CacheCoverQ():
-    """
-    Setup CacheAllCovers in a Queried manner
-    Create Event, set = True
-    Create First CacheAllCovers Thread, set Event = False
-    For 2nd CacheAllCovers Thread, set Event to Wait until it is set to True
-        It will be set to True Once the 1st CacheAllCovers Thread is Finished
-        Once Wait is over, Re-set Event to Flase, and Start the 2nd CacheAllCovers Thread
-    Repeat Process for remaining CacheAllCovers Threads (3rd and 4th)
-    """
-
-    qevent = Thread.Event()  # create new Event object
-    qevent.set()  # set new Event object to True for first iteration of 'for loop'
-    for (cat, url) in sorted(Common.BASE_URL_LIST_T):
-        if qevent.is_set():
-            Log('Create the First Cache All Covers Thread for %s' %cat)
-            qevent.clear()  # set Event object to Flase for next iteration of 'for loop'
-            Log('qevent set to %s, for next iteration' %qevent.is_set())
-            Thread.Create(CacheAllCovers, category=cat, page=1, qevent=qevent)
-        else:
-            Log('set qevent to wait for %s' %cat)
-            qevent.wait()  # make the 'for loop' wait until the Thread created in the 1st iteration completes
-            Log('qevent is now set to %s, passing along %s' %(qevent.is_set(), cat))
-            qevent.clear()  # re-set Event to False for next interation of 'for loop'
-            Log('set qevent to %s for next iteration' %qevent.is_set())
-            Thread.Create(CacheAllCovers, category=cat, page=1, qevent=qevent)
-
-    Log.Info('Finished starting CacheAllCovers Query. %s is last to Cache Covers and will be done in about 7 minutes.' %cat)
-
-    return
-
-####################################################################################################
-@route(PREFIX + '/devtools-bookmarks')
-def DevToolsBM(title=None, header=None, message=None):
-    """
-    Tools to Delete all or certain sections of Bookmarks Dict
-    Toggle "Clear Bookmarks" Function On/Off
-    """
-
-    oc = ObjectContainer(title2='Bookmark Tools', header=header, message=message)
-
-    if title:
-        if title == 'hide_bm_clear':
-            Log('\n----------Hiding "Clear Bookmarks" and Sub List Clear from "My Bookmarks"----------')
-
-            if not Dict['hide_bm_clear']:
-                Dict['hide_bm_clear'] == 'hide'
-                Dict.Save()
-                message = '"Clear Bookmarks" is Hidden Now'
-            elif Dict['hide_bm_clear'] == 'hide':
-                Dict['hide_bm_clear'] = 'unhide'
-                Dict.Save()
-                message = '"Clear Bookmarks" is Un-Hidden Now'
-            elif Dict['hide_bm_clear'] == 'unhide':
-                Dict['hide_bm_clear'] = 'hide'
-                Dict.Save()
-                message = '"Clear Bookmarks" is Hidden Now'
-
-            return DevToolsBM(header='Hide BM Clear Opts', message=message)
-        elif title == 'All' and Dict['Bookmarks']:
-            Log('\n----------Deleting Bookmark section from Channel Dict----------')
-            del Dict['Bookmarks']
-            Dict.Save()
-            message = 'Bookmarks Section Cleaned.'
-            return DevToolsBM(header='BookmarkTools', message=message)
-        elif title and title in Dict['Bookmarks'].keys():
-            Log('\n----------Deleting %s Bookmark section from Channel Dict----------' %title)
-            del Dict['Bookmarks'][title]
-            Dict.Save()
-            message = '%s Bookmark Section Cleaned.' %title
-            return DevToolsBM(header='BookmarkTools', message=message)
-        elif not Dict['Bookmarks']:
-            Log('\n----------Bookmarks Section Alread Removed----------')
-            message = 'Bookmarks Section Already Cleaned.'
-            return DevToolsBM(header='BookmarkTools', message=message)
-        elif not title in Dict['Bookmarks'].keys():
-            Log('\n----------%s Bookmark Section Already Removed----------' %title)
-            message = '%s Bookmark Section Already Cleaned.' %title
-            return DevToolsBM(header='BookmarkTools', message=message)
-    else:
-        pass
-
-    oc.add(DirectoryObject(key=Callback(DevToolsBM, title='hide_bm_clear'),
-        title='Toggle Hiding "Clear Bookmarks" Function',
-        summary='Hide the "Clear Bookmarks" Function from "My Bookmarks" and sub list. For those of us who do not want people randomly clearing our bookmarks.'))
-    for (name, url) in [('All', '')] + sorted(Common.BASE_URL_LIST_T):
-        if name == 'All':
-            oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-                title='Reset "%s" Bookmarks' %name,
-                summary='Delete Entire Bookmark Section. Same as "Clear All Bookmarks".'))
-        else:
-            oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-                title='Reset "%s" Bookmarks' %name,
-                summary='Delete Entire "%s" Bookmark Section. Same as "Clear %s Bookmarks".' %(name, name)))
 
     return oc
 
@@ -768,15 +398,21 @@ def BookmarksMain(title, status):
             'No Bookmarks yet. Get out there and start adding some!!!')
     # create boomark directory based on category
     else:
-        for key in sorted(Dict['Bookmarks'].keys()):
-            if not key == 'Drama':
-                art = 'art-%s.jpg' %key.lower()
-                thumb = 'icon-%s.png' %key.lower()
-                prefs_name = 'kiss%s' %key.lower()
-            else:
-                art = 'art-drama.jpg'
-                thumb = 'icon-drama.png'
-                prefs_name = 'kissasian'
+        key_list = sorted(Dict['Bookmarks'].keys())
+        # return bookmark list directly if only one kiss site selected in prefs
+        bm_prefs_names = [('kissasian' if m == 'Drama' else 'kiss%s' %m.lower()) for m in key_list]
+        bool_prefs_names = [p for p in bm_prefs_names if Prefs[p]]
+        if len(bool_prefs_names) == 1:
+            b_prefs_name = bool_prefs_names[0].split('kiss')[1].title()
+            b_prefs_name = 'Drama' if b_prefs_name == 'Asian' else b_prefs_name
+            if b_prefs_name in key_list:
+                art = 'art-%s.jpg' %b_prefs_name.lower()
+                return BookmarksSub(b_prefs_name, art)
+        # list categories in bookmarks dictionary that are selected in prefs
+        for key in key_list:
+            prefs_name = 'kissasian' if key == 'Drama' else 'kiss%s' %key.lower()
+            art = 'art-%s.jpg' %key.lower()
+            thumb = 'icon-%s.png' %key.lower()
 
             # if site in Prefs then add its bookmark section
             if Prefs[prefs_name]:
@@ -826,7 +462,7 @@ def BookmarksSub(type_title, art):
         summary = bookmark['summary']
 
         if summary:
-            summary2 = StringCode(string=summary, code='decode')
+            summary2 = Common.StringCode(string=summary, code='decode')
         else:
             summary2 = None
 
@@ -897,7 +533,7 @@ def BookmarksSub(type_title, art):
 
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
-            title=StringCode(string=item_title, code='decode'),
+            title=Common.StringCode(string=item_title, code='decode'),
             summary=summary2, thumb=cover, art=cover))
 
     if Dict['hide_bm_clear'] == 'unhide':
@@ -1122,8 +758,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         a_node = item.xpath('./a')[0]
 
         item_url_base = a_node.get('href')
-        item_sys_name = StringCode(string=item_url_base.rsplit('/')[-1].strip(), code='encode')
-        item_url_final = base_url + StringCode(string=item_url_base, code='encode')
+        item_sys_name = Common.StringCode(string=item_url_base.rsplit('/')[-1].strip(), code='encode')
+        item_url_final = base_url + Common.StringCode(string=item_url_base, code='encode')
         Logger('\nitem_url_base = %s\nitem_sys_name = %s\nitem_url_final = %s' %(item_url_base, item_sys_name, item_url_final))
         Logger('thumb = %s' %thumb, kind='Info')
 
@@ -1153,8 +789,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
         item_info = {
             'item_sys_name': item_sys_name,
-            'item_title': StringCode(string=item_title, code='encode'),
-            'short_summary': StringCode(string=summary, code='encode'),
+            'item_title': Common.StringCode(string=item_title, code='encode'),
+            'short_summary': Common.StringCode(string=summary, code='encode'),
             'cover_url': thumb,
             'cover_file': cover_file,
             'type_title': type_title,
@@ -1198,8 +834,8 @@ def HomePageList(tab, category, base_url, type_title, art):
 
     # scrape home page for Top (Day, Week, and Month) list
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
-        page_node = StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
-        item_sys_name = StringCode(string=page_node.split('/')[-1], code='encode')
+        page_node = Common.StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
+        item_sys_name = Common.StringCode(string=page_node.split('/')[-1], code='encode')
         item_title = node.xpath('./a/span[@class="title"]/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
         title2 = '%s | Latest %s' %(item_title, latest)
@@ -1218,7 +854,7 @@ def HomePageList(tab, category, base_url, type_title, art):
 
         item_info = {
             'item_sys_name': item_sys_name,
-            'item_title': StringCode(string=item_title, code='encode'),
+            'item_title': Common.StringCode(string=item_title, code='encode'),
             'short_summary': summary,
             'cover_url': thumb,
             'cover_file': cover_file,
@@ -1251,7 +887,7 @@ def ItemPage(item_info):
     art = item_info['art']
 
     # decode string
-    item_title_decode = StringCode(string=item_title, code='decode')
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
 
     # setup new title2 for container
     title2 = '%s | %s' % (type_title, item_title_decode)
@@ -1325,7 +961,7 @@ def ItemSubPage(item_info):
     art = item_info['art']
 
     # decode string(s)
-    item_title_decode = StringCode(string=item_title, code='decode')
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
 
     # setup title2 for container
     title2 = '%s | %s | %s' % (type_title, item_title_decode, page_category.lower())
@@ -1384,7 +1020,7 @@ def ItemSubPage(item_info):
             for x, y in map(None, a, b):
                 video_info = {
                     'date': y,
-                    'title': StringCode(string=x[1], code='encode'),
+                    'title': Common.StringCode(string=x[1], code='encode'),
                     'video_page_url': x[0]
                     }
 
@@ -1415,11 +1051,11 @@ def VideoDetail(video_info, item_info):
     """
 
     # set variables
-    title = StringCode(string=video_info['title'], code='decode')
+    title = Common.StringCode(string=video_info['title'], code='decode')
     date = Datetime.ParseDate(video_info['date'])
     summary = item_info['short_summary']
     if summary:
-        summary = StringCode(string=summary, code='decode')
+        summary = Common.StringCode(string=summary, code='decode')
     art = item_info['art']
     url = video_info['video_page_url']
     video_type = video_info['video_type']
@@ -1435,12 +1071,19 @@ def VideoDetail(video_info, item_info):
     # test if video link is hosted on OneDrive
     # currently the URL Service is not setup to handle OneDrive Links
     onedrive_test = html.xpath('//div[@id="centerDivVideo"]//iframe')
-    quality_test = html.xpath('//select[@id="selectQuality"]/option')
+
     if onedrive_test:
         if "onedrive" in onedrive_test[0].get('src'):
             return MC.message_container('Error',
                 'OneDrive Videos Not Yet Supported. Try another source if avalible.')
-    elif not quality_test:
+    for test in html.xpath('//script[@type="text/javascript"]'):
+        jscode = test.text_content()
+        if Regex('https\:\/\/(onedrive)\.live\.com\/prev').search(jscode):
+            return MC.message_container('Error',
+                'OneDrive Videos Not Yet Supported. Try another source if avalible.')
+
+    quality_test = html.xpath('//select[@id="selectQuality"]/option')
+    if not quality_test:
         return MC.message_container('Warning',
             'This video is broken, Kiss%s is working to fix it.' %item_info['type_title'])
 
@@ -1483,6 +1126,7 @@ def Search(query=''):
     """Set up Search for kiss(anime, asian, cartoon, manga)"""
 
     # set defaults
+    query = query.strip()
     title2 = 'Search for \"%s\" in...' % query
 
     oc = ObjectContainer(title2=title2)
@@ -1491,33 +1135,46 @@ def Search(query=''):
 
     # format each search url and send to 'SearchPage'
     # can't check each url here, would take too long since behind cloudflare and timeout the server
-    for search_url in all_search_urls:
+    prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga']
+    b_prefs_names = [p for p in prefs_names if Prefs[p]]
+    if len(b_prefs_names) == 1:
+        b_prefs_name = b_prefs_names[0]
+        search_url = [s for s in all_search_urls if b_prefs_name in s][0]
         search_url_filled = search_url % String.Quote(query, usePlus=True)
-        type_title = search_url.rsplit('/')[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
-        # change kissasian info to 'Drama'
-        if type_title == 'Asian':
-            type_title = 'Drama'
-            art = ASIAN_ART
-            thumb = ASIAN_ICON
-            prefs_name = 'kissasian'
-        else:
-            art = 'art-%s.jpg' % type_title.lower()
-            thumb = 'icon-%s.png' % type_title.lower()
-            prefs_name = 'kiss%s' %type_title.lower()
+        type_title = 'Drama' if b_prefs_name == 'kissasian' else b_prefs_name.split('kiss')[1].title()
+        art = 'art-%s.jpg' %type_title.lower()
 
-        if Prefs[prefs_name]:
-            Logger('Search url = %s' % search_url_filled)
-            Logger('type title = %s' %type_title)
+        html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
+        if html.xpath('//table[@class="listing"]'):
+            return SearchPage(type_title=type_title, search_url=search_url_filled, art=art)
+    else:
+        Logger('*' * 80)
+        for search_url in all_search_urls:
+            search_url_filled = search_url % String.Quote(query, usePlus=True)
+            type_title = search_url.rsplit('/')[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
+            # change kissasian info to 'Drama'
+            type_title = 'Drama' if type_title == 'Asian' else type_title
+            art = 'art-%s.jpg' %type_title.lower()
+            thumb = 'icon-%s.png' %type_title.lower()
+            prefs_name = 'kissasian' if type_title == 'Drama' else 'kiss%s' %type_title.lower()
 
-            html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
-            if html.xpath('//table[@class="listing"]'):
-                oc.add(DirectoryObject(
-                    key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
-                    title=type_title, thumb=R(thumb)))
+            if Prefs[prefs_name]:
+                Logger('Search url = %s' % search_url_filled)
+                Logger('type title = %s' %type_title)
+
+                html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
+                if html.xpath('//table[@class="listing"]'):
+                    oc.add(DirectoryObject(
+                        key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
+                        title=type_title, thumb=R(thumb)
+                        ))
 
     if len(oc) > 0:
+        Logger('*' * 80)
         return oc
     else:
+        Logger('* Search retunred no results')
+        Logger('*' * 80)
         return MC.message_container('Search',
             'There are no search results for \"%s\". Try being less specific or make sure at least one source is selected in Preferences.' %query)
 
@@ -1543,8 +1200,8 @@ def SearchPage(type_title, search_url, art):
             base_url = Common.GetBaseURL(search_url)
             node = html.xpath('//div[@class="barContent"]/div/a')[0]
 
-            item_sys_name = StringCode(string=node.get('href').rsplit('/')[-1].strip(), code='encode')
-            item_url = base_url + '/' + type_title + '/' + StringCode(item_sys_name, code='encode')
+            item_sys_name = Common.StringCode(string=node.get('href').rsplit('/')[-1].strip(), code='encode')
+            item_url = base_url + '/' + type_title + '/' + Common.StringCode(item_sys_name, code='encode')
             item_title = node.text
             try:
                 cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
@@ -1564,7 +1221,7 @@ def SearchPage(type_title, search_url, art):
 
             item_info = {
                 'item_sys_name': item_sys_name,
-                'item_title': StringCode(string=item_title, code='encode'),
+                'item_title': Common.StringCode(string=item_title, code='encode'),
                 'short_summary': None,
                 'cover_url': cover_url,
                 'cover_file': cover_file,
@@ -1604,7 +1261,7 @@ def AddBookmark(item_info):
     base_url = item_info['base_url']
 
     # decode title string
-    item_title_decode = StringCode(string=item_title, code='decode')
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
 
     Logger('item to add = %s | %s' %(item_title_decode, item_sys_name), kind='Info')
 
@@ -1643,78 +1300,8 @@ def AddBookmark(item_info):
     else:
         image_file = None
 
-    # set full summary
-    summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
-    # if summary found in <p> after <p><span>Summary:</span></p>
-    if summary:
-        Logger('summary in <p>', kind='Info')
-        p_list = html.xpath('//div[@id="container"]//p')
-        p_num = len(p_list)
-        match = int(0)
-        for i, node in enumerate(html.xpath('//div[@id="container"]//p')):
-            if node.xpath('./span[@class="info"]="Summary:"'):
-                match = int(i) + 1
-                break
-
-        new_p_list = p_list[match:p_num]
-        sum_list = []
-        for node in new_p_list:
-            if node is not None:
-                sum_text = node.text_content().strip()
-                if sum_text:
-                    sum_list.append(sum_text)
-
-        if len(sum_list) > 1:
-            Logger('summary was in %i <p>\'s' %int(len(sum_list)), kind='Info')
-            summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip().replace('\n\n\n', '\n')
-        else:
-            if len(sum_list) == 1:
-                Logger('summary was in the only <p>', kind='Info')
-                summary = sum_list[0]
-            else:
-                Logger('no summary found in <p>\'s, setting to \"None\"', force=True)
-                summary = None
-    else:
-        summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
-        # if summary found in <p><span> after <p><span>Summary:</span></p>
-        if summary:
-            Logger('summary is in <p><span>', kind='Info')
-            summary = summary[0].text_content().strip()
-        else:
-            summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/table//td')
-            # if summary found in own <table>
-            if summary:
-                Logger('summary is in own <table>', kind='Info')
-                summary = summary[0].text_content().strip()
-            else:
-                summary = html.xpath('//div[@id="container"]//div[@class="bigBarContainer"]/div[@class="barContent"]/div/div')
-                # if summary found in own <div>
-                if summary:
-                    Logger('summary is in own <div>', kind='Info')
-                    summary = summary[0].text_content().strip()
-                    # fix string encoding errors before they happen by encoding
-                    #summary = StringCode(string=summary, code='encode')
-                else:
-                    summary = html.xpath('//p[span[@class="info"]="Summary:"]')
-                    # summary may be in <p><span>Summary:</span>summary</p>, ie text outside Summary span
-                    if summary:
-                        summary = summary[0].text_content().strip()
-                        test = Regex('(?s)Summary\:.+?([\S].+)').search(summary)
-                        if test:
-                            Logger('summary is in <p><span>Summary:</span>summary</p>', kind='Info')
-                            summary = test.group(1).strip()
-                        else:
-                            # if no summary found then set to 'None'
-                            Logger('no summary found, setting summary to \"None\"', kind='Info')
-                            summary = None
-                    else:
-                        # if no summary found then set to 'None'
-                        Logger('no summary found, setting summary to \"None\"', kind='Info')
-                        summary = None
-
-    if summary:
-        Logger('summary = %s' %summary, kind='Debug')
-        summary = StringCode(string=summary, code='encode')
+    # get summary
+    summary = Metadata.GetSummary(html)
 
     # setup new bookmark json data to add to Dict
 
@@ -1783,7 +1370,7 @@ def RemoveBookmark(item_info):
     type_title = item_info['type_title']
 
     # decode string
-    item_title_decode = StringCode(string=item_title, code='decode')
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
 
     # index 'Bookmarks' list
     bm = Dict['Bookmarks'][type_title]
@@ -1946,149 +1533,6 @@ def CacheCovers(start=False, skip=True):
     return
 
 ####################################################################################################
-def Test():
-    """
-    Testing bookmark cache stuff
-    Trying to get rid of so many nested for loops and if/else statments
-    """
-
-    Logger('*' * 80)
-    bm = Dict['Bookmarks']
-    test = []
-    if [[((test.append(Common.CorrectCoverImage(sbm['cover_url'])) if 'kiss' in sbm['cover_url'] else None) if (sbm['cover_file'] and sbm['cover_url']) else None) for sbm in bm[key]] for key in bm.keys()] if bm else []:
-        Logger('* we have bookmarks')
-    else:
-        Logger('* no bookmarks')
-
-    Logger('* test list = %s' %test)
-    Logger('*' * 80)
-
-    return test
-
-####################################################################################################
-def CacheAllCovers(category, qevent, page=1):
-    """Cache All, or any one of the Categories"""
-
-    if category == 'Drama':
-        ncategory = 'Asian'
-        drama_test = True
-    else:
-        ncategory = category
-        drama_test = False
-    base_url = Common.Domain_Dict[ncategory]
-    item_url = base_url + '/%sList?page=%s' % (category, page)
-
-    html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
-
-    nextpg_node = None
-    # parse html for 'next' page node
-    for node in html.xpath('///div[@class="pagination pagination-left"]//li/a'):
-        if "Next" in node.text:
-            nextpg_node = str(node.get('href'))  # pull out next page if exist
-            break
-
-    listing = html.xpath('//table[@class="listing"]//td[@title]')
-    if not listing:
-        listing = html.xpath('//div[@class="item"]')
-
-    for item in listing:
-        if not drama_test:
-            title_html = HTML.ElementFromString(item.get('title'))
-        else:
-            title_html = item
-            drama_title_html = HTML.ElementFromString(item.get('title'))
-
-        try:
-            if drama_test:
-                thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
-            else:
-                thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
-            if 'kiss' in thumb:
-                cover_file = thumb.rsplit('/')[-1]
-            elif 'http' in thumb:
-                cover_file = thumb.split('/', 3)[3].replace('/', '_')
-            else:
-                Log.Debug('thumb missing valid url. | %s' %thumb)
-                Log.Debug('thumb xpath = %s' %title_html.xpath('//img/@src'))
-                Log.Debug('item name | %s | %s' %(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
-                thumb = None
-                cover_file = None
-        except:
-            thumb = None
-            cover_file = None
-
-        if thumb:
-            if (not Common.CoverImageFileExist(cover_file)) and ('kiss' in thumb):
-                timer = float(Util.RandomInt(0,30)) + Util.Random()
-                Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=thumb)
-
-    if nextpg_node:
-        sleep(2)  # wait 2 sec before calling next page
-        Dict.Save()
-        nextpg = int(nextpg_node.split('page=')[1])
-        return CacheAllCovers(category=category, qevent=qevent, page=nextpg)
-    else:
-        Dict.Save()
-        sleep(5)  # wait 5 seconds before starting next Threaded instance of CacheAllCovers for next Category
-        qevent.set()  # set Event object to True for 'for loop' in CacheCoverQ()
-        Log.Info(
-            '%s Finished caching covers. Set qevent to %s, so next category can start caching covers.'
-            %(category, qevent.is_set()))
-        return
-
-####################################################################################################
-@route(PREFIX + '/save-cover-image', count=int)
-def SaveCoverImage(image_url, count=0):
-    """Save image to Cover Image Path and return the file name"""
-
-    if 'kiss' in image_url:
-        content_url = Common.GetBaseURL(image_url) + '/' + image_url.split('/', 3)[3]
-        image_file = content_url.rsplit('/')[-1]
-    else:
-        content_url = image_url
-        image_file = image_url.split('/', 3)[3].replace('/', '_')
-
-    path = Core.storage.join_path(Common.RESOURCES_PATH, image_file)
-    Logger('image file path = %s' %path)
-
-    if not Core.storage.file_exists(path):
-        if 'kiss' in content_url:
-            r = requests.get(content_url, headers=Headers.GetHeadersForURL(content_url), stream=True)
-        else:
-            r = requests.get(content_url, stream=True)
-
-        if r.status_code == 200:
-            with open(path, 'wb') as f:
-                r.raw.decode_content = True
-                shutil.copyfileobj(r.raw, f)
-
-            Logger('saved image %s' %image_file)
-            #Logger('saved image %s in path %s' %(image_file, path))
-            # create dict for cover files, so we can clear them later
-            #   seperate from bookmark covers if need be
-            if Dict['cover_files']:
-                Dict['cover_files'].update({image_file: image_file})
-            else:
-                Dict['cover_files'] = {image_file: image_file}
-
-            #Dict.Save()
-            return image_file
-        elif r.status_code == 503 and count < 3:
-            count += 1
-            timer = float(Util.RandomInt(5,10)) + Util.Random()
-            Logger(
-                '%s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i'
-                %(r.status_code, timer, count), kind='Warn', force=True)
-            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count, name=name)
-        else:
-            Logger('status code for image url = %s' %r.status_code)
-            Logger('image url not found | %s' %content_url, force=True, kind='Error')
-            return None  #replace with "no image" icon later
-    else:
-        Logger('file %s already exists' %image_file)
-        return image_file
-
-####################################################################################################
 @route(PREFIX + '/remove-cover-image')
 def RemoveCoverImage(image_file):
     """Remove Cover Image"""
@@ -2097,10 +1541,6 @@ def RemoveCoverImage(image_file):
 
         if Core.storage.file_exists(path):
             Core.storage.remove(path)
-        else:
-            pass
-    else:
-        pass
 
     return
 
@@ -2113,7 +1553,7 @@ def UpdateLegacyBookmark(bm_info=dict):
 
     type_title = bm_info['type_title']
     item_title = bm_info['item_title']
-    item_title_decode = StringCode(string=item_title, code='decode')
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
 
@@ -2165,19 +1605,6 @@ def UpdateLegacyBookmark(bm_info=dict):
     return
 
 ####################################################################################################
-@route(PREFIX + '/string-code', string=str, code=str)
-def StringCode(string, code):
-    """Handle String Coding"""
-
-    if code == 'encode':
-        string_code = urllib2.quote(string.encode('utf8'))
-    elif code == 'decode':
-        # Â artifact in Windows OS, don't know why, think it has to do with the Dict protocall
-        string_code = urllib2.unquote(string).decode('utf8').replace('Â', '')
-
-    return string_code
-
-####################################################################################################
 @route(PREFIX + '/dirsize')
 def GetDirSize(start_path='.'):
     """Get Directory Size in Megabytes or Gigabytes. Returns String rounded to 3 decimal places"""
@@ -2215,32 +1642,6 @@ def GetDirSize(start_path='.'):
         return 'Error'
 
 ####################################################################################################
-@route(PREFIX + '/cftest')
-def SetUpCFTest():
-    """setup test for cfscrape"""
-
-    if not Dict['cfscrape_test']:
-        try:
-            cftest = Headers.CFTest()
-            Log.Info('\n----------CFTest passed! Aime Cookies:----------\n%s' %cftest)
-            Dict['cfscrape_test'] = True
-            Dict.Save()
-        except:
-            Dict['cfscrape_test'] = False
-            Dict.Save()
-            Log.Error(
-                """
-                ----------CFTest Fail----------
-                You need to install a JavaScript Runtime like node.js or equivalent
-                """
-                )
-    else:
-        Log.Debug('* CFTest Previously Passed, not running again.')
-        Log.Debug('*' * 80)
-
-    return
-
-####################################################################################################
 @route(PREFIX + '/auto-cache')
 def BackgroundAutoCache():
     """Auto Cache Headers"""
@@ -2263,8 +1664,10 @@ def BackgroundAutoCache():
             Logger('* Header Dictionary already found, writing new Headers to old Dictionary', force=True)
 
             # get headers for each url
-            for url in Common.BASE_URL_LIST:
-                Headers.GetHeadersForURL(url)
+            for (t, u) in Common.BASE_URL_LIST_T:
+                prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
+                if Prefs[prefs_name]:
+                    Headers.GetHeadersForURL(u)
 
         else:
             # Header Dictionary not yet setup, so create it and fill in the data
@@ -2279,9 +1682,11 @@ def BackgroundAutoCache():
         Dict['Headers Auto Cached'] = True
         Dict.Save()
     else:
-        for url in Common.BASE_URL_LIST:
-            Logger('* Checking %s headers' %url, kind='Info', force=True)
-            Headers.GetHeadersForURL(url)
+        for (t, u) in Common.BASE_URL_LIST_T:
+            prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
+            if Prefs[prefs_name]:
+                Logger('* Checking %s headers' %u, kind='Info', force=True)
+                Headers.GetHeadersForURL(u)
 
         Logger('* Completed Header Cache Check', force=True)
         Logger('* Headers will be cached independently when needed from now on', force=True)
@@ -2289,19 +1694,6 @@ def BackgroundAutoCache():
     Log.Debug('*' * 80)
 
     return ValidatePrefs(start=start, skip=skip)
-
-####################################################################################################
-def RestartChannel():
-    """Try to Restart the KissNetwork Channel"""
-
-    try:
-        # touch Contents/Code/__init__.py
-        plist_path = Core.storage.join_path(Common.BUNDLE_PATH, "Contents", "Info.plist")
-        Core.storage.utime(plist_path, None)
-        return True
-    except Exception, e:
-        Log.Error(e)
-        return False
 
 ####################################################################################################
 def GetThumb(cover_url, cover_file):
