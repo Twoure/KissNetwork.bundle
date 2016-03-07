@@ -87,6 +87,32 @@ def GetSummary(html):
     return summary
 
 ########################################################################################
+def get_thumb_and_art(html, url):
+    """setup thumb and art for video"""
+
+    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
+    if 'kiss' in cover_url:
+        cover_file = cover_url.rsplit('/')[-1]
+    elif 'http' in cover_url:
+        cover_file = cover_url.split('/', 3)[3].replace('/', '_')
+    else:
+        Log.Error('*' * 80)
+        Log.Error('* cover url not a valid picture url | %s' %cover_url)
+        Log.Error('*' * 80)
+        cover_file = None
+    time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+    if Common.CoverImageFileExist(cover_file):
+        thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%s' %(cover_file, str(time_stamp))
+    elif cover_url:
+        thumb = cover_url
+    else:
+        thumb = None
+    # Get art background
+    art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg?t=%s' %(Common.GetTypeTitle(url).lower(), str(time_stamp))
+
+    return thumb, art
+
+########################################################################################
 def GetGenres(html):
     """Get Genres from HTML"""
 
@@ -176,6 +202,23 @@ def GetYear(html):
     return year
 
 ########################################################################################
+def GetDateAdded(html, url):
+    """Get Date Video was Added"""
+
+    video_id = int(url.split('/', 3)[3].split('=')[-1])
+
+    node = html.xpath('//table[@class="listing"]/tr')
+    da = None
+    for item in node:
+        ep = item.xpath('./td/a')
+        if ep:
+            ep_id = int(item.xpath('./td/a/@href')[0].split('=')[-1])
+            if video_id == ep_id:
+                da = Datetime.ParseDate(item.xpath('./td')[1].text_content().strip())
+                break
+    return da
+
+########################################################################################
 def GetEpisodeNameAndNumber(html, title, url):
     """
     Get Episode Name and Number from HTML and title
@@ -250,77 +293,71 @@ def GetSeasonNumber(title, show_name_raw, tags=list, summary=str):
 
     # if season in title then set season number
     if se_node:
-        #season_number = str(se_node.group(1))
-        #if not season_number == '0':
-            #season_number = season_number.lstrip('0')
-
         return str(se_node.group(1))
-
-    # set up tags test lits of strings for finding season
-    tags_test = [x.lower() for x in tags]
-    # setup summary for finding season
-    if summary:
-        summary_test = summary.lower()
-    else:
-        summary_test = 'none'
-
-    # if season number was not found above and if 'season' in the show name
-    # then try and find the season number in the show name
-    if "season" in show_name_raw.lower() and not season_number:
-        # test for "2nd Season" etc...
-        test1 = Regex('(\d+)(?:[a-z][a-z]\ Season)').search(show_name_raw)
-        if test1:
-            season_number = int(test1.group(1))
+    # if not uncensored episode
+    elif 'episode' in title.lower() and 'uncensored' not in title.lower():
+        # set up tags test lits of strings for finding season
+        tags_test = [x.lower() for x in tags]
+        # setup summary for finding season
+        if summary:
+            summary_test = summary.lower()
         else:
-            # test for "Season 2" etc...
-            test2 = Regex('(?:Season\ )(\d+)').search(show_name_raw)
-            if test2:
-                season_number = int(test2.group(1))
+            summary_test = 'none'
+
+        # if season number was not found above and if 'season' in the show name
+        # then try and find the season number in the show name
+        if "season" in show_name_raw.lower() and not season_number:
+            # test for "2nd Season" etc...
+            test1 = Regex('(\d+)(?:[a-z][a-z]\ Season)').search(show_name_raw)
+            if test1:
+                season_number = int(test1.group(1))
             else:
-                # test for "Second Season" etc...
-                test3 = Regex('(First|Second|Third)\ (?:Season)').search(show_name_raw)
-                if test3:
-                    test3_text = test3.group(1)
-                    if test3_text == 'First':
-                        season_number = int(1)
-                    elif test3_text == 'Second':
-                        season_number = int(2)
-                    elif test3_text == 'Third':
-                        season_number = int(3)
-                # if season number not in show name then try and find it in the summary or tags test array
-                elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
-                    season_number = int(2)
-                elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
-                    season_number = int(3)
-                elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
-                    season_number = int(4)
-                elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-                    season_nubmer = int(0)
-                # if no season number found then set season to 1
+                # test for "Season 2" etc...
+                test2 = Regex('(?:Season\ )(\d+)').search(show_name_raw)
+                if test2:
+                    season_number = int(test2.group(1))
                 else:
-                    season_number = int(1)
-    # if season number not above and if 'season' not in show name
-    # try and find season number in summary or tags test string
-    elif not season_number:
-        if 'first season' in summary_test or FindPartElement(array=tags_test, string='first season'):
-            season_number = int(1)
-        elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
-            season_number = int(2)
-        elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
-            season_number = int(3)
-        elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
-            season_number = int(4)
-        elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-            season_number = int(0)
-        # if no season number found then set season to 1
-        else:
-            season_number = int(1)
-
-    #season_number = str(season_number)
-    #if not season_number == '0':
-        #season_number = season_number.lstrip('0')
-
-    return str(season_number)
+                    # test for "Second Season" etc...
+                    test3 = Regex('(First|Second|2nd|Third|3rd)\ (?:Season)').search(show_name_raw)
+                    if test3:
+                        test3_text = test3.group(1)
+                        if test3_text == 'First':
+                            season_number = int(1)
+                        elif test3_text == 'Second' or test3_text == '2nd':
+                            season_number = int(2)
+                        elif test3_text == 'Third' or test3_text == '3rd':
+                            season_number = int(3)
+                    # if season number not in show name then try and find it in the summary or tags test array
+                    elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
+                        season_number = int(2)
+                    elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
+                        season_number = int(3)
+                    elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
+                        season_number = int(4)
+                    elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+                        season_nubmer = int(0)
+                    # if no season number found then set season to 1
+                    else:
+                        season_number = int(1)
+        # if season number not above and if 'season' not in show name
+        # try and find season number in summary or tags test string
+        elif not season_number:
+            if 'first season' in summary_test or FindPartElement(array=tags_test, string='first season'):
+                season_number = int(1)
+            elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
+                season_number = int(2)
+            elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
+                season_number = int(3)
+            elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
+                season_number = int(4)
+            elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
+                season_number = int(0)
+            # if no season number found then set season to 1
+            else:
+                season_number = int(1)
+        return str(season_number)
+    else:
+        return str(0)
 
 ########################################################################################
 def GetTVShowTitle(show_name_raw):
@@ -363,6 +400,13 @@ def GetSourceTitle(url):
     source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
 
     return source_title
+
+########################################################################################
+def get_title(html, video_id, show_name_raw):
+    """Get the show title matching the video id"""
+    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "%s")]/../a/text()' %video_id)[0]
+    title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
+    return title
 
 ########################################################################################
 def GetBaseMovieInfo(html, url):
