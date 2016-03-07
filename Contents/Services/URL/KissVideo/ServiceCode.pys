@@ -2,17 +2,11 @@
 
 """Kiss(anime, cartoon, and drama) Service code"""
 
-# import system modules
-import base64
-import urllib2
-
 # import Shared Service Code
 import headers as Headers
 import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
-#import aadecode as aa
-#import requests
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -93,9 +87,6 @@ def MediaObjectsForURL(url):
     additional computation.
     """
 
-    Log.Debug('* MediaObjectsForURL url = %s' %url)
-    Log.Debug('*' * 80)
-
     mo = []
     fmt_list = [('1080p', 'm37'), ('720p', 'm22'), ('360p', 'm18')]
 
@@ -118,12 +109,9 @@ def MediaObjectsForURL(url):
 def PlayVideo(url, m, **kwargs):
     """
     Get Video URL
-    Returns the Hights stream playable depending on the previous Stream Selections
-    If Stream not found, then trys to find next hightest.
-    Example:
-    If 1080p not available then return 720p. If 720p not available then return 360p.
-
-    OneDrive give only one link, so no resolution code for it
+    Currently available host: GoogleVideo, OneDrive, and OpenLoad
+    GoogleVideo links have the potential for multiple resolutions links
+    OneDrive & OpenLoad give only one link (the highest), so no optional resolutions
     """
 
     Log.Debug('*' * 80)
@@ -143,53 +131,70 @@ def PlayVideo(url, m, **kwargs):
         vurl = get_openload_url(openload.group(1))
         Log.Debug('* PlayVideo URL      = %s' %vurl)
     else:
-        html = HTML.ElementFromString(page_text)
-        olist = html.xpath('//select[@id="selectQuality"]/option')
-        type_title = Common.GetTypeTitle(url)
-        if not olist:
-            Log.Error('* This Video is broken, Kiss%s is working to fix it.' %type_title)
-            raise Ex.MediaNotAvailable
-
-        vurl = None
-        vurls = []
-        for node in olist:
-            vurl_old = base64.b64decode(node.get('value'))
-            vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
-
-        for item, mm in sorted(vurls, key=lambda tup: tup[1]):
-            vurl = item
-            if 'm%s' %str(mm) == m:
-                break
-
-        Log.Debug('* PlayVideo URL      = %s' %vurl)
-
-        prefs = SubPrefs.GetPrefs()
-        if not 'samsung_fix' in prefs.keys():
-            samsung_fix = 'false'
-        else:
-            samsung_fix = prefs['samsung_fix']
-            if not samsung_fix:
-                samsung_fix = 'false'
-
-        if samsung_fix == 'true':
-            Log.Debug('* Samsung Fix ON')
-            Log.Debug('* Note: Videos will NO longer play outside the network connection.')
-            try:
-                vurl = get_redirect_url(path)
-                Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
-            except:
-                Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
-
+        vurl = get_googlevideo_url(page_text, url, m)
     Log.Debug('*' * 80)
 
     if not vurl:
         raise Ex.MediaNotAvailable
+    else:
+        return IndirectResponse(VideoClipObject, key=vurl)
 
-    return IndirectResponse(VideoClipObject, key=vurl)
+####################################################################################################
+def get_googlevideo_url(page_text, url, m):
+    """
+    Get GoogleVideo URLs
+    Returns the Hights stream playable depending on the previous Stream Selections
+    If Stream not found, then try's to find next hightest.
+    Example:
+    If 1080p not available then return 720p. If 720p not available then return 360p.
+    """
+
+    import base64
+
+    html = HTML.ElementFromString(page_text)
+    olist = html.xpath('//select[@id="selectQuality"]/option')
+    type_title = Common.GetTypeTitle(url)
+    if not olist:
+        Log.Error('* This Video is broken, Kiss%s is working to fix it.' %type_title)
+        raise Ex.MediaNotAvailable
+
+    vurl = None
+    vurls = []
+    for node in olist:
+        vurl_old = base64.b64decode(node.get('value'))
+        vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
+
+    for item, mm in sorted(vurls, key=lambda tup: tup[1]):
+        vurl = item
+        if 'm%s' %str(mm) == m:
+            break
+
+    Log.Debug('* PlayVideo URL      = %s' %vurl)
+
+    prefs = SubPrefs.GetPrefs()
+    if not 'samsung_fix' in prefs.keys():
+        samsung_fix = 'false'
+    else:
+        samsung_fix = prefs['samsung_fix']
+        if not samsung_fix:
+            samsung_fix = 'false'
+
+    if samsung_fix == 'true':
+        Log.Debug('* Samsung Fix ON')
+        Log.Debug('* Note: Videos will NO longer play outside the network connection.')
+        try:
+            vurl = get_redirect_url(path)
+            Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+        except:
+            Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+
+    return vurl
 
 ####################################################################################################
 def get_redirect_url(rurl):
     """Expand Redirect URLs"""
+
+    import urllib2
 
     opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
     request = opener.open(rurl, timeout=5)
@@ -237,7 +242,7 @@ def get_onedrive_url(onedrive_url):
 
     # create the request for the download url
     dl_url = 'https://onedrive.live.com/GetDownloadUrl/?cid=' + a['cid'] + '&resid=' + a['id'] + '&authkey=' + data['authKey'].decode('unicode-escape') + '&canary='
-    # setup headers for request
+    # setup headers for request. Needs authKey and appId
     h = {'X-Requested-With': 'XMLHttpRequest', 'InvitationToken': data['authKey'].decode('unicode-escape'), 'AppId': data['appId'], 'Accept': 'application/json'}
 
     # open download request and parse json data
