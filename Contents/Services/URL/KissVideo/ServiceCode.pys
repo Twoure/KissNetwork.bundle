@@ -3,13 +3,16 @@
 """Kiss(anime, cartoon, and drama) Service code"""
 
 # import system modules
-import base64, urllib2
+import base64
+import urllib2
 
 # import Shared Service Code
 import headers as Headers
 import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
+#import aadecode as aa
+#import requests
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -20,303 +23,66 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
-    video_href = '/' + url.split('/', 3)[3]
-    video_id = video_href.split('=')[-1]
     Log.Debug('*' * 80)
-    Log.Debug('* video href = %s' %video_href)
-    Log.Debug('* video id   = %s' %video_id)
-    url = url.rsplit('/', 1)[0]
-    source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
-
     Log.Debug('* MetadataObjectForURL url = %s' %url)
+
+    video_id = int(url.split('=')[-1])
+    show_url = url.rsplit('/', 1)[0]
+
+    html = HTML.ElementFromURL(show_url, headers=Headers.GetHeadersForURL(show_url))
     Log.Debug('*' * 80)
 
-    # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
-    Log.Debug('*' * 80)
+    genres, genres_list = Metadata.GetGenres(html)
+    date_added = Metadata.GetDateAdded(html, url)
+    thumb, art = Metadata.get_thumb_and_art(html, url)
 
-    show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
-    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "%s")]/../a/text()' %video_id)[0]
-    title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
-    other_names = html.xpath('//p[span[@class="info"]="Other name:"]/a/text()')
-    Log.Debug('* other names = %s' %other_names)
-    genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
-    Log.Debug('* genres = %s' %genres)
-    view_text = html.xpath('//p[span[@class="info"]="Status:"]')[0].text_content()[:100].replace(',', '')
-    views = int(Regex('(?s).*(?:Views:).(\d+)').search(view_text).group(1))
-    Log.Debug('* views = %i' %views)
-    countries = html.xpath('//p[span[@class="info"]="Country:"]/a/text()')
-    Log.Debug('* countries = %s' %countries)
-    date_aired = html.xpath('//p[span[@class="info"]="Date aired:"]/text()')
-    Log.Debug('* date aired = %s' %date_aired)
-    Log.Debug('* show_name_raw = %s' %show_name_raw)
-    Log.Debug('* title_raw = %s' %title_raw.strip())
-    Log.Debug('* title = %s' %title)
-
-    # setup thumb and art for video
-    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
-    if 'kiss' in cover_url:
-        cover_file = cover_url.rsplit('/')[-1]
-    elif 'http' in cover_url:
-        cover_file = cover_url.split('/', 3)[3].replace('/', '_')
-    else:
-        Log.Error('*' * 80)
-        Log.Error('* cover url not a valid picture url | %s' %cover_url)
-        Log.Error('*' * 80)
-        cover_file = None
-
-    time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
-
-    if Common.CoverImageFileExist(cover_file):
-        thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%s' %(cover_file, str(time_stamp))
-    elif cover_url:
-        thumb = cover_url
-    else:
-        thumb = None
-
-    # Get art background
-    art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg?t=%s' %(Common.GetTypeTitle(url).lower(), str(time_stamp))
-
-
-    # set full summary
-    summary = Common.StringCode(string=Metadata.GetSummary(html), code='decode')
-
-    # setup MovieObject
-    if 'movie' in title.lower() or 'Movie' in genres and not 'episode' in title.lower():
-        Log.Debug('* this is a movie')
+    # Setup MovieObject for Moives
+    if 'Movie' in genres:
+        Log.Debug('* This is a Movie')
         Log.Debug('*' * 80)
 
         # remove 'Movie' from genre list
         genre_list = [g for g in genres if not g == 'Movie']
-
-        # try and set date and year
-        if date_aired:
-            try:
-                date_aired = date_aired[1].strip()
-                date = Datetime.ParseDate(date_aired)
-                year = int(Datetime.ParseDate(date_aired).year)
-            except:
-                date = None
-                year = None
-        else:
-            date = None
-            year = None
+        mi = Metadata.GetBaseMovieInfo(html, url)
+        summary = Common.StringCode(string=mi['summary'], code='decode') if mi['summary'] else None
 
         return MovieObject(
-            title=show_name_raw.strip(),
+            title=mi['title'],
             genres=genre_list,
-            tags=other_names,
-            source_title=source_title,
-            originally_available_at=date,
-            year=year,
-            countries=countries,
+            tags=Metadata.string_to_list(Common.StringCode(string=mi['tags'], code='decode')) if mi['tags'] else [],
+            source_title=mi['source_title'],
+            originally_available_at=date_added if date_added else None,
+            year=int(mi['year']) if mi['year'] else None,
+            countries=Metadata.string_to_list(Common.StringCode(string=mi['countries'], code='decode')) if mi['countries'] else [],
             thumb=thumb,
             art=art,
-            summary=summary)
-    # setup EpisodeObject
-    elif 'episode' in title.lower():
-        Log.Debug('* this is a TV Show')
+            summary=summary
+            )
+    # Setup EpisodeObject for all shows that are not Movies
+    else:
+        Log.Debug('* This is a TV Show')
 
-        show_title = None
-        season_number = None
-        # test title for episode # and season # via Regex
-        ep_node = Regex('Episode(?:(?:\ (\d+)(\ .*))|(?:\ (\d+))|(\ .*))').search(title)
-        se_node = Regex('Season (\d+)').search(title)
-
-        # if season in title then set season number
-        if se_node:
-            season_number = int(se_node.group(1))
-
-        # set up episode_name and episode number
-        if ep_node:
-            # if ep # and text found after # then:
-            if ep_node.group(1) and ep_node.group(2):
-                # set episode number (ep #)
-                episode_number = int(ep_node.group(1))
-                # if ep # != 0 then strip leading 0 from #
-                if not episode_number == int(0):
-                    episode_number = int(str(episode_number).lstrip('0'))
-                # set episode name
-                episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(2).lstrip(' -'))
-            # if ep # with no text after it then:
-            elif ep_node.group(3):
-                episode_number = int(ep_node.group(3))
-                if not episode_number == int(0):
-                    episode_number = int(str(episode_number).lstrip('0'))
-
-                episode_name = 'Episode %i' %episode_number
-            # if ep found with no number but has text after it then:
-            elif ep_node.group(4):
-                # get episode list from show page
-                test = html.xpath('//table[@class="listing"]/tr/td/a')
-                # reverse list and enumerate to match selected video id with interation
-                for i, item in enumerate(list(reversed(test))):
-                    # get episode id
-                    ep_id = int(item.get('href').split('=')[-1])
-                    if int(video_id) == ep_id:
-                        # add 1 to i since it starts at 0 in list
-                        episode_number = int(i) + 1
-                        episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(4).lstrip(' -'))
-                        break
-            # this shouldn't be needed but just in case the above fails
-            else:
-                episode_number = None
-                episode_name = title
-        # if Episode in name but Regex has not matches then add ep # and format ep name
-        else:
-            # get episode list from show page
-            test = html.xpath('//table[@class="listing"]/tr/td/a')
-            # reverse list and enumerate to match selected video id with interation
-            for i, item in enumerate(list(reversed(test))):
-                # get episode id
-                ep_id = int(item.get('href').split('=')[-1])
-                if int(video_id) == ep_id:
-                    # add 1 to i since it starts at 0 in list
-                    episode_number = int(i) + 1
-                    episode_name = 'Episode %i' %episode_number
-                    break
-
-        # add genres to other_names, for 'tags' later
-        for genre in genres:
-            other_names.append(genre)
-
-        # set up tags test lits of strings for finding season
-        tags_test = [x.lower() for x in other_names]
-        # setup summary for finding season
-        if summary:
-            summary_test = summary.lower()
-        else:
-            summary_test = 'none'
-
-        # if season number was not found above and if 'season' in the show name
-        # then try and find the season number in the show name
-        if "season" in show_name_raw.lower() and not season_number:
-            # test for "2nd Season" etc...
-            test1 = Regex('(\d+)(?:[a-z][a-z]\ Season)').search(show_name_raw)
-            if test1:
-                season_number = int(test1.group(1))
-            else:
-                # test for "Season 2" etc...
-                test2 = Regex('(?:Season\ )(\d+)').search(show_name_raw)
-                if test2:
-                    season_number = int(test2.group(1))
-                else:
-                    # test for "Second Season" etc...
-                    test3 = Regex('(First|Second|Third)\ (?:Season)').search(show_name_raw)
-                    if test3:
-                        test3_text = test3.group(1)
-                        if test3_text == 'First':
-                            season_number = int(1)
-                        elif test3_text == 'Second':
-                            season_number = int(2)
-                        elif test3_text == 'Third':
-                            season_number = int(3)
-                    # if season number not in show name then try and find it in the summary or tags test array
-                    elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
-                        season_number = int(2)
-                    elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
-                        season_number = int(3)
-                    elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
-                        season_number = int(4)
-                    #elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-                    elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-                        season_nubmer = int(0)
-                    # if no season number found then set season to 1
-                    else:
-                        season_number = int(1)
-        # if season number not above and if 'season' not in show name
-        # try and find season number in summary or tags test string
-        elif not season_number:
-            if 'first season' in summary_test or FindPartElement(array=tags_test, string='first season'):
-                season_number = int(1)
-            elif 'second season' in summary_test or FindPartElement(array=tags_test, string='second season'):
-                season_number = int(2)
-            elif 'third season' in summary_test or FindPartElement(array=tags_test, string='third season'):
-                season_number = int(3)
-            elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
-                season_number = int(4)
-            #elif 'special' in summary_test or 'short' in summary_test or FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-            elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-                season_number = int(0)
-            # if no season number found then set season to 1
-            else:
-                season_number = int(1)
-
-        # set show title
-        show_title_regex = Regex('^(.+?)(?:\ |\ (?:[1-9][a-z][a-z]|First|Second)\ )(?:Season|Episode)(.+|)').search(show_name_raw)
-        if show_title_regex:
-            show_title = show_title_regex.group(1) + show_title_regex.group(2)
-        else:
-            show_title = show_name_raw
-
-        # set episode title for EpisodeObject
-        if season_number or season_number == 0:
-            ep_test = Regex('E(?:\d+)(.*)').search(episode_name)
-            # if no show name then return 'Season %i | Episode %i'
-            if not ep_test:
-                new_title = 'Season %i | %s' %(season_number, episode_name)
-            # PHT displays season and episode already, so don't include in name
-            elif Client.Platform == 'Plex Home Theater':
-                new_title = ep_test.group(1).lstrip(' |')
-            # shorten season and episode to include ep name
-            else:
-                new_title = 'S%i | E%i%s' %(season_number, episode_number, ep_test.group(1))
-        # no season # found, so just return ep # and name
-        else:
-            new_title = episode_name
-
-        # try and get the date and year
-        if date_aired:
-            try:
-                date_aired = date_aired[1].lower().split('to')[0].split('-')[0].strip()
-                Log.Debug('* date aired = %s' %date_aired)
-                date = Datetime.ParseDate(date_aired)
-                Log.Debug('* date = %s' %str(date))
-            except:
-                date = None
-        else:
-            date = None
-        Log.Debug('*' * 80)
+        si = Metadata.GetBaseShowInfo(html, url)
+        summary = Common.StringCode(string=si['summary'], code='decode') if si['summary'] else None
+        tags = Metadata.string_to_list(Common.StringCode(string=si['tags'], code='decode')) if si['tags'] else []
+        show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
+        start_title = Metadata.get_title(html, video_id, show_name_raw)
+        season_number = Metadata.GetSeasonNumber(start_title, show_name_raw, tags, summary)
+        ep_name, ep_number = Metadata.GetEpisodeNameAndNumber(html, start_title, url)
+        new_title = Metadata.GetEpisodeTitle(int(season_number), ep_name, int(ep_number))
 
         return EpisodeObject(
             title=new_title,
-            source_title=source_title,
-            show=show_title,
-            season=season_number,
-            index=episode_number,
-            tags=other_names,
-            originally_available_at=date,
+            source_title=si['source_title'],
+            show=si['tv_show_name'],
+            season=int(season_number),
+            index=int(ep_number),
+            tags=tags,
+            originally_available_at=date_added if date_added else None,
             thumb=thumb,
             art=art,
-            summary=summary)
-    # setup VideoClibObject in case video has no episode or movie data
-    else:
-        Log.Debug('* show not defined, so returned general video clip')
-        Log.Debug('*' * 80)
-
-        if date_aired:
-            try:
-                date_aired = date_aired[1].lower().split('to')[0].split('-')[0].strip()
-                date = Datetime.ParseDate(date_aired)
-                year = int(Datetime.ParseDate(date_aired).year)
-            except:
-                date = None
-                year = None
-        else:
-            date = None
-            year = None
-
-        return VideoClipObject(
-            title=title.lstrip('_'),
-            genres=genres,
-            tags=other_names,
-            source_title=source_title,
-            originally_available_at=date,
-            year=year,
-            countries=countries,
-            thumb=thumb,
-            art=art,
-            summary=summary)
+            summary=summary
+            )
 
 ########################################################################################
 def MediaObjectsForURL(url):
@@ -330,68 +96,89 @@ def MediaObjectsForURL(url):
     Log.Debug('* MediaObjectsForURL url = %s' %url)
     Log.Debug('*' * 80)
 
-    # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
     mo = []
-
-    if "(Dub)" in html.xpath('//head/title/text()')[0]:
-        Log.Debug('* language = English')
-        AudioStreamObject.language_code = Locale.Language.English
-    elif "(Sub)" in html.xpath('//head/title/text()')[0]:
-        Log.Debug('* language = Japanese')
-        AudioStreamObject.language_code = Locale.Language.Japanese
-    else:
-        Log.Debug('* No Language set. Setting to Unknown')
-        AudioStreamObject.language_code = Locale.Language.Unknown
-
-    Log.Debug('*' * 80)
+    fmt_list = [('1080p', 'm37'), ('720p', 'm22'), ('360p', 'm18')]
 
     # create media objects for each video quality
-    for node in html.xpath('//select[@id="selectQuality"]/option'):
-        fmt = node.text
-        video_url = node.get('value')
-
+    for fmt, m in fmt_list:
         mo.append(MediaObject(
-            parts=[PartObject(key=Callback(PlayVideo, url=video_url))],
+            parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
             video_resolution=fmt[:-1],
             container=Container.MP4,
             video_codec=VideoCodec.H264,
             audio_codec=AudioCodec.AAC,
             audio_channels=2,
-            optimized_for_streaming=True))
+            optimized_for_streaming=True
+            ))
 
     return mo
 
 ########################################################################################
 @indirect
-def PlayVideo(url, **kwargs):
-    """Log the Client Product, Platform and base64 decoded PlayVideo URL"""
+def PlayVideo(url, m, **kwargs):
+    """
+    Get Video URL
+    Returns the Hights stream playable depending on the previous Stream Selections
+    If Stream not found, then trys to find next hightest.
+    Example:
+    If 1080p not available then return 720p. If 720p not available then return 360p.
 
-    path = base64.b64decode(url)
-    vurl = path
+    OneDrive give only one link, so no resolution code for it
+    """
 
     Log.Debug('*' * 80)
     Log.Debug('* Client.Product     = %s' %Client.Product)
     Log.Debug('* Client.Platform    = %s' %Client.Platform)
     Log.Debug('* Client.Version     = %s' %Client.Version)
-    Log.Debug('* PlayVideo URL      = %s' %path)
 
-    prefs = SubPrefs.GetPrefs()
-    if not 'samsung_fix' in prefs.keys():
-        samsung_fix = 'false'
+    page_text = HTTP.Request(url, headers=Headers.GetHeadersForURL(url)).content
+    onedrive = Regex('src\=\"(https\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
+    openload = Regex('src\=\"(https\:\/\/openload.+?)\"').search(page_text)
+    if onedrive:
+        Log.Debug('* OneDrive URL       = %s' %onedrive.group(1))
+        vurl = get_onedrive_url(onedrive.group(1))
+        Log.Debug('* PlayVideo URL      = %s' %vurl)
+    elif openload:
+        Log.Debug('* OpenLoad URL       = %s' %openload.group(1))
+        vurl = get_openload_url(openload.group(1))
+        Log.Debug('* PlayVideo URL      = %s' %vurl)
     else:
-        samsung_fix = prefs['samsung_fix']
-        if not samsung_fix:
-            samsung_fix = 'false'
+        html = HTML.ElementFromString(page_text)
+        olist = html.xpath('//select[@id="selectQuality"]/option')
+        type_title = Common.GetTypeTitle(url)
+        if not olist:
+            Log.Error('* This Video is broken, Kiss%s is working to fix it.' %type_title)
+            raise Ex.MediaNotAvailable
 
-    if samsung_fix == 'true':
-        Log.Debug('* Samsung Fix ON')
-        Log.Debug('* Note: Videos will NO longer play outside the network connection.')
-        try:
-            vurl = get_redirect_url(path)
-            Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
-        except:
-            Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+        vurl = None
+        vurls = []
+        for node in olist:
+            vurl_old = base64.b64decode(node.get('value'))
+            vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
+
+        for item, mm in sorted(vurls, key=lambda tup: tup[1]):
+            vurl = item
+            if 'm%s' %str(mm) == m:
+                break
+
+        Log.Debug('* PlayVideo URL      = %s' %vurl)
+
+        prefs = SubPrefs.GetPrefs()
+        if not 'samsung_fix' in prefs.keys():
+            samsung_fix = 'false'
+        else:
+            samsung_fix = prefs['samsung_fix']
+            if not samsung_fix:
+                samsung_fix = 'false'
+
+        if samsung_fix == 'true':
+            Log.Debug('* Samsung Fix ON')
+            Log.Debug('* Note: Videos will NO longer play outside the network connection.')
+            try:
+                vurl = get_redirect_url(path)
+                Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+            except:
+                Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
 
     Log.Debug('*' * 80)
 
@@ -399,15 +186,6 @@ def PlayVideo(url, **kwargs):
         raise Ex.MediaNotAvailable
 
     return IndirectResponse(VideoClipObject, key=vurl)
-
-########################################################################################
-def FindPartElement(array=list, string=str):
-    """fileter elements in array by sting, allows for loose matches"""
-
-    if filter(lambda element: string in element, array):
-        return True
-    else:
-        return False
 
 ####################################################################################################
 def get_redirect_url(rurl):
@@ -417,3 +195,83 @@ def get_redirect_url(rurl):
     request = opener.open(rurl, timeout=5)
 
     return request.url
+
+####################################################################################################
+def get_onedrive_url(onedrive_url):
+    """
+    Get OneDrive URLs
+    Made by Twoure :P
+    Code returns the download link for a OneDrive video
+    Example Start URL
+    https://onedrive.live.com/prev?cid=f90d37dd21022d17&id=F90D37DD21022D17%21108&authkey=%21AJZbMrbEbLJhvUk&parId=root&view=video&mode=interactiveEmbed
+    Note the Start URL needs the 'cid', 'id', and 'authkey'
+    No need to do the URL redirect, final video URL is NOT bound to local ip
+    """
+
+    html = HTML.ElementFromURL(onedrive_url)
+
+    # Pull out the GetItemsLoaderConfing and store info in data dictionary
+    for node in html.xpath('//script[@type="text/javascript"]'):
+        match = Regex('(?s)GetItemsLoaderConfig\ \=\ (\{.*?\})\;').search(node.text_content())
+        if match:
+            test = match.group(1).replace('\n\r', '').strip()
+            for i, s in enumerate(['cid', 'skyApiDomain', 'mkt', 'appId', 'canary', 'oauthToken', 'authKey', 'ticket', 'gb', 'rset']):
+                if i == 0:
+                    data = {s: Regex('%s\:\ \'(.*)\'\,' %s).search(test).group(1)}
+                elif not s == 'rset':
+                    data.update({s: Regex('%s\:\ \'(.*)\'\,' %s).search(test).group(1)})
+                else:
+                    data.update({s: Regex('%s\:\ \'(.*?)\'' %s).search(test).group(1)})
+            break
+
+    # parse parameters in URL
+    uris = onedrive_url.split('&')
+    for i, s in enumerate(uris):
+        if i == 0:
+            bs = s.split('?')[1]
+            ss = bs.split('=')
+            a = {ss[0]: ss[1]}
+        else:
+            ns = s.split('=')
+            a.update({ns[0]: ns[1]})
+
+    # create the request for the download url
+    dl_url = 'https://onedrive.live.com/GetDownloadUrl/?cid=' + a['cid'] + '&resid=' + a['id'] + '&authkey=' + data['authKey'].decode('unicode-escape') + '&canary='
+    # setup headers for request
+    h = {'X-Requested-With': 'XMLHttpRequest', 'InvitationToken': data['authKey'].decode('unicode-escape'), 'AppId': data['appId'], 'Accept': 'application/json'}
+
+    # open download request and parse json data
+    dl_data = JSON.ObjectFromURL(dl_url, headers=h)
+
+    # remove the download info after .mp4, that way the video will play instead of force downloading
+    vurl = dl_data['DownloadUrl'].split('?')[0]
+
+    return vurl
+
+####################################################################################################
+def get_openload_url(openload_url):
+    """
+    Get OpenLoad URLs
+    Code returns the download link for a OpenLoad video
+    Example Start URL
+    https://openload.co/embed/rano_HSH6Fk/%5BHorribleSubs%5D_GATE_-_21_%5B720p%5D-r976.mp4
+    Note the Start URL needs the 'fid' after "/embed/"
+    No need to do the URL redirect, final video URL is NOT bound to local ip
+    """
+
+    import aadecode as aa
+
+    fid = openload_url.split('/')[4]
+    base_url = openload_url.rsplit('/', 3)[0]
+    # setup the url to ask for the Download Link
+    ourl_res = base_url + '/getdllink/' + fid
+    Log.Debug('* Get OpenLoad dlURL = %s' %ourl_res)
+
+    s = HTTP.Request(ourl_res, encoding=('utf-8')).content
+    # returns an aaencoded string, use aadecode to return JavaScript sting
+    # then parse string for raw video URL
+    aad = aa.AADecoder(s)
+    jscode = aad.decode()
+    url = Regex('\.attr\((.*)\)').search(jscode).group(1).split(',')[1].replace('\/', '/').lstrip('\'\"').rstrip('\'\"')
+
+    return url
