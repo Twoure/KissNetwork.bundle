@@ -21,19 +21,6 @@
         <string>http://kisscartoon.me/Cartoon/Steven-Universe/Episode-000-Pilot?id=44288</string>
       </array>
     </dict>
-    <key>KissManga</key>
-    <dict>
-      <key>Identifier</key>
-      <string>com.plexapp.plugins.kissnetwork</string>
-      <key>URLPatterns</key>
-      <array>
-        <string>^http://(?:www\.|)kissmanga\.(?:[^/]+\/)?Manga/.+(?:\?id=\d+)$</string>
-      </array>
-      <key>TestURLs</key>
-      <array>
-        <string>http://kissmanga.com/Manga/Naruto/001-007?id=80552</string>
-      </array>
-    </dict>
   </dict>
 </dict>
 </plist>
