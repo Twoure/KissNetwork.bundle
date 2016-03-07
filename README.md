@@ -29,7 +29,6 @@ KissNetwork
 - [Issues](#issues)
   - [General](#general)
   - [Kiss(Anime, Asian, Cartoon, Manga)](#kissanime-asian-cartoon-manga)
-  - [Chromecast](#chromecast)
   - [Plex Home Theater](#plex-home-theater)
 - [Plans](#plans)
   - [General](#general-1)
@@ -203,7 +202,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ## About
 
-Hey you, you scrolled to the end of the page! [Yeah](http://i.imgur.com/ZGfN8eb.gif)
+Hey you, you scrolled to the end of the page! [Yeah](http://i.imgur.com/ZGfN8eb.gifv)
 
 Little background to this project.  I decided it was time I start learning some Python, so what better way than to learn it and get some fun results to play with.  I started out working on revamping the unsupported app store.  Currently I've created a way to search github for new channels and import them into the store and then install them.  Also you can remove channels from the store, maybe it's old or you don't want them anymore.  My version would allow you to import your own custom channels from Github and not have to worry about asking me to add them. This works but has some bugs in it still.  For now that project is on the back-burner since I've gotten tired of it as-well-as I'm unsure if it's OK to put the store back up on Github.
 
