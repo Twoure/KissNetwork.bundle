@@ -886,16 +886,15 @@ def ItemPage(item_info):
     page_url = item_info['page_url']
     art = item_info['art']
 
-    # decode string
+    # decode string & set title2 for oc
     item_title_decode = Common.StringCode(string=item_title, code='decode')
-
-    # setup new title2 for container
     title2 = '%s | %s' % (type_title, item_title_decode)
-
     oc = ObjectContainer(title2=title2, art=R(art))
 
+    html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
+    genres, genres_list = Metadata.GetGenres(html)
+
     if not Prefs['adult']:
-        html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
 
         # Check for Adult content, block if Prefs set.
         genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
@@ -909,26 +908,59 @@ def ItemPage(item_info):
                     'Adult Content Blocked: %s' %warning_string)
 
     # page category stings depending on media
-    if not 'Manga' in type_title:
-        category_thumb = CATEGORY_VIDEO_ICON
-        page_category = 'Video(s)'
-    else:
-        category_thumb = CATEGORY_PICTURE_ICON
-        page_category = 'Chapter(s)'
+    page_category = 'Chapter(s)' if type_title == 'Manga' else 'Video(s)'
 
     # update item_info to include page_category
     item_info.update({'page_category': page_category})
 
     # format item_url for parsing
     Logger('page url = %s | base url = %s' %(page_url, base_url))
+    cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
 
-    # add video(s)/chapter(s) container
-    oc.add(DirectoryObject(
-        key=Callback(ItemSubPage, item_info=item_info),
-        title=page_category,
-        thumb=R(category_thumb),
-        summary='List all currently avalible %s for \"%s\"' %
-        (page_category.lower(), item_title_decode)))
+    if 'Manga' in type_title:
+        manga_info = Metadata.GetBaseMangaInfo(html, page_url)
+        summary = manga_info['summary'] if manga_info['summary'] else (item_info['short_summary'] if item_info['short_summary'] else None)
+        item_info.update({'summary': summary})
+        item_info.pop('short_summary')
+        manga_info.pop('summary')
+        summary2 = Common.StringCode(string=summary, code='decode')
+
+        oc.add(TVShowObject(
+            key=Callback(MangaSubPage, item_info=item_info, manga_info=manga_info),
+            rating_key=page_url, title=manga_info['title'], genres=genres,
+            source_title=manga_info['source_title'], summary=summary2,
+            thumb=cover, art=R(art)
+            ))
+
+    elif 'Movie' in genres:
+        movie_info = Metadata.GetBaseMovieInfo(html, page_url)
+        summary = movie_info['summary'] if movie_info['summary'] else (item_info['short_summary'] if item_info['short_summary'] else None)
+        item_info.update({'summary': summary})
+        item_info.pop('short_summary')
+        movie_info.pop('summary')
+        summary2 = Common.StringCode(string=summary, code='decode')
+
+        oc.add(TVShowObject(
+            key=Callback(MovieSubPage, item_info=item_info, movie_info=movie_info),
+            rating_key=page_url, title=movie_info['title'], genres=genres,
+            source_title=movie_info['source_title'], summary=summary2,
+            thumb=cover, art=R(art)
+            ))
+
+    else:
+        show_info = Metadata.GetBaseShowInfo(html, page_url)
+        summary = string=show_info['summary'] if show_info['summary'] else (item_info['short_summary'] if item_info['short_summary'] else None)
+        item_info.update({'summary': summary})
+        item_info.pop('short_summary')
+        show_info.pop('summary')
+        summary2 = Common.StringCode(string=summary, code='decode')
+
+        oc.add(TVShowObject(
+            key=Callback(ShowSubPage, item_info=item_info, show_info=show_info),
+            rating_key=page_url, title=show_info['tv_show_name'], genres=genres,
+            source_title=show_info['source_title'], summary=summary2,
+            thumb=cover, art=R(art)
+            ))
 
     # Test if the Dict does have the 'Bookmarks' section
     bm = Dict['Bookmarks']
@@ -948,177 +980,316 @@ def ItemPage(item_info):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/itemsubpage', item_info=dict)
-def ItemSubPage(item_info):
-    """Create the Item Sub Page with Video or Chapter list"""
+def GetItemList(html, url, item_title, type_title):
+    """Get list of Episodes, Movies, or Chapters"""
 
-    # set variables
-    item_title = item_info['item_title']
-    type_title = item_info['type_title']
-    base_url = item_info['base_url']
-    page_url = item_info['page_url']
-    page_category = item_info['page_category']
-    art = item_info['art']
-
-    # decode string(s)
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
-
-    # setup title2 for container
-    title2 = '%s | %s | %s' % (type_title, item_title_decode, page_category.lower())
-
-    # remove special charaters from item_title for matching later
-    item_title_decode = Regex('[^a-zA-Z0-9 \n\.]').sub('', item_title_decode)
-
-    # remove '(s)' from page_category string for logs
-    s_removed_page_category = page_category.rsplit('(')[0]
-
-    oc = ObjectContainer(title2=title2, art=R(art))
-
-    Logger('item sub page url = %s' %page_url)
-
-    # setup html for parsing
-    html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
-
-    # episode_list_node
     episode_list = html.xpath('//table[@class="listing"]/tr/td')
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
+    item_title_regex = Regex('[^a-zA-Z0-9 \n\.]').sub('', item_title_decode)
+    Log.Debug('* item_title_regex = %s' %item_title_regex)
 
     # if no shows, then none have been added yet
     if not episode_list:
-        return MC.message_container('Warning',
-            '%s \"%s\" Not Yet Aired.' %(type_title, item_title_decode))
+        return 'Not Yet Aired'
     else:
-        # parse html for media url, title and date added
         a = []
         b = []
+        c = []
 
         for media in episode_list:
             if media.xpath('./a'):
                 node = media.xpath('./a')
 
                 # url for Video/Chapter
-                mpu_node = node[0].get('href').split('/')[-1].rsplit('?', 1)
-                media_page_url = page_url + '/' + urllib2.quote((mpu_node[0]).encode("utf8")) + '?' + mpu_node[1]
-                #Logger('* %s Page URL = %s' % (s_removed_page_category, media_page_url))
+                media_page_url = url + '/' + node[0].get('href').rsplit('/')[-1]
 
                 # title for Video/Chapter, cleaned
-                raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_decode, '')
+                raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
                 if not 'Manga' in type_title:
                     media_title = raw_title.replace('Watch Online', '').strip()
                 else:
                     media_title = raw_title.replace('Read Online', '').strip()
-                #Logger('* %s Title = %s' % (s_removed_page_category, media_title))
 
                 a.append((media_page_url, media_title))
             else:
                 # date Video/Chapter added
                 date = media.text.strip()
-                #Logger('date=%s' %date)
                 b.append(date)
 
-        # setup photo/video objects, Service URL's will do the rest
-        if not 'Manga' in type_title:
-            for x, y in map(None, a, b):
-                video_info = {
-                    'date': y,
-                    'title': Common.StringCode(string=x[1], code='encode'),
-                    'video_page_url': x[0]
-                    }
+        for x, y in reversed(map(None, a, b)):
+            c.append({'title':x[1], 'date': y, 'url': x[0]})
 
-                if "movie" in x[1].lower():
-                    video_info.update({'video_type': 'movie'})
-                elif 'episode' in x[1].lower():
-                    video_info.update({'video_type': 'episode'})
-                else:
-                    video_info.update({'video_type': 'na'})
+        return c
 
-                oc.add(DirectoryObject(
-                    key=Callback(VideoDetail,
-                        video_info=video_info, item_info=item_info),
-                    title='%s | %s' % (x[1], y)))
-        else:
-            for x, y in map(None, a, b):
-                oc.add(PhotoAlbumObject(url=x[0], title='%s | %s' % (x[1], y)))
+####################################################################################################
+@route(PREFIX + '/movie-sub-page', item_info=dict, movie_info=dict)
+def MovieSubPage(item_info, movie_info):
+    """Setup Movie Page"""
 
+    item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
+    title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
+
+    oc = ObjectContainer(title2=title2, art=R(item_info['art']))
+
+    html = HTML.ElementFromURL(item_info['page_url'], headers=Headers.GetHeadersForURL(item_info['base_url']))
+
+    movie_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
+    if movie_list == 'Not Yet Aired':
+        return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+    else:
+        summary = Common.StringCode(string=item_info['summary'], code='decode') if item_info['summary'] else None
+        cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+        genres, genres_list = Metadata.GetGenres(html)
+        for movie in movie_list:
+            oc.add(
+                MovieObject(
+                    title='%s | %s' %(movie['title'], movie['date']),
+                    source_title=movie_info['source_title'],
+                    summary=summary,
+                    year=int(movie_info['year']) if movie_info['year'] else None,
+                    genres=genres if genres else [],
+                    originally_available_at=Datetime.ParseDate(movie['date']) if movie['date'] else None,
+                    thumb=cover,
+                    art=R(item_info['art']),
+                    url=movie['url']
+                    ))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/manga-sub-page', item_info=dict, manga_info=dict)
+def MangaSubPage(item_info, manga_info):
+    """Create the Manga Sub Page with Chapter list"""
+    #TODO split this into ~30 chapters per book or so, similar to what was done with seasons
+
+    item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
+    title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
+
+    oc = ObjectContainer(title2=title2, art=R(item_info['art']))
+    html = HTML.ElementFromURL(item_info['page_url'], headers=Headers.GetHeadersForURL(item_info['base_url']))
+
+    cp_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
+    if cp_list == 'Not Yet Aired':
+        return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+    else:
+        cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+        for cp in cp_list:
+            oc.add(PhotoAlbumObject(
+                key=Callback(GetPhotoAlbum,
+                    url=cp['url'], source_title=manga_info['source_title'], title=cp['title'],
+                    art=item_info['art']),
+                rating_key=cp['url'],
+                title='%s | %s' %(cp['title'], cp['date']),
+                source_title=manga_info['source_title'],
+                originally_available_at=Datetime.ParseDate(cp['date']) if cp['date'] else None,
+                thumb=cover,
+                art=R(item_info['art'])
+                ))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/getphotoablum')
+def GetPhotoAlbum(url, source_title, title, art):
+    """
+    This function pulls down all the image urls for a chapter and adds them to the
+    'PhotoObject' container.
+    """
+
+    oc = ObjectContainer(title2=title)
+
+    # get relevant javascript block
+    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
+
+    for java in html.xpath('//script[@type="text/javascript"]'):
+        javatext = java.text
+        if javatext:
+            if "lstImages" in javatext:
+                # then do a regex search to pull out relevant text
+                m = Regex('(?s)lstImages\.push\(\"([\S].*)\"\);').search(javatext).group(0)
+                break
+
+    # then split the string by the ';' to get each relevant line in an array
+    image_lines = m.rsplit(';')
+
+    # now iterate over each line and pull out the image url
+    for item in image_lines:
+        m = Regex('lstImages\.push\(\"([\S].*?)\"\)').search(item)
+
+        if m:  # test for empty results
+            image = m.group(1)
+            #Logger('* image url = %s' %image)
+            image_title = image.rsplit('/')[-1].rsplit('.', 1)[0]
+
+            if "proxy" in image_title:
+                image_title = image_title.rsplit('%')[-1].rsplit('2f')[1]
+
+            oc.add(CreatePhotoObject(
+                url=image, source_title=source_title, art=art, title=image_title
+                ))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/show-sub-page', item_info=dict, show_info=dict)
+def ShowSubPage(item_info, show_info):
+    """Setup Show page"""
+
+    item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
+    title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
+
+    oc = ObjectContainer(title2=title2, art=R(item_info['art']))
+
+    html = HTML.ElementFromURL(item_info['page_url'], headers=Headers.GetHeadersForURL(item_info['base_url']))
+    ep_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
+    if ep_list == 'Not Yet Aired':
+        return MessageContainer('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+    else:
+        tags = Metadata.string_to_list(Common.StringCode(string=show_info['tags'], code='decode')) if show_info['tags'] else []
+        thumb = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+        summary = Metadata.GetSummary(html)
+        show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
+        season_dict = None
+        main_ep_count = len(ep_list)
+        ips = 30
+        season_info = {
+            'season': '1', 'ep_count': main_ep_count, 'tv_show_name': show_info['tv_show_name'],
+            'art': item_info['art'], 'source_title': show_info['source_title'],
+            'page_url': item_info['page_url'], 'cover_url': item_info['cover_url'],
+            'cover_file': item_info['cover_file'], 'year': show_info['year'], 'tags': show_info['tags'],
+            'item_title': item_info['item_title'], 'type_title': item_info['type_title'], 'ips': str(ips)
+            }
+
+        Log.Debug('*' * 80)
+        Log.Debug('* ep_list lenght = %i' %main_ep_count)
+
+        for ep in ep_list:
+            title_lower = ep['title'].lower()
+
+            if 'episode' in title_lower and 'uncensored' not in title_lower:
+                season_number = Metadata.GetSeasonNumber(ep['title'], show_name_raw, tags, summary)
+                Log.Debug('* Episode = %s' %ep['title'])
+                pass
+            else:
+                Log.Debug('* Special = %s' %ep['title'])
+                season_number = '0'
+
+            if not season_dict:
+                season_dict = {season_number: [ep['title']]}
+            elif season_number in season_dict.keys():
+                season_dict[season_number].append(ep['title'])
+            else:
+                season_dict.update({season_number: [ep['title']]})
+
+        for season in sorted(season_dict.keys()):
+            ep_count = len(season_dict[season])
+            season_info.update({'season': season, 'ep_count': ep_count})
+            if ep_count > ips:
+                season = int(season)
+                x, r = divmod(main_ep_count, ips)
+                nseason_list = [str(t) for t in xrange(season, x + (1 if r > 0 else 0) + season)]
+                Log.Debug('* new season list = %s' %nseason_list)
+                for i, nseason in enumerate(nseason_list):
+                    nep_count = r if i+1 == len(nseason_list) else ips
+                    season_info.update({'season': nseason, 'ep_count': nep_count})
+                    oc.add(SeasonObject(
+                        key=Callback(SeasonSubPage, season_info=season_info),
+                        rating_key=item_info['page_url'] + nseason,
+                        title='Season %s' %nseason, show=show_info['tv_show_name'],
+                        index=int(nseason), episode_count=nep_count,
+                        source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art'])
+                        ))
+            else:
+                oc.add(SeasonObject(
+                    key=Callback(SeasonSubPage, season_info=season_info),
+                    rating_key=item_info['page_url'] + season,
+                    title='Season %s' %season, show=show_info['tv_show_name'],
+                    index=int(season), episode_count=ep_count,
+                    source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art'])
+                    ))
+
+        Log.Debug('*' * 80)
         return oc
 
 ####################################################################################################
-@route(PREFIX + '/videodetail', video_info=dict, item_info=dict)
-def VideoDetail(video_info, item_info):
-    """
-    Create Video container
-    Don't like that I need this, but if not the Service URL will parse all the videos
-    and bog down the server respose time
-    """
+@route(PREFIX + '/season/sub-page', season_info=dict)
+def SeasonSubPage(season_info):
+    """Setup Episodes for Season"""
 
-    # set variables
-    title = Common.StringCode(string=video_info['title'], code='decode')
-    date = Datetime.ParseDate(video_info['date'])
-    summary = item_info['short_summary']
-    if summary:
-        summary = Common.StringCode(string=summary, code='decode')
-    art = item_info['art']
-    url = video_info['video_page_url']
-    video_type = video_info['video_type']
-    cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+    title2 = '%s | Season %s' %(season_info['tv_show_name'], season_info['season'])
 
-    oc = ObjectContainer(title2=title, art=R(art))
+    oc = ObjectContainer(title2=title2, art=R(season_info['art']))
 
-    Logger('video url in video detail section = %s' %url)
+    html = HTML.ElementFromURL(season_info['page_url'], headers=Headers.GetHeadersForURL(season_info['page_url']))
 
-    # setup html for parsing
-    html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
+    ep_list = GetItemList(html, season_info['page_url'], season_info['item_title'], season_info['type_title'])
+    tags = Metadata.string_to_list(Common.StringCode(string=season_info['tags'], code='decode')) if season_info['tags'] else []
+    thumb = GetThumb(cover_url=season_info['cover_url'], cover_file=season_info['cover_file'])
+    summary = Metadata.GetSummary(html)
+    show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
+    season_dict = None
+    ips = int(season_info['ips'])
 
-    # test if video link is hosted on OneDrive
-    # currently the URL Service is not setup to handle OneDrive Links
-    onedrive_test = html.xpath('//div[@id="centerDivVideo"]//iframe')
+    ep_list2 = []
+    for ep in ep_list:
+        ep_name, ep_number = Metadata.GetEpisodeNameAndNumber(html, ep['title'], ep['url'])
+        season_number = Metadata.GetSeasonNumber(ep['title'], show_name_raw, tags, summary)
+        if season_number == season_info['season']:
+            ep.update({'season_number': season_number, 'ep_number': ep_number})
+            ep_list2.append(ep)
 
-    if onedrive_test:
-        if "onedrive" in onedrive_test[0].get('src'):
-            return MC.message_container('Error',
-                'OneDrive Videos Not Yet Supported. Try another source if avalible.')
-    for test in html.xpath('//script[@type="text/javascript"]'):
-        jscode = test.text_content()
-        if Regex('https\:\/\/(onedrive)\.live\.com\/prev').search(jscode):
-            return MC.message_container('Error',
-                'OneDrive Videos Not Yet Supported. Try another source if avalible.')
-
-    quality_test = html.xpath('//select[@id="selectQuality"]/option')
-    if not quality_test:
-        return MC.message_container('Warning',
-            'This video is broken, Kiss%s is working to fix it.' %item_info['type_title'])
-
-    # Movie
-    if video_type == 'movie':
-        oc.add(
-            MovieObject(
-                title=title,
-                summary=summary,
-                originally_available_at=date,
-                thumb=cover,
-                art=R(art),
-                url=url))
-    # TV Episode
-    elif video_type == 'episode':
-        oc.add(
-            EpisodeObject(
-                title=title,
-                summary=summary,
-                thumb=cover,
-                art=R(art),
-                originally_available_at=date,
-                url=url))
-    # everything else
+    if len(ep_list2) > ips or len(ep_list2) == 0:
+        temp = int(season_info['season'])
+        nep_list = ep_list[((temp -1 )*ips):((temp)*ips)]
+        for nep in nep_list:
+            ep_name, ep_number = Metadata.GetEpisodeNameAndNumber(html, nep['title'], nep['url'])
+            season_number = Metadata.GetSeasonNumber(nep['title'], show_name_raw, tags, summary)
+            oc.add(EpisodeObject(
+                source_title=season_info['source_title'],
+                title=nep['title'],
+                show=season_info['tv_show_name'],
+                season=int(season_number),
+                index=int(ep_number),
+                thumb=thumb,
+                art=R(season_info['art']),
+                originally_available_at=Datetime.ParseDate(nep['date']) if nep['date'] else None,
+                url=nep['url']
+                ))
     else:
-        oc.add(
-            VideoClipObject(
-                title=title,
-                summary=summary,
-                thumb=cover,
-                art=R(art),
-                originally_available_at=date,
-                url=url))
+        for ep in ep_list2:
+            oc.add(EpisodeObject(
+                source_title=season_info['source_title'],
+                title=ep['title'],
+                show=season_info['tv_show_name'],
+                season=int(ep['season_number']),
+                index=int(ep['ep_number']),
+                thumb=thumb,
+                art=R(season_info['art']),
+                originally_available_at=Datetime.ParseDate(ep['date']) if ep['date'] else None,
+                url=ep['url']
+                ))
 
     return oc
+
+####################################################################################################
+@route(PREFIX + '/create-photo-object', include_container=bool)
+def CreatePhotoObject(title, url, art, source_title, include_container=False, *args, **kwargs):
+
+    photo_object = PhotoObject(
+        key=Callback(CreatePhotoObject,
+            title=title, url=url, art=art, source_title=source_title, include_container=True),
+        rating_key=url,
+        source_title=source_title,
+        title=title,
+        thumb=url,
+        art=R(art),
+        items=[MediaObject(parts=[PartObject(key=url)])]
+        )
+
+    if include_container:
+        return ObjectContainer(objects=[photo_object])
+    else:
+        return photo_object
 
 ####################################################################################################
 @route(PREFIX + '/search')
@@ -1256,7 +1427,6 @@ def AddBookmark(item_info):
     item_title = item_info['item_title']
     type_title = item_info['type_title']
     cover_url = item_info['cover_url']
-    short_summary = item_info['short_summary']
     page_url = item_info['page_url']
     base_url = item_info['base_url']
 
