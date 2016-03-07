@@ -67,17 +67,15 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
     - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
     - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 0.9.15.3
+  - Ubuntu 14.04 LTS: PMS version 0.9.16.0
   - Windows 7 & 10: PMS version 0.9.12.13
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
   - Android (4.4.2)
-  - Plex/Web (2.5.4)
-  - Chromecast (Videos)
-- Not Working:
-  - Chromecast (Pictures)
+  - Plex/Web (2.5.6)
+  - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
 
@@ -182,11 +180,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Kissmanga is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
 - Cookie timeouts change too often, cannot parse expire time yet
 
-##### Chromecast
-- does not work for Photo Albums but does for Videos, don't know why yet.  Assuming it has to do with how the Photo Albums are created.
-
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
+  - Working to fix this.  Have new message.py but have yet to integrate with bookmarks fully
 
 [Table of Contents](#table-of-contents)
 
@@ -196,7 +192,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Might look into grouping seasons of the same show for the directory list
 - Implement some kind of Password protection for choosing which sites to display, or Adult stuff
 - Continue Improving Metadata
-- Currently Working on moving service code into main code, that way not polling the site so much for metadata and can have continuous play for episodes in a season.
 
 ##### Bookmarks
 - Add option to add all seasons at once for a show

@@ -1,5 +1,16 @@
 # ChangeLog
 
+##### 1.1.2
+- _03/06/2016_
+ - Fixes:
+   - Reduced kissanime and kissmanga cache time to 20 hrs
+   - Removed ASP.Net_SessionId from cookie string. Should help with some of the cookie caching issues.
+   - KissManga Chromecast support
+ - Updates/New:
+   - Added Onedrive and Openload video support
+   - New SeasonObject and TVShowObject, now TV episodes can play back-to-back on supported clients
+   - Cleaned KissVideo service code, finished integrating in new metadata.pys
+
 ##### 1.1.1
 - _03/04/2016_
 - Fixes:
