@@ -1,5 +1,13 @@
 # ChangeLog
 
+##### 1.1.3
+- _03/07/2016_
+  - Fixes:
+    - GoogleVideo links: some links were of a different style
+  - Updates:
+    - Added logging for Video host
+    - Looks like Kiss Sites are going with OpenLoad for now, and Removing OneDrive links
+
 ##### 1.1.2
 - _03/06/2016_
  - Fixes:
