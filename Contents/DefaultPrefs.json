@@ -25,6 +25,12 @@
     "default": "True"
   },
   {
+    "id": "kisscomic",
+    "label": "View ReadComicOnline.com (Comic)",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "kissmanga",
     "label": "View Kissmanga.com (Manga)",
     "type": "bool",

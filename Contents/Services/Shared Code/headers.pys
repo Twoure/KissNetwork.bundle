@@ -80,14 +80,18 @@ def GetHeadersForURL(url, update=False):
     # cookie time constants for each site.
     time_constants = {
         'Anime': Datetime.Delta(hours=20), 'Cartoon': Datetime.Delta(days=5),
-        'Drama': Datetime.Delta(minutes=30), 'Manga': Datetime.Delta(hours=20)}
+        'Drama': Datetime.Delta(minutes=30), 'Manga': Datetime.Delta(hours=20),
+        'Comic': Datetime.Delta(days=364)}
 
     test = None
     header_data = LoadHeaderDict()
 
     if len(header_data) > 1:
         # Update Header Dictionary
-        cachetime = Datetime.ParseDate(header_data[type_title]['date'])
+        if type_title in header_data.keys():
+            cachetime = Datetime.ParseDate(header_data[type_title]['date'])
+        else:
+            cachetime = Datetime.Now()
         deltatime = current_datetime - cachetime
 
         if deltatime >= time_constants[type_title] or update:

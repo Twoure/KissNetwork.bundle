@@ -397,7 +397,10 @@ def GetEpisodeTitle(season_number=int, episode_name=str, episode_number=int):
 def GetSourceTitle(url):
     """Get Source Title"""
 
-    source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
+    if 'kiss' in url:
+        source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
+    else:
+        source_title = 'KissComic'
 
     return source_title
 

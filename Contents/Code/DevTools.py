@@ -110,7 +110,7 @@ def DevToolsH(title=None, header=None, message=None):
 
             return DevToolsH(header=header, message=message)
         elif ( title == 'Anime' or title == 'Cartoon'
-            or title == 'Drama' or title == 'Manga' ):
+            or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating %s Headers in Header_Dict----------' %title)
 
             for (h_name, h_url) in Common.BASE_URL_LIST_T:
@@ -163,7 +163,7 @@ def DevToolsC(title=None, header=None, message=None):
             message = 'Reset Resources Directory, and Deleted Dict[\'cover_files\']'
             return DevToolsC(header=header, message=message)
         elif ( title == 'Anime_cache' or title == 'Cartoon_cache'
-            or title == 'Drama_cache' or title == 'Manga_cache' ):
+            or title == 'Drama_cache' or title == 'Manga_cache' or title == 'Comic_cache' ):
             category = title.split('_')[0]
             Log('\n----------Start Caching all %s Cover Images----------' %category)
 
@@ -368,7 +368,7 @@ def CacheAllCovers(category, qevent, page=1):
 def SaveCoverImage(image_url, count=0):
     """Save image to Cover Image Path and return the file name"""
 
-    if 'kiss' in image_url:
+    if 'kiss' in image_url or 'readcomiconline' in image_url:
         content_url = Common.GetBaseURL(image_url) + '/' + image_url.split('/', 3)[3]
         image_file = content_url.rsplit('/')[-1]
     else:

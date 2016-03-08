@@ -38,10 +38,13 @@ import requests
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-    # correct type_title
-    if type_title == 'Asian':
-        type_title = 'Drama'
+    if 'kiss' in url:
+        type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
+        # correct type_title
+        if type_title == 'Asian':
+            type_title = 'Drama'
+    else:
+        type_title = 'Comic'
 
     return type_title
 
@@ -63,6 +66,8 @@ def SetDomainURL(string, domain=None, count=0):
         test_one = 'http://kisscartoon.me'
     elif string == 'manga':
         test_one = 'http://kissmanga.com'
+    elif string == 'comic':
+        test_one = 'http://readcomiconline.com'
     elif string == 'retry':
         test_one = domain
 
@@ -104,7 +109,7 @@ def SaveDomainDict(content=dict):
 def CreateDomainDict():
     """setup the domain dict"""
 
-    setup_list = ['anime', 'asian', 'cartoon', 'manga']
+    setup_list = ['anime', 'asian', 'cartoon', 'manga', 'comic']
     for i, item in enumerate(setup_list):
         if i == 0:
             temp_dict = {item.title(): SetDomainURL(item)}

@@ -18,6 +18,7 @@ from AuthTools import CheckAdmin
 from DevTools import add_dev_tools
 from DevTools import SaveCoverImage
 from DevTools import SetUpCFTest
+from DevTools import ResetCustomDict
 
 # import Shared Service Code
 Headers = SharedCodeService.headers
@@ -57,6 +58,12 @@ MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
 MANGA_ART = 'art-manga.jpg'
 MANGA_ICON = 'icon-manga.png'
 
+# ReadComincOnline
+COMIC_BASE_URL = Common.COMIC_BASE_URL
+COMIC_SEARCH_URL = COMIC_BASE_URL + '/Search/Comic?keyword=%s'
+COMIC_ART = 'art-comic.jpg'
+COMIC_ICON = 'icon-comic.png'
+
 # set background art and icon defaults
 MAIN_ART = 'art-main.jpg'
 MAIN_ICON = 'icon-default.png'
@@ -94,6 +101,12 @@ def Start():
 
     # setup background auto cache of headers
     Dict['First Headers Cached'] = False
+    # setup domain/header comic upgrade
+    if not Dict['domain_comic_upgrade']:
+        ResetCustomDict('Domain_Dict')
+        Headers.GetHeadersForURL(COMIC_BASE_URL, update=True)
+        Dict['domain_comic_upgrade'] = True
+        Dict.Save()
 
     # setup test for cfscrape
     SetUpCFTest()
@@ -191,7 +204,7 @@ def MainMenu():
         Updater(PREFIX + '/updater', oc)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
-    prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga']
+    prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']
     b_prefs_names = [p for p in prefs_names if Prefs[p]]
     # present KissMain directly if no other sites selected
     if len(b_prefs_names) == 1:
@@ -249,14 +262,16 @@ def KissMain(url, title, art, ob=True, oc=None):
         oc.add(DirectoryObject(
             key=Callback(CountryList, url=url, title=title, art=art), title='Countries'))
 
-    if not title == 'Manga':
+    if (title == 'Anime') or (title == 'Cartoon') or (title == 'Drama'):
         oc.add(DirectoryObject(
             key=Callback(DirectoryList,
                 page=1, pname='/Genre/Movie', category='Movie', base_url=url, type_title=title, art=art),
             title='Movies'))
-        oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art),
-            title='Status'))
-    if (title == 'Drama') or (title == 'Cartoon'):
+
+    oc.add(DirectoryObject(key=Callback(StatusList, url=url, type_title=title, art=art),
+        title='Status'))
+
+    if (title == 'Drama') or (title == 'Cartoon') or (title == 'Comic'):
         oc.add(DirectoryObject(key=Callback(TopList, url=url, type_title=title, art=art),
             title='Top'))
 
@@ -818,7 +833,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 ####################################################################################################
 @route(PREFIX + '/homedirectorylist')
 def HomePageList(tab, category, base_url, type_title, art):
-    """KissCartoon and KissAsian have 'Top' list on home page. This returns those list."""
+    """
+    KissCartoon, KissAsian, and ReadComicOnline have 'Top' list on home page.
+    This returns those list.
+    """
 
     main_title = '%s | %s' % (type_title, category)
     oc = ObjectContainer(title2=main_title, art=R(art))
@@ -829,7 +847,8 @@ def HomePageList(tab, category, base_url, type_title, art):
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
         page_node = Common.StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
         item_sys_name = Common.StringCode(string=page_node.split('/')[-1], code='encode')
-        item_title = node.xpath('./a/span[@class="title"]/text()')[0]
+        #item_title = node.xpath('./a/span[@class="title"]/text()')[0]
+        item_title = node.xpath('./a/span/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
         title2 = '%s | Latest %s' %(item_title, latest)
         summary = 'NA'  # no summarys are given in the 'Top' lists
@@ -902,7 +921,7 @@ def ItemPage(item_info):
                     'Adult Content Blocked: %s' %warning_string)
 
     # page category stings depending on media
-    page_category = 'Chapter(s)' if type_title == 'Manga' else 'Video(s)'
+    page_category = 'Chapter(s)' if (type_title == 'Manga' or type_title == 'Comic') else 'Video(s)'
 
     # update item_info to include page_category
     item_info.update({'page_category': page_category})
@@ -913,7 +932,7 @@ def ItemPage(item_info):
     Logger('*' * 80)
     cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
 
-    if 'Manga' in type_title:
+    if ('Manga' in type_title) or ('Comic' in type_title):
         manga_info = Metadata.GetBaseMangaInfo(html, page_url)
         summary = manga_info['summary'] if manga_info['summary'] else (item_info['short_summary'] if item_info['short_summary'] else None)
         item_info.update({'summary': summary})
@@ -1000,10 +1019,10 @@ def GetItemList(html, url, item_title, type_title):
 
                 # title for Video/Chapter, cleaned
                 raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
-                if not 'Manga' in type_title:
-                    media_title = raw_title.replace('Watch Online', '').strip()
-                else:
+                if ('Manga' in type_title) or ('Comic' in type_title):
                     media_title = raw_title.replace('Read Online', '').strip()
+                else:
+                    media_title = raw_title.replace('Watch Online', '').strip()
 
                 a.append((media_page_url, media_title))
             else:
@@ -1054,7 +1073,7 @@ def MovieSubPage(item_info, movie_info):
 ####################################################################################################
 @route(PREFIX + '/manga-sub-page', item_info=dict, manga_info=dict)
 def MangaSubPage(item_info, manga_info):
-    """Create the Manga Sub Page with Chapter list"""
+    """Create the Manga/Comic Sub Page with Chapter list"""
     #TODO split this into ~30 chapters per book or so, similar to what was done with seasons
 
     item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
@@ -1091,7 +1110,7 @@ def GetPhotoAlbum(url, source_title, title, art):
     'PhotoObject' container.
     """
 
-    oc = ObjectContainer(title2=title)
+    oc = ObjectContainer(title2=title, art=R(art))
 
     # get relevant javascript block
     html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
@@ -1294,17 +1313,18 @@ def Search(query=''):
 
     oc = ObjectContainer(title2=title2)
     # create list of search URL's
-    all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL]
+    all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL, COMIC_SEARCH_URL]
 
     # format each search url and send to 'SearchPage'
     # can't check each url here, would take too long since behind cloudflare and timeout the server
-    prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga']
+    prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']
     b_prefs_names = [p for p in prefs_names if Prefs[p]]
     if len(b_prefs_names) == 1:
         b_prefs_name = b_prefs_names[0]
+        b_prefs_name = 'comic' if b_prefs_name == 'kisscomic' else b_prefs_name
         search_url = [s for s in all_search_urls if b_prefs_name in s][0]
-        search_url_filled = search_url % String.Quote(query, usePlus=True)
-        type_title = 'Drama' if b_prefs_name == 'kissasian' else b_prefs_name.split('kiss')[1].title()
+        search_url_filled = search_url %String.Quote(query, usePlus=True)
+        type_title = 'Drama' if b_prefs_name == 'kissasian' else (b_prefs_name.split('kiss')[1].title() if 'kiss' in b_prefs_name else 'Comic')
         art = 'art-%s.jpg' %type_title.lower()
 
         html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
@@ -1314,15 +1334,14 @@ def Search(query=''):
         Logger('*' * 80)
         for search_url in all_search_urls:
             search_url_filled = search_url % String.Quote(query, usePlus=True)
-            type_title = search_url.rsplit('/')[2].rsplit('kiss', 1)[1].rsplit('.', 1)[0].title()
+            type_title = Common.GetTypeTitle(search_url_filled)
             # change kissasian info to 'Drama'
-            type_title = 'Drama' if type_title == 'Asian' else type_title
             art = 'art-%s.jpg' %type_title.lower()
             thumb = 'icon-%s.png' %type_title.lower()
             prefs_name = 'kissasian' if type_title == 'Drama' else 'kiss%s' %type_title.lower()
 
             if Prefs[prefs_name]:
-                Logger('* Search url = %s' % search_url_filled)
+                Logger('* Search url = %s' %search_url_filled)
                 Logger('* type title = %s' %type_title)
 
                 html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
@@ -1495,7 +1514,7 @@ def AddBookmark(item_info):
         # Provide feedback that the Item has been added to bookmarks
         return MC.message_container(item_title_decode,
             '\"%s\" has been added to your bookmarks.' %item_title_decode)
-    # check if the category key 'Anime', 'Manga', 'Cartoon', or 'Drama' exist
+    # check if the category key 'Anime', 'Manga', 'Cartoon', 'Drama', or 'Comic' exist
     # if so then append new bookmark to one of those categories
     elif type_title in bm.keys():
         # fail safe for when clients are out of sync and it trys to add the bookmark in duplicate
@@ -1595,7 +1614,7 @@ def ClearBookmarks(type_title):
             for bookmark in Dict['Bookmarks'][type_title]:
                 RemoveCoverImage(bookmark['cover_file'])
 
-        # delete section 'Anime', 'Manga', 'Cartoon', or 'Drama' from bookmark list
+        # delete section 'Anime', 'Manga', 'Cartoon', 'Drama', or 'Comic' from bookmark list
         del Dict['Bookmarks'][type_title]
         Logger('* \"%s\" Bookmark Section Cleared' % type_title)
 
