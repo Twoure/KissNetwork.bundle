@@ -162,7 +162,11 @@ def get_googlevideo_url(page_text, url, m):
     vurls = []
     for node in olist:
         vurl_old = base64.b64decode(node.get('value'))
-        vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
+        try:
+            vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
+        except:
+            itag = Regex('itag\=(\d+)').search(vurl_old).group(1)
+            vurls.append((vurl_old, int(itag)))
 
     for item, mm in sorted(vurls, key=lambda tup: tup[1]):
         vurl = item
@@ -197,9 +201,15 @@ def get_redirect_url(rurl):
     import urllib2
 
     opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
-    request = opener.open(rurl, timeout=5)
+    try:
+        request = opener.open(rurl, timeout=5)
+        res = request.url
+    except Exception as e:
+        Log.Error('* URL Redirect Handler Error: Something went wrong, cannot access %s' %rurl)
+        Log.Error('* URL Redirect Handler Error: %s' %str(e))
+        res = False
 
-    return request.url
+    return res
 
 ####################################################################################################
 def get_onedrive_url(onedrive_url):
@@ -246,10 +256,15 @@ def get_onedrive_url(onedrive_url):
     h = {'X-Requested-With': 'XMLHttpRequest', 'InvitationToken': data['authKey'].decode('unicode-escape'), 'AppId': data['appId'], 'Accept': 'application/json'}
 
     # open download request and parse json data
-    dl_data = JSON.ObjectFromURL(dl_url, headers=h)
-
-    # remove the download info after .mp4, that way the video will play instead of force downloading
-    vurl = dl_data['DownloadUrl'].split('?')[0]
+    try:
+        # open download request and parse json data
+        dl_data = JSON.ObjectFromURL(dl_url, headers=h)
+        # remove the download info after .mp4, that way the video will play instead of force downloading
+        vurl = dl_data['DownloadUrl'].split('?')[0]
+    except Exception as e:
+        Log.Error('* OneDrive Error: Cannot access %s' %dl_url)
+        Log.Error('* OneDrive Error: %s' %str(e))
+        vurl = False
 
     return vurl
 
@@ -269,14 +284,19 @@ def get_openload_url(openload_url):
     fid = openload_url.split('/')[4]
     base_url = openload_url.rsplit('/', 3)[0]
     # setup the url to ask for the Download Link
-    ourl_res = base_url + '/getdllink/' + fid
-    Log.Debug('* Get OpenLoad dlURL = %s' %ourl_res)
+    ourl_req = base_url + '/getdllink/' + fid
+    Log.Debug('* Get OpenLoad dlURL = %s' %ourl_req)
 
-    s = HTTP.Request(ourl_res, encoding=('utf-8')).content
-    # returns an aaencoded string, use aadecode to return JavaScript sting
-    # then parse string for raw video URL
-    aad = aa.AADecoder(s)
-    jscode = aad.decode()
-    url = Regex('\.attr\((.*)\)').search(jscode).group(1).split(',')[1].replace('\/', '/').lstrip('\'\"').rstrip('\'\"')
+    try:
+        s = HTTP.Request(ourl_req, encoding=('utf-8')).content
+        # returns an aaencoded string, use aadecode to return JavaScript sting
+        # then parse string for raw video URL
+        aad = aa.AADecoder(s)
+        jscode = aad.decode()
+        url = Regex('\.attr\((.*)\)').search(jscode).group(1).split(',')[1].replace('\/', '/').lstrip('\'\"').rstrip('\'\"')
+    except Exception as e:
+        Log.Error('* OpenLoad Error: Something went wrong, cannot access %s' %ourl_req)
+        Log.Error('* OpenLoad Error: %s' %str(e))
+        url = False
 
     return url
