@@ -1,5 +1,14 @@
 # ChangeLog
 
+##### 1.1.4
+- add date when ready
+  - Fixes:
+    - None
+  - Updates:
+    - Added ReadComicOnline as Comic Section
+    - Comic and Manga sections: Cut up long chapter list into 30 chapters per directory
+      - Makes it easier to navigate to the most recent
+
 ##### 1.1.3
 - _03/07/2016_
   - Fixes:

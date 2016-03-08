@@ -847,7 +847,6 @@ def HomePageList(tab, category, base_url, type_title, art):
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
         page_node = Common.StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
         item_sys_name = Common.StringCode(string=page_node.split('/')[-1], code='encode')
-        #item_title = node.xpath('./a/span[@class="title"]/text()')[0]
         item_title = node.xpath('./a/span/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
         title2 = '%s | Latest %s' %(item_title, latest)

@@ -12,7 +12,7 @@ KissNetwork
 - [Operation](#operation)
   - [Preferences](#preferences)
     - [Sort List by...](#sort-list-by)
-    - [View Kiss(Anime, Asian, Cartoon, Manga)](#view-kissanime-asian-cartoon-manga)
+    - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
     - [Cache All Covers Locally](#cache-all-covers-locally)
     - [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally)
     - [Samsung Fix (disables remote play)](#samsung-fix-disables-remote-play)
@@ -28,7 +28,7 @@ KissNetwork
   - [Updater](#updater)
 - [Issues](#issues)
   - [General](#general)
-  - [Kiss(Anime, Asian, Cartoon, Manga)](#kissanime-asian-cartoon-manga)
+  - [Anime, Cartoon, Comic, Drama, Manga](#anime-cartoon-comic-drama-manga)
   - [Plex Home Theater](#plex-home-theater)
 - [Plans](#plans)
   - [General](#general-1)
@@ -48,7 +48,8 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Watch video content across all Kiss sites (quality ranges from 360p to 1080p)
 - Choose which Kiss sites to view content, hide others
 - Option to Block most Adult content
-- Read manga from Kissmanga
+- Read Manga from KissManga
+- Read Comics from ReadComicOnline
 - Create custom Bookmarks
 - Search all Kiss sites for videos/manga
 
@@ -62,9 +63,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Plex Media Server:
 - JavaScript Runtime Required:
-    - Recomended Node.js or V8 (with or without the PyV8 module)
-    - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
-    - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
+  - Recomended Node.js or V8 (with or without the PyV8 module)
+  - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
+  - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
   - Ubuntu 14.04 LTS: PMS version 0.9.16.0
   - Windows 7 & 10: PMS version 0.9.12.13
@@ -94,7 +95,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Sort List by...
 - Set list order for "All", "Alphabets", "Country", "Genres", "Movies", "Ongoing", and "Completed"
 
-##### View Kiss(Anime, Asian, Cartoon, Manga)
+##### View Anime, Cartoon, Comic, Drama, Manga
 - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
 
 ##### Cache All Covers Locally
@@ -140,17 +141,17 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Toggle Hiding "Clear Bookmarks" Function:** For those of us who accidentally delete our bookmarks but don't mean to
 - **Reset "All" Bookmarks:** Same as "Clear All Bookmarks"
 - **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
-- **Reset... :** Same for Drama, Cartoon, and Manga
+- **Reset... :** Same for Drama, Cartoon, Comic, and Manga
 
 ##### Header Tools
 - **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
 - **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
-- **Update... :** Same for Drama, Cartoon, and Manga
+- **Update... :** Same for Drama, Cartoon, Comic, and Manga
 
 ##### Cover Cache Tools
 - **Cache All Covers:** Download cover images from all sites.  Background process.
 - **Cache All Anime Covers:** Download All Anime covers only.  Do not download covers from the other sites.
-- **Cache All... :** Same for Drama, Cartoon, and Manga
+- **Cache All... :** Same for Drama, Cartoon, Comic, and Manga
 - **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
 
 ### Updater
@@ -170,7 +171,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 - Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
 
-##### Kiss(Anime, Asian, Cartoon, Manga)
+##### Anime, Cartoon, Comic, Drama, Manga
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
 - Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
 - Cover art does not load for Videos
