@@ -8,31 +8,31 @@
   },
   {
     "id": "kissanime",
-    "label": "View Kissanime.to (Anime)",
-    "type": "bool",
-    "default": "True"
-  },
-  {
-    "id": "kissasian",
-    "label": "View Kissasian.com (Drama)",
+    "label": "View Anime (Kissanime.to)",
     "type": "bool",
     "default": "True"
   },
   {
     "id": "kisscartoon",
-    "label": "View Kisscartoon.me (Cartoon)",
+    "label": "View Cartoon (Kisscartoon.me)",
     "type": "bool",
     "default": "True"
   },
   {
     "id": "kisscomic",
-    "label": "View ReadComicOnline.com (Comic)",
+    "label": "View Comic (ReadComicOnline.com)",
     "type": "bool",
     "default": "False"
   },
   {
+    "id": "kissasian",
+    "label": "View Drama (Kissasian.com)",
+    "type": "bool",
+    "default": "True"
+  },
+  {
     "id": "kissmanga",
-    "label": "View Kissmanga.com (Manga)",
+    "label": "View Manga (Kissmanga.com)",
     "type": "bool",
     "default": "True"
   },
@@ -51,6 +51,12 @@
   {
     "id": "samsung_fix",
     "label": "Samsung Fix (disables remote play)",
+    "type": "bool",
+    "default": "False"
+  },
+  {
+    "id": "force_transcode",
+    "label": "Force Transcoding (enables remote play)",
     "type": "bool",
     "default": "False"
   },

@@ -16,6 +16,7 @@ KissNetwork
     - [Cache All Covers Locally](#cache-all-covers-locally)
     - [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally)
     - [Samsung Fix (disables remote play)](#samsung-fix-disables-remote-play)
+    - [Force Transcoding (enables remote play)](#force-transcoding-enables-remote-play)
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
     - [Auth Admin Through Plex.tv](#auth-admin-through-plextv)
@@ -37,7 +38,7 @@ KissNetwork
 
 ## Introduction
 
-This is a plugin that creates a new channel in [Plex Media Server](https://plex.tv/) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), and [Kissmanga.com](http://kissmanga.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
+This is a plugin that creates a new channel in [Plex Media Server](https://plex.tv/) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.com](http://readcomiconline.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
@@ -46,12 +47,12 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ## Features
 
 - Watch video content across all Kiss sites (quality ranges from 360p to 1080p)
-- Choose which Kiss sites to view content, hide others
-- Option to Block most Adult content
+- Choose which sites to view content, hide others
+- Option to Block most _Adult_ content
 - Read Manga from KissManga
 - Read Comics from ReadComicOnline
 - Create custom Bookmarks
-- Search all Kiss sites for videos/manga
+- Search all sites for Videos/Manga/Comics
 
 [Table of Contents](#table-of-contents)
 
@@ -110,6 +111,11 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Samsung Fix (disables remote play)
 - Enables URL Redirect Function, allowing videos to play in the Samsung Plex App
 - If enabled, then videos will not load outside the local network (i.e. remote play disabled)
+
+##### Force Transcoding (enables remote play)
+- OpenLoad videos have a hash tied to the PMS server IP.  Enable this to watch videos outside the PMS local network.
+- Will remove metadata so PMS will transcode the unknow content
+- When Enabled, videos will be transcoded by PMS and available for use outside the servers network
 
 ##### Allow Adult Content
 - Attempt to block adult content from the kiss sites. Removes adult themed genres from genre list if content blocked.  Will provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.

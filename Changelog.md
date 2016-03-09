@@ -3,7 +3,9 @@
 ##### 1.1.4
 - add date when ready
   - Fixes:
-    - None
+    - Added _Force Transcoding_ to prefs to fix OpenLoad video remote play
+      - OpenLoad videos have a hash tied to the PMS IP.  This is fine for playing videos inside the PMS network, but not for remote play.
+      - _Force Transcoding_ removes video formatting metadata, forcing PMS to transcode the now unknow video format
   - Updates:
     - Added ReadComicOnline as Comic Section
     - Comic and Manga sections: Cut up long chapter list into 30 chapters per directory
