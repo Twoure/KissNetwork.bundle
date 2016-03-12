@@ -8,8 +8,7 @@
       - _Force Transcoding_ removes video formatting metadata, forcing PMS to transcode the now unknow video format
   - Updates:
     - Added ReadComicOnline as Comic Section
-    - Comic and Manga sections: Cut up long chapter list into 30 chapters per directory
-      - Makes it easier to navigate to the most recent
+    - Comic and Manga sections: Reversed the list, newest chapters show first now
 
 ##### 1.1.3
 - _03/07/2016_

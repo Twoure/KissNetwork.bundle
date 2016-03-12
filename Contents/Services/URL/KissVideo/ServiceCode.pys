@@ -207,8 +207,9 @@ def get_googlevideo_url(page_text, url, m):
         try:
             vurl = get_redirect_url(path)
             Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
-        except:
+        except Exception as e:
             Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+            Log.Debug('* URL Redirect Error: %s' %str(e))
 
     return vurl
 

@@ -1086,7 +1086,7 @@ def MangaSubPage(item_info, manga_info):
         return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
     else:
         cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
-        for cp in cp_list:
+        for cp in reversed(cp_list):
             oc.add(PhotoAlbumObject(
                 key=Callback(GetPhotoAlbum,
                     url=cp['url'], source_title=manga_info['source_title'], title=cp['title'],
