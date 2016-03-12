@@ -7,6 +7,7 @@ import urllib2
 # to follow the redirect path up to the real URL
 # (c) 2012 Filippo Valsorda - FiloSottile
 # Released under the GPL license
+# 03/12/2016 Edited by Twoure for use with Plex Media Server
 
 class HeadRequest(urllib2.Request):
     def get_method(self):

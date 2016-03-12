@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # ------------------------------------------------------------
 # streamondemand - Kodi add-on
@@ -5,7 +6,7 @@
 # http://blog.tvalacarta.info/plugin-xbmc/pelisalacarta/
 # Fix imported by DrZ3r0, credits to mortael, Fr33m1nd, anton40
 # ------------------------------------------------------------
-# Edited by Twoure for Plex Media Server
+# 03/12/2016 Edited by Twoure for use with Plex Media Server
 
 import re
 
