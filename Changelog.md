@@ -1,5 +1,10 @@
 # ChangeLog
 
+##### 1.1.5
+- _03/12/2016_
+  - Fixed Comic upgrade
+  - Removed kissanime domain change
+
 ##### 1.1.4
 - _03/12/2016_
   - Fixes:
