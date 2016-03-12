@@ -1,14 +1,17 @@
 # ChangeLog
 
 ##### 1.1.4
-- add date when ready
+- _03/12/2016_
   - Fixes:
     - Added _Force Transcoding_ to prefs to fix OpenLoad video remote play
       - OpenLoad videos have a hash tied to the PMS IP.  This is fine for playing videos inside the PMS network, but not for remote play.
       - _Force Transcoding_ removes video formatting metadata, forcing PMS to transcode the now unknow video format
+      - The New Redirect Follower does not work with OpenLoad links, so the Transcoder is needed for clients that cannot follow redirects
+    - OpenLoad site changes.  No access to `getdllink` anymore.
   - Updates:
     - Added ReadComicOnline as Comic Section
-    - Comic and Manga sections: Reversed the list, newest chapters show first now
+    - Comic and Manga sections: Reversed the list, newest chapters show first
+    - New URL Redirect Follower
 
 ##### 1.1.3
 - _03/07/2016_

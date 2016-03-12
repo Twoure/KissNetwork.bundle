@@ -31,6 +31,7 @@ KissNetwork
   - [General](#general)
   - [Anime, Cartoon, Comic, Drama, Manga](#anime-cartoon-comic-drama-manga)
   - [Plex Home Theater](#plex-home-theater)
+  - [OpenLoad](#openload)
 - [Plans](#plans)
   - [General](#general-1)
   - [Bookmarks](#bookmarks)
@@ -116,6 +117,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - OpenLoad videos have a hash tied to the PMS server IP.  Enable this to watch videos outside the PMS local network.
 - Will remove metadata so PMS will transcode the unknow content
 - When Enabled, videos will be transcoded by PMS and available for use outside the servers network
+- Pulls out the highest possible video resolution to transcode.
 
 ##### Allow Adult Content
 - Attempt to block adult content from the kiss sites. Removes adult themed genres from genre list if content blocked.  Will provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
@@ -189,6 +191,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
   - Working to fix this.  Have new message.py but have yet to integrate with bookmarks fully
+
+##### OpenLoad
+- URL Redirect Follower does not work for OpenLoad links.  If your client needs the fully expanded link, like the Samsung TVs, then use _Force Transcoding_ instead of _Samsung Fix_.  Force transcoding will make the video compatible with all clients.
 
 [Table of Contents](#table-of-contents)
 
