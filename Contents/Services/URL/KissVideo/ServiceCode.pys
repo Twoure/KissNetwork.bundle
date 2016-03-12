@@ -7,6 +7,8 @@ import headers as Headers
 import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
+from RedirectFollower import get_url_redirect
+from openload import decode_openload
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -150,6 +152,29 @@ def PlayVideo(url, m, **kwargs):
         Log.Debug('* PlayVideo URL      = %s' %vurl)
     else:
         vurl = get_googlevideo_url(page_text, url, m)
+        Log.Debug('* PlayVideo URL      = %s' %vurl)
+
+    prefs = SubPrefs.GetPrefs()
+    if not 'samsung_fix' in prefs.keys():
+        samsung_fix = 'false'
+    else:
+        samsung_fix = prefs['samsung_fix']
+        if not samsung_fix:
+            samsung_fix = 'false'
+
+    if samsung_fix == 'true':
+        Log.Debug('* Samsung Fix ON')
+        Log.Debug('* Note: Videos will NO longer play outside the network connection.')
+        try:
+            vurl = get_url_redirect(vurl)
+            if 'googlevideo' in vurl and not vurl == False:
+                Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+            else:
+                Log.Debug('* URL Redirect       = %s' %vurl)
+        except Exception as e:
+            Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
+            Log.Debug('* URL Redirect Error: %s' %str(e))
+
     Log.Debug('*' * 80)
 
     if not vurl:
@@ -167,8 +192,6 @@ def get_googlevideo_url(page_text, url, m):
     If 1080p not available then return 720p. If 720p not available then return 360p.
     """
 
-    import base64
-
     html = HTML.ElementFromString(page_text)
     olist = html.xpath('//select[@id="selectQuality"]/option')
     type_title = Common.GetTypeTitle(url)
@@ -179,7 +202,7 @@ def get_googlevideo_url(page_text, url, m):
     vurl = None
     vurls = []
     for node in olist:
-        vurl_old = base64.b64decode(node.get('value'))
+        vurl_old = String.Base64Decode(node.get('value'))
         try:
             vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
         except:
@@ -191,44 +214,7 @@ def get_googlevideo_url(page_text, url, m):
         if 'm%s' %str(mm) == m:
             break
 
-    Log.Debug('* PlayVideo URL      = %s' %vurl)
-
-    prefs = SubPrefs.GetPrefs()
-    if not 'samsung_fix' in prefs.keys():
-        samsung_fix = 'false'
-    else:
-        samsung_fix = prefs['samsung_fix']
-        if not samsung_fix:
-            samsung_fix = 'false'
-
-    if samsung_fix == 'true':
-        Log.Debug('* Samsung Fix ON')
-        Log.Debug('* Note: Videos will NO longer play outside the network connection.')
-        try:
-            vurl = get_redirect_url(path)
-            Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
-        except Exception as e:
-            Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
-            Log.Debug('* URL Redirect Error: %s' %str(e))
-
     return vurl
-
-####################################################################################################
-def get_redirect_url(rurl):
-    """Expand Redirect URLs"""
-
-    import urllib2
-
-    opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
-    try:
-        request = opener.open(rurl, timeout=5)
-        res = request.url
-    except Exception as e:
-        Log.Error('* URL Redirect Handler Error: Something went wrong, cannot access %s' %rurl)
-        Log.Error('* URL Redirect Handler Error: %s' %str(e))
-        res = False
-
-    return res
 
 ####################################################################################################
 def get_onedrive_url(onedrive_url):
@@ -291,28 +277,16 @@ def get_onedrive_url(onedrive_url):
 def get_openload_url(openload_url):
     """
     Get OpenLoad URLs
-    Code returns the download link for a OpenLoad video
+    Code returns the a stream link for a OpenLoad video
     Example Start URL
     https://openload.co/embed/rano_HSH6Fk/%5BHorribleSubs%5D_GATE_-_21_%5B720p%5D-r976.mp4
     Note the Start URL needs the 'fid' after "/embed/"
-    No need to do the URL redirect, final video URL is NOT bound to local ip
     """
 
-    import aadecode as aa
-
-    fid = openload_url.split('/')[4]
-    base_url = openload_url.rsplit('/', 3)[0]
-    # setup the url to ask for the Download Link
-    ourl_req = base_url + '/getdllink/' + fid
-    Log.Debug('* Get OpenLoad dlURL = %s' %ourl_req)
-
+    ourl_req = openload_url.rsplit('/', 1)[0]
     try:
         s = HTTP.Request(ourl_req, encoding=('utf-8')).content
-        # returns an aaencoded string, use aadecode to return JavaScript sting
-        # then parse string for raw video URL
-        aad = aa.AADecoder(s)
-        jscode = aad.decode()
-        url = Regex('\.attr\((.*)\)').search(jscode).group(1).split(',')[1].replace('\/', '/').lstrip('\'\"').rstrip('\'\"')
+        url = decode_openload(s)
     except Exception as e:
         Log.Error('* OpenLoad Error: Something went wrong, cannot access %s' %ourl_req)
         Log.Error('* OpenLoad Error: %s' %str(e))
