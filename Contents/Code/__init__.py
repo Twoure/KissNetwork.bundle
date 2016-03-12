@@ -101,12 +101,6 @@ def Start():
 
     # setup background auto cache of headers
     Dict['First Headers Cached'] = False
-    # setup domain/header comic upgrade
-    if not Dict['domain_comic_upgrade']:
-        ResetCustomDict('Domain_Dict')
-        Headers.GetHeadersForURL(COMIC_BASE_URL, update=True)
-        Dict['domain_comic_upgrade'] = True
-        Dict.Save()
 
     # setup test for cfscrape
     SetUpCFTest()
@@ -1840,15 +1834,6 @@ def GetDirSize(start_path='.'):
 @route(PREFIX + '/auto-cache')
 def BackgroundAutoCache():
     """Auto Cache Headers"""
-
-    if not Dict['patch_anime_domain']:
-        start = False
-        skip = True
-        ResetCustomDict('Domain_Dict')
-        Dict['patch_anime_domain'] = True
-    else:
-        skip = False
-        start = True
 
     Logger('*' * 80)
     # setup urls for setting headers

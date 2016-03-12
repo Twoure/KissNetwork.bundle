@@ -20,6 +20,10 @@ LIST_VIEW_CLIENTS = ['Android', 'iOS']
 Domain_Dict = Domain.LoadDomainDict()
 USER_AGENT = Domain.USER_AGENT
 
+if len(Domain_Dict.keys()) != 5:
+    Domain.CreateDomainDict()
+    Domain_Dict = Domain.LoadDomainDict()
+
 ANIME_BASE_URL = Domain_Dict['Anime']
 ASIAN_BASE_URL = Domain_Dict['Asian']
 CARTOON_BASE_URL = Domain_Dict['Cartoon']

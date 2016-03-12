@@ -92,6 +92,7 @@ def GetHeadersForURL(url, update=False):
             cachetime = Datetime.ParseDate(header_data[type_title]['date'])
         else:
             cachetime = Datetime.Now()
+            update = True
         deltatime = current_datetime - cachetime
 
         if deltatime >= time_constants[type_title] or update:

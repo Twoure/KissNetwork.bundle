@@ -22,7 +22,7 @@
     "id": "kisscomic",
     "label": "View Comic (ReadComicOnline.com)",
     "type": "bool",
-    "default": "False"
+    "default": "True"
   },
   {
     "id": "kissasian",
