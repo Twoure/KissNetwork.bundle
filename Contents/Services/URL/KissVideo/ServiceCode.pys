@@ -135,7 +135,7 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Client.Version     = %s' %Client.Version)
 
     prefs = get_prefs()
-    req_url = url + '&s=openload' if prefs['openload'] else url
+    req_url = url + '&s=openload' if prefs['openload'] == 'true' else url
 
     page_text = HTTP.Request(req_url, headers=Headers.GetHeadersForURL(url)).content
 
