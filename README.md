@@ -17,6 +17,7 @@ KissNetwork
     - [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally)
     - [Samsung Fix (disables remote play)](#samsung-fix-disables-remote-play)
     - [Force Transcoding (enables remote play)](#force-transcoding-enables-remote-play)
+    - [Use OpenLoad instead of GoogleVideo](#use-openload-instead-of-googlevideo)
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
     - [Auth Admin Through Plex.tv](#auth-admin-through-plextv)
@@ -69,14 +70,14 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
   - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 0.9.16.0
+  - Ubuntu 14.04 LTS: PMS version 0.9.16.1
   - Windows 7 & 10: PMS version 0.9.12.13
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
   - Android (4.4.2)
-  - Plex/Web (2.5.6)
+  - Plex/Web (2.5.8)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
@@ -101,34 +102,47 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
 
 ##### Cache All Covers Locally
-- Overrides [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally) function
-- If enabled, will download and index cover images
-- If disabled, will remove all downloaded images from computer. If "Cache Bookmark Covers Locally" is True, then bookmark covers will be kept from deletion.
+- **Enabled:** Will download and index cover images
+  - Overrides [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally) function
+- **Disabled(_default_):** Will remove all downloaded images from computer.
+  - If "Cache Bookmark Covers Locally" is **Enabled**, then bookmark covers will be kept from deletion.
 
 ##### Cache Bookmark Covers Locally
-- If enabled AND "Cache All Covers Locally" is False, will download cover images and only display them in your "My Bookmarks" list.
-- If disabled AND 'Cache All Covers Locally" is False, will delete all bookmarked covers from computer.
+- **Enabled:** AND "Cache All Covers Locally" **Disabled**, will download cover images and only display them in your "My Bookmarks" list.
+- **Disabled(_default_):** AND 'Cache All Covers Locally" **Disabled**, will delete all bookmarked covers from computer.
 
 ##### Samsung Fix (disables remote play)
-- Enables URL Redirect Function, allowing videos to play in the Samsung Plex App
-- If enabled, then videos will not load outside the local network (i.e. remote play disabled)
+- **Enabled:** Turns On URL Redirect Function, making PMS follow the URL Redirect.
+  - Follows URL through its redirect and returns the final URL
+  - GoogleVideo Links: will expand around PMS IP rendering unusable outside of local network (i.e. remote play disabled)
+- **Disabled(_default_):** URL Redirect is handled by client
 
 ##### Force Transcoding (enables remote play)
-- OpenLoad videos have a hash tied to the PMS server IP.  Enable this to watch videos outside the PMS local network.
-- Will remove metadata so PMS will transcode the unknow content
-- When Enabled, videos will be transcoded by PMS and available for use outside the servers network
-- Pulls out the highest possible video resolution to transcode.
+- OpenLoad videos have a hash tied to the PMS server IP.  Enable to watch OpenLoad videos outside the PMS local network.
+- **Enabled:** Videos will be transcoded by PMS and available for use outside the servers network
+  - Resolution will depend on available streams and client settings
+  - Overrides [Samsung Fix](#samsung-fix-disables-remote-play), because PMS will properly handle any URL Redirects
+- **Disabled(_default_):** Transcoding is handled by the clients settings
+
+##### Use OpenLoad instead of GoogleVideo
+- **Enabled:** If both OpenLoad and GoogleVideo links provieded, use OpenLoad
+- **Disabled(_default_):** Use the default links provided, normally GoogleVideo but could be OpenLoad (or even OneDrive)
 
 ##### Allow Adult Content
-- Attempt to block adult content from the kiss sites. Removes adult themed genres from genre list if content blocked.  Will provide a popup whenever an adult video/manga is accessed providing feedback as to why the content is blocked.
+- **Enable:** Allows Adult Content to be viewed
+- **Disabled(_default_):** Checks agains contents _Genre_ list for adult themed genres. Current [block list](Contents/Code/__init__.py#L35).
+  - Will provide a popup whenever an Adult themed video/comic/manga is accessed providing feedback as to why the content is blocked
+  - Fails with KissCartoon because it does not have Adult themed _Genres_ but does have Adult content
 
 ##### Enable Developer Tools
-- Hide/Un-Hide Developer Tools Menu located in [About / Help](#about--help) section
+- **Enable:** Show Developer Tools Menu located in [About / Help](#about--help) section
+- **Disabled(_default_):** Developer Tools Menu remains hidden
+- Is only available to PMS admin regardless of enabled/disabled
 
 ##### Auth Admin Through Plex.tv
 - Authenticate admin user through Plex.tv if Plex Media Server does not have Plex Home enabled
-- Enable  : Auth against `https://plex.tv/user/account`
-- Disable : Auth against `http://127.0.0.1:32400/myplex/account`
+- **Enable            :** Auth against `https://plex.tv/user/account`
+- **Disable(_default_):** Auth against `http://127.0.0.1:32400/myplex/account`
 
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
@@ -164,7 +178,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ### Updater
 
-- Update button visible only when update avalible
+- Update button visible only to PMS admin and when update avalible
 - Checks KissNetwork.bundle Github [atom feed](https://github.com/Twoure/KissNetwork.bundle/commits/master.atom) every 12 hours.
 
 [Table of Contents](#table-of-contents)

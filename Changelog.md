@@ -1,5 +1,17 @@
 # ChangeLog
 
+##### 1.1.6
+- _03/16/2016_
+  - Fixes:
+    - BackgroundAutoCache error
+    - Season were binned incorrectly. Season 0 has no episode limit now.
+  - Updates:
+    - Added 480p stream support
+    - Added option to Prefer **OpenLoad** video links.  In case the provided GoogleVideo links fail to play
+    - Better Transcoding options.  Now supports selecting resolution.
+      - If Transcoding is selected, then _Samsung Fix_ is disabled.
+      - If server is trascoding, then it will correctly handle the URL redirect, so _Samsung Fix_ would be irrelevant
+
 ##### 1.1.5
 - _03/12/2016_
   - Fixed Comic upgrade
