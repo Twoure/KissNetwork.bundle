@@ -1048,18 +1048,17 @@ def MovieSubPage(item_info, movie_info):
         cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
         genres, genres_list = Metadata.GetGenres(html)
         for movie in movie_list:
-            oc.add(
-                MovieObject(
-                    title='%s | %s' %(movie['title'], movie['date']),
-                    source_title=movie_info['source_title'],
-                    summary=summary,
-                    year=int(movie_info['year']) if movie_info['year'] else None,
-                    genres=genres if genres else [],
-                    originally_available_at=Datetime.ParseDate(movie['date']) if movie['date'] else None,
-                    thumb=cover,
-                    art=R(item_info['art']),
-                    url=movie['url']
-                    ))
+            oc.add(MovieObject(
+                title='%s | %s' %(movie['title'], movie['date']),
+                source_title=movie_info['source_title'],
+                summary=summary,
+                year=int(movie_info['year']) if movie_info['year'] else None,
+                genres=genres if genres else [],
+                originally_available_at=Datetime.ParseDate(movie['date']) if movie['date'] else None,
+                thumb=cover,
+                art=R(item_info['art']),
+                url=movie['url']
+                ))
 
     return oc
 
@@ -1187,15 +1186,16 @@ def ShowSubPage(item_info, show_info):
 
         for season in sorted(season_dict.keys()):
             ep_count = len(season_dict[season])
-            season_info.update({'season': season, 'ep_count': ep_count})
-            if ep_count > ips:
+            s0 = (ep_count if season == '0' else (len(season_dict['0']) if '0' in season_dict.keys() else 0))
+            season_info.update({'season': season, 'ep_count': ep_count, 'fseason': season, 'season0': s0})
+            if (ep_count > ips) and (season != '0'):
                 season = int(season)
-                x, r = divmod(main_ep_count, ips)
+                x, r = divmod(main_ep_count-s0, ips)
                 nseason_list = [str(t) for t in xrange(season, x + (1 if r > 0 else 0) + season)]
                 Logger('* new season list = %s' %nseason_list)
                 for i, nseason in enumerate(nseason_list):
                     nep_count = r if i+1 == len(nseason_list) else ips
-                    season_info.update({'season': nseason, 'ep_count': nep_count})
+                    season_info.update({'season': nseason, 'ep_count': nep_count, 'fseason': str(i+1)})
                     oc.add(SeasonObject(
                         key=Callback(SeasonSubPage, season_info=season_info),
                         rating_key=item_info['page_url'] + nseason,
@@ -1242,9 +1242,13 @@ def SeasonSubPage(season_info):
             ep.update({'season_number': season_number, 'ep_number': ep_number})
             ep_list2.append(ep)
 
-    if len(ep_list2) > ips or len(ep_list2) == 0:
-        temp = int(season_info['season'])
-        nep_list = ep_list[((temp -1 )*ips):((temp)*ips)]
+    if ((len(ep_list2) > ips and season_info['season'] != '0') or (len(ep_list2) == 0)):
+        temp = int(season_info['fseason'])
+        s0 = int(season_info['season0'])
+        if len(ep_list2) == 0:
+            nep_list = ep_list[ ( ((temp-1)*ips) + s0 ) : ((temp*ips) + s0) ]
+        else:
+            nep_list = ep_list2[((temp - 1)*ips):((temp)*ips)]
         for nep in nep_list:
             ep_name, ep_number = Metadata.GetEpisodeNameAndNumber(html, nep['title'], nep['url'])
             season_number = Metadata.GetSeasonNumber(nep['title'], show_name_raw, tags, summary)
@@ -1873,7 +1877,7 @@ def BackgroundAutoCache():
         pass
     Logger('*' * 80)
 
-    return ValidatePrefs(start=start, skip=skip)
+    return ValidatePrefs(start=True, skip=False)
 
 ####################################################################################################
 def GetThumb(cover_url, cover_file):
