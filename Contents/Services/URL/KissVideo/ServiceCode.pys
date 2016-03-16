@@ -90,26 +90,21 @@ def MediaObjectsForURL(url):
     """
 
     Log.Debug('*' * 80)
-    prefs = SubPrefs.GetPrefs()
-    if not 'force_transcode' in prefs.keys():
-        force_transcode = 'false'
-    else:
-        force_transcode = prefs['force_transcode']
-        if not force_transcode:
-            force_transcode = 'false'
+    mo = []
+    fmt_list = [('1080p', 'm37'), ('720p', 'm22'), ('480p', 'm59'), ('360p', 'm18')]
+    prefs = get_prefs()
 
-    if force_transcode == 'true':
+    if prefs['force_transcode'] == 'true':
         Log.Debug('* Force Transcoding ON')
-        mo = [MediaObject(
-            parts=[PartObject(key=Callback(PlayVideo, url=url, m='m37'))],
-            audio_channels=2,
-            optimized_for_streaming=False
-            )]
+        for fmt, m in fmt_list:
+            mo.append(MediaObject(
+                parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
+                video_resolution=fmt[:-1],
+                audio_channels=2,
+                optimized_for_streaming=False
+                ))
     else:
         Log.Debug('* Force Trascoding OFF')
-        mo = []
-        fmt_list = [('1080p', 'm37'), ('720p', 'm22'), ('360p', 'm18')]
-
         # create media objects for each video quality
         for fmt, m in fmt_list:
             mo.append(MediaObject(
@@ -139,7 +134,11 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Client.Platform    = %s' %Client.Platform)
     Log.Debug('* Client.Version     = %s' %Client.Version)
 
-    page_text = HTTP.Request(url, headers=Headers.GetHeadersForURL(url)).content
+    prefs = get_prefs()
+    req_url = url + '&s=openload' if prefs['openload'] else url
+
+    page_text = HTTP.Request(req_url, headers=Headers.GetHeadersForURL(url)).content
+
     onedrive = Regex('src\=\"(https\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
     openload = Regex('src\=\"(https\:\/\/openload.+?)\"').search(page_text)
     if onedrive:
@@ -154,15 +153,7 @@ def PlayVideo(url, m, **kwargs):
         vurl = get_googlevideo_url(page_text, url, m)
         Log.Debug('* PlayVideo URL      = %s' %vurl)
 
-    prefs = SubPrefs.GetPrefs()
-    if not 'samsung_fix' in prefs.keys():
-        samsung_fix = 'false'
-    else:
-        samsung_fix = prefs['samsung_fix']
-        if not samsung_fix:
-            samsung_fix = 'false'
-
-    if samsung_fix == 'true':
+    if prefs['samsung_fix'] == 'true' and prefs['force_transcode'] == 'false':
         Log.Debug('* Samsung Fix ON')
         Log.Debug('* Note: Videos will NO longer play outside the network connection.')
         try:
@@ -174,6 +165,8 @@ def PlayVideo(url, m, **kwargs):
         except Exception as e:
             Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
             Log.Debug('* URL Redirect Error: %s' %str(e))
+    else:
+        Log.Debug('* Samsung Fix OFF')
 
     Log.Debug('*' * 80)
 
@@ -188,8 +181,10 @@ def get_googlevideo_url(page_text, url, m):
     Get GoogleVideo URLs
     Returns the Hights stream playable depending on the previous Stream Selections
     If Stream not found, then try's to find next hightest.
-    Example:
-    If 1080p not available then return 720p. If 720p not available then return 360p.
+    Example 1: format list = [1080p, 720p, 360p]
+    If 480p was previously chosen, then 720p will be used
+    Example 2: format list = [720p, 480p, 360p]
+    If 1080p was previously chosen, then 720p will be used
     """
 
     html = HTML.ElementFromString(page_text)
@@ -199,20 +194,26 @@ def get_googlevideo_url(page_text, url, m):
         Log.Error('* This Video is broken, Kiss%s is working to fix it.' %type_title)
         raise Ex.MediaNotAvailable
 
-    vurl = None
+    vurl = False
     vurls = []
+    fmt_dict = {'37': '1080', '22': '720', '59': '480', '18': '360'}
+    rfmt_dict = {'1080': '37', '720': '22', '480': '59', '360': '18'}
     for node in olist:
         vurl_old = String.Base64Decode(node.get('value'))
         try:
-            vurls.append((vurl_old, int(vurl_old.split('=m')[1])))
+            vurls.append((vurl_old, fmt_dict[vurl_old.split('=m')[1]]))
         except:
             itag = Regex('itag\=(\d+)').search(vurl_old).group(1)
-            vurls.append((vurl_old, int(itag)))
+            vurls.append((vurl_old, fmt_dict[str(itag)]))
 
-    for item, mm in sorted(vurls, key=lambda tup: tup[1]):
-        vurl = item
-        if 'm%s' %str(mm) == m:
-            break
+    if vurls:
+        for item, mm in sorted(vurls, key=lambda tup: int(tup[1])):
+            vurl = item
+            nm = rfmt_dict[mm]
+            if str(nm) == m[1:]:
+                break
+            elif int(mm) > int(fmt_dict[m[1:]]):
+                break
 
     return vurl
 
@@ -293,3 +294,22 @@ def get_openload_url(openload_url):
         url = False
 
     return url
+
+####################################################################################################
+def get_prefs():
+    """
+    Get Prefs
+    If a new key has not been added yet, do so here
+    """
+
+    prefs = SubPrefs.GetPrefs()
+    if not 'samsung_fix' in prefs.keys():
+        prefs.update({'samsung_fix': 'false'})
+
+    if not 'force_transcode' in prefs.keys():
+        prefs.update({'force_transcode': 'false'})
+
+    if not 'openload' in prefs.keys():
+        prefs.update({'openload': 'false'})
+
+    return prefs

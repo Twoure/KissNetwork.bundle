@@ -61,6 +61,12 @@
     "default": "False"
   },
   {
+    "id": "openload",
+    "label": "Use OpenLoad instead of GoogleVideo",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "adult",
     "label": "Allow Adult Content",
     "type": "bool",
