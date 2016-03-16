@@ -129,13 +129,13 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Disabled(_default_):** Use the default links provided, normally GoogleVideo but could be OpenLoad (or even OneDrive)
 
 ##### Allow Adult Content
-- **Enable:** Allows Adult Content to be viewed
+- **Enabled:** Allows Adult Content to be viewed
 - **Disabled(_default_):** Checks agains contents _Genre_ list for adult themed genres. Current [block list](Contents/Code/__init__.py#L35).
   - Will provide a popup whenever an Adult themed video/comic/manga is accessed providing feedback as to why the content is blocked
   - Fails with KissCartoon because it does not have Adult themed _Genres_ but does have Adult content
 
 ##### Enable Developer Tools
-- **Enable:** Show Developer Tools Menu located in [About / Help](#about--help) section
+- **Enabled:** Show Developer Tools Menu located in [About / Help](#about--help) section
 - **Disabled(_default_):** Developer Tools Menu remains hidden
 - Is only available to PMS admin regardless of enabled/disabled
 
