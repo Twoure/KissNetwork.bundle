@@ -1189,7 +1189,7 @@ def ShowSubPage(item_info, show_info):
 
         for season in sorted(season_dict.keys()):
             ep_count = len(season_dict[season])
-            Logger('ep_count = %i' %ep_count)
+            Logger('* ep_count = %i' %ep_count)
             s0 = (ep_count if season == '0' else (len(season_dict['0']) if '0' in season_dict.keys() else 0))
             season_info.update({'season': season, 'ep_count': ep_count, 'fseason': season, 'season0': s0})
             if (ep_count > ips) and (season != '0'):
@@ -1199,7 +1199,7 @@ def ShowSubPage(item_info, show_info):
                 Logger('* new season list = %s' %nseason_list)
                 for i, nseason in enumerate(nseason_list):
                     nep_count = ((ips if r == 0 else r) if i+1 == len(nseason_list) else ips)
-                    Logger('nep_count = %i' %nep_count)
+                    Logger('* nep_count = %i' %nep_count)
                     season_info.update({'season': nseason, 'ep_count': nep_count, 'fseason': str(i+1)})
                     oc.add(SeasonObject(
                         key=Callback(SeasonSubPage, season_info=season_info),
