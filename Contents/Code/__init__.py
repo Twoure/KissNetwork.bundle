@@ -88,6 +88,8 @@ def Start():
     ObjectContainer.title1 = TITLE
 
     DirectoryObject.thumb = R(MAIN_ICON)
+    DirectoryObject.art = R(MAIN_ART)
+    PopupDirectoryObject.art = R(MAIN_ART)
 
     InputDirectoryObject.art = R(MAIN_ART)
 
