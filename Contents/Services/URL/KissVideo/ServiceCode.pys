@@ -212,16 +212,23 @@ def get_googlevideo_url(page_text, url, m):
 
     for node in olist:
         vurl_old = String.Base64Decode(node.get('value'))
-        try:
-            itag = vurl_old.split('=m')[1]
-            vurls.append((vurl_old, fmt_dict[itag]))
-        except:
-            itag = 'No itag Found!'
-            itag_test = Regex('itag\=(\d+)').search(vurl_old)
-            if itag_test:
-                itag = str(itag_test.group(1))
-                if itag in fmt_dict.keys():
-                    vurls.append((vurl_old, fmt_dict[itag]))
+        if 'googlevideo' in vurl_old:
+            try:
+                itag = vurl_old.split('=m')[1]
+                vurls.append((vurl_old, fmt_dict[itag]))
+            except:
+                itag = 'No itag Found!'
+                itag_test = Regex('itag\=(\d+)').search(vurl_old)
+                if itag_test:
+                    itag = str(itag_test.group(1))
+                    if itag in fmt_dict.keys():
+                        vurls.append((vurl_old, fmt_dict[itag]))
+        else:
+            try:
+                itag = rfmt_dict[node.text.strip()[:-1]]
+                vurls.append((vurl_old, node.text.strip()[:-1]))
+            except Exception as e:
+                itag = 'No itag Found: %s' %str(e)
 
         if not itag in fmt_dict.keys():
             Log.Warn('* Format NOT Supported: %s' %itag)
