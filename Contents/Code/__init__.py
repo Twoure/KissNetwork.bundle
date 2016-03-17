@@ -157,7 +157,8 @@ def MainMenu():
         thumb = 'icon-%s.png' %t.lower()
         rthumb = None if cp_match else R(thumb)
         art = 'art-%s.jpg' %t.lower()
-        rart = None if cp_match else R(art)
+        #rart = None if cp_match else R(art)
+        rart = R(art)
         prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
         new_data = {
             'prefs_name': prefs_name, 'title': t, 'art': art,
@@ -705,7 +706,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         # set title2 for last page
         main_title = '%s | %s | Page %s, Last Page' % (type_title, str(category), str(page))
 
-    oc = ObjectContainer(title2=main_title, art=R(art), no_cache=True)
+    #oc = ObjectContainer(title2=main_title, art=R(art), no_cache=True)
+    oc = ObjectContainer(title2=main_title, art=R(art))
 
     # parse url for each Item and pull out its title, summary, and cover image
     # took some time to figure out how to get the javascript info
@@ -810,8 +812,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
     if nextpg_node:  # if not 'None' then find the next page and create a button
         nextpg = int(nextpg_node.split('page=')[1])
-        Logger('NextPage            = %i' % nextpg)
-        Logger('base url            = %s' %base_url)
+        Logger('* NextPage          = %i' % nextpg)
+        Logger('* base url          = %s' %base_url)
         oc.add(NextPageObject(
             key=Callback(DirectoryList,
                 page=nextpg, pname=pname, category=category,
@@ -1186,6 +1188,7 @@ def ShowSubPage(item_info, show_info):
 
         for season in sorted(season_dict.keys()):
             ep_count = len(season_dict[season])
+            Logger('ep_count = %i' %ep_count)
             s0 = (ep_count if season == '0' else (len(season_dict['0']) if '0' in season_dict.keys() else 0))
             season_info.update({'season': season, 'ep_count': ep_count, 'fseason': season, 'season0': s0})
             if (ep_count > ips) and (season != '0'):
@@ -1194,7 +1197,8 @@ def ShowSubPage(item_info, show_info):
                 nseason_list = [str(t) for t in xrange(season, x + (1 if r > 0 else 0) + season)]
                 Logger('* new season list = %s' %nseason_list)
                 for i, nseason in enumerate(nseason_list):
-                    nep_count = r if i+1 == len(nseason_list) else ips
+                    nep_count = ((ips if r == 0 else r) if i+1 == len(nseason_list) else ips)
+                    Logger('nep_count = %i' %nep_count)
                     season_info.update({'season': nseason, 'ep_count': nep_count, 'fseason': str(i+1)})
                     oc.add(SeasonObject(
                         key=Callback(SeasonSubPage, season_info=season_info),
@@ -1786,8 +1790,7 @@ def UpdateLegacyBookmark(bm_info=dict):
             Log.Debug('*' * 80)
 
             bm[i].update(new_bookmark)
-            Logger('* %s Bookmark \"%s\" Updated' %(type_title, item_title_decode), kind='Info', force=True)
-
+            Log.Debug('* %s Bookmark \"%s\" Updated' %(type_title, item_title_decode))
             Log.Debug('* updated bookmark = %s' %bm[i])
             Log.Debug('*' * 80)
             break
