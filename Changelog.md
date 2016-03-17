@@ -18,6 +18,7 @@
     - Added logging to report resolution used when video played
     - Added [Steamy.moe](https://steamy.moe/) video host support. Example usage: [Star Wars Rebels S2E17](http://kisscartoon.me/Cartoon/Star-Wars-Rebels-Season-2/Episode-17-New-Host-2?id=68897)
     - Added Short summary info for SeasonObjects
+    - Added Default Artwork to DirectoryObject and PopupDirectoryObject
     - Updated descriptions in README
 
 ##### 1.1.5
