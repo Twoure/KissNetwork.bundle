@@ -12,7 +12,7 @@
       - If Transcoding is selected, then _Samsung Fix_ is disabled.
       - If server is trascoding, then it will correctly handle the URL redirect, so _Samsung Fix_ would be irrelevant
     - Added back Artwork for Menus on mobile phones
-    - Added webm and flv resolution suppport when Force Transcoding enabled
+    - Added webm and flv resolution support when Force Transcoding enabled
     - Added additional 480p format (78) incase site changes
     - Added logging to report resolution used when video played
     - Added [Steamy.moe](https://steamy.moe/) video host support. Example usage: [Star Wars Rebels S2E17](http://kisscartoon.me/Cartoon/Star-Wars-Rebels-Season-2/Episode-17-New-Host-2?id=68897)
