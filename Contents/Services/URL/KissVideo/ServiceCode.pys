@@ -227,6 +227,7 @@ def get_googlevideo_url(page_text, url, m):
             Log.Warn('* Format NOT Supported: %s' %itag)
 
     if vurls:
+        Log.Debug('* pre resolution selected = %s' %m)
         for item, mm in sorted(vurls, key=lambda tup: int(tup[1])):
             vurl = item
             nm = rfmt_dict[mm]
