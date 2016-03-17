@@ -4,7 +4,8 @@
 - _03/17/2016_
   - Fixes:
     - BackgroundAutoCache error
-    - Season were binned incorrectly. Season 0 has no episode limit now.
+    - Season were binned incorrectly. Season 0 has no episode limit now.  Still some minor errors but all episodes will display in some format.
+    - Episode dates added back for cients that do not support show date aired
   - Updates:
     - Added 480p stream support
     - Added option to Prefer **OpenLoad** video links.  In case the provided GoogleVideo links fail to play
@@ -16,6 +17,8 @@
     - Added additional 480p format (78) incase site changes
     - Added logging to report resolution used when video played
     - Added [Steamy.moe](https://steamy.moe/) video host support. Example usage: [Star Wars Rebels S2E17](http://kisscartoon.me/Cartoon/Star-Wars-Rebels-Season-2/Episode-17-New-Host-2?id=68897)
+    - Added Short summary info for SeasonObjects
+    - Updated descriptions in README
 
 ##### 1.1.5
 - _03/12/2016_

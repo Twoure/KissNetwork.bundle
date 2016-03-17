@@ -33,6 +33,7 @@ import requests
 PREFIX = '/video/kissnetwork'
 TITLE = L('title')
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
+CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 
 # KissAnime
 ANIME_BASE_URL = Common.ANIME_BASE_URL
@@ -1160,6 +1161,7 @@ def ShowSubPage(item_info, show_info):
         season_dict = None
         main_ep_count = len(ep_list)
         ips = 30
+        cp = Client.Product
         season_info = {
             'season': '1', 'ep_count': main_ep_count, 'tv_show_name': show_info['tv_show_name'],
             'art': item_info['art'], 'source_title': show_info['source_title'],
@@ -1192,6 +1194,9 @@ def ShowSubPage(item_info, show_info):
             Logger('* ep_count = %i' %ep_count)
             s0 = (ep_count if season == '0' else (len(season_dict['0']) if '0' in season_dict.keys() else 0))
             season_info.update({'season': season, 'ep_count': ep_count, 'fseason': season, 'season0': s0})
+            ep_info = '' if cp in CP_DATE else ' | %i Episodes' %ep_count
+            s0_summary = '%s: S0 Specials, Uncensored Episodes, and Miscellaneous Videos%s' %(show_info['tv_show_name'], ep_info)
+            s_summary = '%s: S%s Episodes%s' %(show_info['tv_show_name'], season, ep_info)
             if (ep_count > ips) and (season != '0'):
                 season = int(season)
                 x, r = divmod(main_ep_count-s0, ips)
@@ -1201,12 +1206,15 @@ def ShowSubPage(item_info, show_info):
                     nep_count = ((ips if r == 0 else r) if i+1 == len(nseason_list) else ips)
                     Logger('* nep_count = %i' %nep_count)
                     season_info.update({'season': nseason, 'ep_count': nep_count, 'fseason': str(i+1)})
+                    nep_info = '' if cp in CP_DATE else ' | %i Episodes' %nep_count
+                    s_summary = '%s: S%s seperated out S%s into multiple seasons%s' %(show_info['tv_show_name'], nseason, season, nep_info)
                     oc.add(SeasonObject(
                         key=Callback(SeasonSubPage, season_info=season_info),
                         rating_key=item_info['page_url'] + nseason,
                         title='Season %s' %nseason, show=show_info['tv_show_name'],
                         index=int(nseason), episode_count=nep_count,
-                        source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art'])
+                        source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art']),
+                        summary=s_summary
                         ))
             else:
                 oc.add(SeasonObject(
@@ -1214,7 +1222,8 @@ def ShowSubPage(item_info, show_info):
                     rating_key=item_info['page_url'] + season,
                     title='Season %s' %season, show=show_info['tv_show_name'],
                     index=int(season), episode_count=ep_count,
-                    source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art'])
+                    source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art']),
+                    summary=s0_summary if season == '0' else s_summary
                     ))
 
         Logger('*' * 80)
@@ -1238,6 +1247,7 @@ def SeasonSubPage(season_info):
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
     season_dict = None
     ips = int(season_info['ips'])
+    cp = Client.Product
 
     ep_list2 = []
     for ep in ep_list:
@@ -1259,7 +1269,7 @@ def SeasonSubPage(season_info):
             season_number = Metadata.GetSeasonNumber(nep['title'], show_name_raw, tags, summary)
             oc.add(EpisodeObject(
                 source_title=season_info['source_title'],
-                title=nep['title'],
+                title=nep['title'] if cp in CP_DATE else '%s | %s' %(nep['title'], (nep['date'] if nep['date'] else 'NA')),
                 show=season_info['tv_show_name'],
                 season=int(season_number),
                 index=int(ep_number),
@@ -1272,7 +1282,7 @@ def SeasonSubPage(season_info):
         for ep in ep_list2:
             oc.add(EpisodeObject(
                 source_title=season_info['source_title'],
-                title=ep['title'],
+                title=ep['title'] if cp in CP_DATE else '%s | %s' %(ep['title'], (ep['date'] if ep['date'] else 'NA')),
                 show=season_info['tv_show_name'],
                 season=int(ep['season_number']),
                 index=int(ep['ep_number']),

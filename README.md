@@ -122,11 +122,11 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Enabled:** Videos will be transcoded by PMS and available for use outside the servers network
   - Resolution will depend on available streams and client settings
   - Overrides [Samsung Fix](#samsung-fix-disables-remote-play), because PMS will properly handle any URL Redirects
-- **Disabled(_default_):** Transcoding is handled by the clients settings
+- **Disabled(_default_):** Transcoding depends on clients settings/support
 
 ##### Use OpenLoad instead of GoogleVideo
 - **Enabled:** If both OpenLoad and GoogleVideo links provieded, use OpenLoad
-- **Disabled(_default_):** Use the default links provided, normally GoogleVideo but could be OpenLoad (or even OneDrive)
+- **Disabled(_default_):** Use the default links provided, normally GoogleVideo but could be OpenLoad, OneDrive, or Steamy.moe
 
 ##### Allow Adult Content
 - **Enabled:** Allows Adult Content to be viewed
@@ -141,8 +141,16 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Auth Admin Through Plex.tv
 - Authenticate admin user through Plex.tv if Plex Media Server does not have Plex Home enabled
-- **Enable            :** Auth against `https://plex.tv/user/account`
+- **Enable:** Auth against `https://plex.tv/user/account`
+  - Use if PMS is _NOT_ setup as _Plex Home_
+  - If plex.tv is down then this authentication will fail, locking the admin out from channel [Preferences](#preferences), [Updater](#updater), and [DevTools](#developer-tools) section
+    - If this happens, open `Plug-in Support/Preferences/com.plexapp.plugins.kissnetwork.xml` and set `plextv` section to `false`. Save and exit file.
+    - **Note 1:** if PMS is not setup as _Plex Home_ then admin features will now be available to all shared users
+    - **Note 2:** when plex.tv comes online again, make sure to re-enable _Auth Admin Trough Plex.tv_ to ensure shared users are not allowed admin access
 - **Disable(_default_):** Auth against `http://127.0.0.1:32400/myplex/account`
+  - Use when PMS is setup as _Plex Home_
+  - **Note:** If PMS _NOT_ setup as _Plex Home_ then all shared users will have admin access
+- If using Plex Web Client on Host Server Machine and not signed-in, then no Plex Token will be available to authenticate.  In this use case, the assumption is you are the admin so the channel will treat you as such.
 
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
@@ -171,6 +179,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Update... :** Same for Drama, Cartoon, Comic, and Manga
 
 ##### Cover Cache Tools
+- The Cache Cover tools are experimental, and could result in a temporary IP ban from using the Kiss sites. If this happens, just wait for the allotted time to pass (usually an hour, but could be up to 24 hours, do not remember).  I have yet to hear people report this issue, but did encounter it while developing these tools since I had to test and re-test the download functions multiple times.
 - **Cache All Covers:** Download cover images from all sites.  Background process.
 - **Cache All Anime Covers:** Download All Anime covers only.  Do not download covers from the other sites.
 - **Cache All... :** Same for Drama, Cartoon, Comic, and Manga
@@ -191,7 +200,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - If the headers are not set before Plex Framework tries to scrape the site then an error will occur.
 - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
-- Sometimes the date the video aired only has a year.  If this is the case then the metadata will set the originally_available_at to the current month and day with the year from the video.  Also aired dates are when the season started or movie came out, so not the actual date the episode aired.
 
 ##### Anime, Cartoon, Comic, Drama, Manga
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
@@ -199,7 +207,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Cover art does not load for Videos
   - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
   - I have added a local cover image caching option to work around cloudflare
-- Kissmanga is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
+- Kissmanga/ReadComicOnline is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
 - Cookie timeouts change too often, cannot parse expire time yet
 
 ##### Plex Home Theater
