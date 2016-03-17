@@ -70,7 +70,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
   - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 0.9.16.1
+  - Ubuntu 14.04 LTS: PMS version 0.9.16.2
   - Windows 7 & 10: PMS version 0.9.12.13
 
 ##### Plex Clients:
@@ -141,13 +141,13 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Auth Admin Through Plex.tv
 - Authenticate admin user through Plex.tv if Plex Media Server does not have Plex Home enabled
-- **Enable:** Auth against `https://plex.tv/user/account`
+- **Enabled:** Auth against `https://plex.tv/user/account`
   - Use if PMS is _NOT_ setup as _Plex Home_
   - If plex.tv is down then this authentication will fail, locking the admin out from channel [Preferences](#preferences), [Updater](#updater), and [DevTools](#developer-tools) section
     - If this happens, open `Plug-in Support/Preferences/com.plexapp.plugins.kissnetwork.xml` and set `plextv` section to `false`. Save and exit file.
     - **Note 1:** if PMS is not setup as _Plex Home_ then admin features will now be available to all shared users
     - **Note 2:** when plex.tv comes online again, make sure to re-enable _Auth Admin Trough Plex.tv_ to ensure shared users are not allowed admin access
-- **Disable(_default_):** Auth against `http://127.0.0.1:32400/myplex/account`
+- **Disabled(_default_):** Auth against `http://127.0.0.1:32400/myplex/account`
   - Use when PMS is setup as _Plex Home_
   - **Note:** If PMS _NOT_ setup as _Plex Home_ then all shared users will have admin access
 - If using Plex Web Client on Host Server Machine and not signed-in, then no Plex Token will be available to authenticate.  In this use case, the assumption is you are the admin so the channel will treat you as such.
@@ -223,7 +223,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### General
 - Might look into grouping seasons of the same show for the directory list
-- Implement some kind of Password protection for choosing which sites to display, or Adult stuff
 - Continue Improving Metadata
 
 ##### Bookmarks
