@@ -196,24 +196,47 @@ def get_googlevideo_url(page_text, url, m):
 
     vurl = False
     vurls = []
-    fmt_dict = {'37': '1080', '22': '720', '59': '480', '18': '360'}
+    prefs = get_prefs()
+    # format info taken from here:
+    # https://github.com/rg3/youtube-dl/blob/fd050249afce1bcc9e7f4a127069375467007b55/youtube_dl/extractor/youtube.py#L281
+    # mp4 {format: resolution} dictionary
+    fmt_dict = {'37': '1080', '22': '720', '59': '480', '78': '480', '18': '360'}
+    if prefs['force_transcode'] == 'true':
+        # When force transcoding, then provide support for webm and flv video resolutions
+        # webm {format: resolution} dictionary
+        fmt_dict.update({'43': '360', '44': '480', '45': '720', '46': '1080'})
+        # flv {format: resolution} dictionary
+        fmt_dict.update({'35': '480', '34': '360'})
+    # reversed mp4 format dictionary, paired values with resolutin selection in MediaObjectsForURL()
     rfmt_dict = {'1080': '37', '720': '22', '480': '59', '360': '18'}
+
     for node in olist:
         vurl_old = String.Base64Decode(node.get('value'))
         try:
-            vurls.append((vurl_old, fmt_dict[vurl_old.split('=m')[1]]))
+            itag = vurl_old.split('=m')[1]
+            vurls.append((vurl_old, fmt_dict[itag]))
         except:
-            itag = Regex('itag\=(\d+)').search(vurl_old).group(1)
-            vurls.append((vurl_old, fmt_dict[str(itag)]))
+            itag = 'No itag Found!'
+            itag_test = Regex('itag\=(\d+)').search(vurl_old)
+            if itag_test:
+                itag = str(itag_test.group(1))
+                if itag in fmt_dict.keys():
+                    vurls.append((vurl_old, fmt_dict[itag]))
+
+        if not itag in fmt_dict.keys():
+            Log.Warn('* Format NOT Supported: %s' %itag)
 
     if vurls:
         for item, mm in sorted(vurls, key=lambda tup: int(tup[1])):
             vurl = item
             nm = rfmt_dict[mm]
             if str(nm) == m[1:]:
+                #Log.Debug('* Selecting %sp stream' %mm)
                 break
             elif int(mm) > int(fmt_dict[m[1:]]):
+                #Log.Debug('* Selecting %sp stream' %mm)
                 break
+        Log.Debug('* Selecting %sp stream' %mm)
 
     return vurl
 

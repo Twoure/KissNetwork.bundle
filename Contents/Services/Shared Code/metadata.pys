@@ -81,7 +81,7 @@ def GetSummary(html):
                         summary = None
 
     if summary:
-        Log.Debug('* summary = %s' %summary)
+        #Log.Debug('* summary = %s' %summary)
         summary = Common.StringCode(string=summary, code='encode')
 
     return summary
