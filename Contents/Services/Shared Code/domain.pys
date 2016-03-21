@@ -12,7 +12,7 @@ from io import open
 import json
 
 # constants
-BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
+BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\\\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
 MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Libraries', 'Shared')
 SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork')
 DOMAIN_FILE = os.path.join(SUPPORT_PATH, 'Domain_Dict')

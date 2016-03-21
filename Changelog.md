@@ -1,5 +1,9 @@
 # ChangeLog
 
+##### 1.1.7
+- _03/21/2016_
+  - Fixed Service Code file path error
+
 ##### 1.1.6
 - _03/17/2016_
   - Fixes:

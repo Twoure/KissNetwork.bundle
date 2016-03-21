@@ -77,7 +77,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
   - Android (4.4.2) (Plex Client App v4.23.1.548)
-  - Plex/Web (2.5.8)
+  - Plex/Web (2.5.9)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
