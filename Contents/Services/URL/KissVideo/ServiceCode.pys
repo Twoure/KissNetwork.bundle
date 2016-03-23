@@ -312,15 +312,15 @@ def get_openload_url(openload_url):
     Code returns the a stream link for a OpenLoad video
     Example Start URL
     https://openload.co/embed/rano_HSH6Fk/%5BHorribleSubs%5D_GATE_-_21_%5B720p%5D-r976.mp4
-    Note the Start URL needs the 'fid' after "/embed/"
+    Note the Start URL needs the 'fid' after "/embed/" and needs "/embed/" instead of "/f/"
     """
 
-    ourl_req = openload_url.rsplit('/', 1)[0]
     try:
-        s = HTTP.Request(ourl_req, encoding=('utf-8')).content
+        base = Regex('(https?:\/\/openload.+?)\/\w+\/(.*?)(?:\/|$)').search(openload_url)
+        s = HTTP.Request(base.group(1) + '/embed/' + base.group(2), encoding=('utf-8')).content
         url = decode_openload(s)
     except Exception as e:
-        Log.Error('* OpenLoad Error: Something went wrong, cannot access %s' %ourl_req)
+        Log.Error('* OpenLoad Error: Something went wrong, cannot access %s' %openload_url)
         Log.Error('* OpenLoad Error: %s' %str(e))
         url = False
 
