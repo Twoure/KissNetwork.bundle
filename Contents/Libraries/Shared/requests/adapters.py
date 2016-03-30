@@ -8,6 +8,7 @@ This module contains the transport adapters that Requests uses to define
 and maintain connections.
 """
 
+import os.path
 import socket
 
 from .models import Response
@@ -20,9 +21,11 @@ from .utils import (DEFAULT_CA_BUNDLE_PATH, get_encoding_from_headers,
                     prepend_scheme_if_needed, get_auth_from_url, urldefragauth,
                     select_proxy)
 from .structures import CaseInsensitiveDict
+from .packages.urllib3.exceptions import ClosedPoolError
 from .packages.urllib3.exceptions import ConnectTimeoutError
 from .packages.urllib3.exceptions import HTTPError as _HTTPError
 from .packages.urllib3.exceptions import MaxRetryError
+from .packages.urllib3.exceptions import NewConnectionError
 from .packages.urllib3.exceptions import ProxyError as _ProxyError
 from .packages.urllib3.exceptions import ProtocolError
 from .packages.urllib3.exceptions import ReadTimeoutError
@@ -62,7 +65,7 @@ class HTTPAdapter(BaseAdapter):
 
     :param pool_connections: The number of urllib3 connection pools to cache.
     :param pool_maxsize: The maximum number of connections to save in the pool.
-    :param int max_retries: The maximum number of retries each connection
+    :param max_retries: The maximum number of retries each connection
         should attempt. Note, this applies only to failed DNS lookups, socket
         connections and connection timeouts, never to requests where data has
         made it to the server. By default, Requests does not retry failed
@@ -105,7 +108,7 @@ class HTTPAdapter(BaseAdapter):
 
     def __setstate__(self, state):
         # Can't handle by adding 'proxy_manager' to self.__attrs__ because
-        # because self.poolmanager uses a lambda function, which isn't pickleable.
+        # self.poolmanager uses a lambda function, which isn't pickleable.
         self.proxy_manager = {}
         self.config = {}
 
@@ -183,10 +186,15 @@ class HTTPAdapter(BaseAdapter):
                 raise Exception("Could not find a suitable SSL CA certificate bundle.")
 
             conn.cert_reqs = 'CERT_REQUIRED'
-            conn.ca_certs = cert_loc
+
+            if not os.path.isdir(cert_loc):
+                conn.ca_certs = cert_loc
+            else:
+                conn.ca_cert_dir = cert_loc
         else:
             conn.cert_reqs = 'CERT_NONE'
             conn.ca_certs = None
+            conn.ca_cert_dir = None
 
         if cert:
             if not isinstance(cert, basestring):
@@ -392,7 +400,15 @@ class HTTPAdapter(BaseAdapter):
                         low_conn.send(b'\r\n')
                     low_conn.send(b'0\r\n\r\n')
 
-                    r = low_conn.getresponse()
+                    # Receive the response from the server
+                    try:
+                        # For Python 2.7+ versions, use buffering of HTTP
+                        # responses
+                        r = low_conn.getresponse(buffering=True)
+                    except TypeError:
+                        # For compatibility with Python 2.6 versions and back
+                        r = low_conn.getresponse()
+
                     resp = HTTPResponse.from_httplib(
                         r,
                         pool=conn,
@@ -411,11 +427,16 @@ class HTTPAdapter(BaseAdapter):
 
         except MaxRetryError as e:
             if isinstance(e.reason, ConnectTimeoutError):
-                raise ConnectTimeout(e, request=request)
+                # TODO: Remove this in 3.0.0: see #2811
+                if not isinstance(e.reason, NewConnectionError):
+                    raise ConnectTimeout(e, request=request)
 
             if isinstance(e.reason, ResponseError):
                 raise RetryError(e, request=request)
 
+            raise ConnectionError(e, request=request)
+
+        except ClosedPoolError as e:
             raise ConnectionError(e, request=request)
 
         except _ProxyError as e:

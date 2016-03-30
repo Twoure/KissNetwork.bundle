@@ -106,8 +106,8 @@ def get_tokens(url, user_agent=None):
     try:
         resp = scraper.get(url)
         resp.raise_for_status()
-    except Exception:
-        print("'%s' returned error %d, could not collect tokens.\n" % (url, resp.status_code))
+    except Exception as e:
+        print("'%s' returned error, could not collect tokens.\n%s\n" % (url, str(e)))
         raise
 
     return ( {
