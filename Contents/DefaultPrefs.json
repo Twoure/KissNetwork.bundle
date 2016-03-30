@@ -7,6 +7,13 @@
     "default": "Alphabetical"
   },
   {
+    "id": "server",
+    "label": "Prefered Video Server",
+    "type": "enum",
+    "values": ["KissNetwork", "Stream", "Openload"],
+    "default": "KissNetwork"
+  },
+  {
     "id": "kissanime",
     "label": "View Anime (Kissanime.to)",
     "type": "bool",
@@ -57,12 +64,6 @@
   {
     "id": "force_transcode",
     "label": "Force Transcoding (enables remote play)",
-    "type": "bool",
-    "default": "False"
-  },
-  {
-    "id": "openload",
-    "label": "Use OpenLoad instead of GoogleVideo",
     "type": "bool",
     "default": "False"
   },
