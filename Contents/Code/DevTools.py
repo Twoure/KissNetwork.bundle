@@ -305,7 +305,8 @@ def CacheAllCovers(category, qevent, page=1):
     base_url = Common.Domain_Dict[ncategory]
     item_url = base_url + '/%sList?page=%s' % (category, page)
 
-    html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
+    #html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
+    html = Headers.ElementFromURL(item_url)
 
     nextpg_node = None
     # parse html for 'next' page node

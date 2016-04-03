@@ -16,8 +16,9 @@ import common as Common
 # constants
 HEADER_FILE = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
 
-# Import cfscrape from Shared Libraries
+# Import Shared Libraries Items
 import cfscrape
+import requests
 
 ####################################################################################################
 def CFTest():
@@ -160,3 +161,18 @@ def LoadHeaderDict():
         Log.Debug('* creating new header dict file')
 
         return CreateHeadersDict()
+
+####################################################################################################
+def ElementFromURL(url):
+    """setup requests html"""
+
+    page = requests.get(url, headers=GetHeadersForURL(url))
+    html = HTML.ElementFromString(page.text)
+    return html
+
+####################################################################################################
+def Request(url):
+    """setup requests text page"""
+
+    page = requests.get(url, headers=GetHeadersForURL(url)).text
+    return page

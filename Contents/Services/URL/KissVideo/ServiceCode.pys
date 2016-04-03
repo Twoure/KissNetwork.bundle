@@ -34,7 +34,8 @@ def MetadataObjectForURL(url):
     video_id = int(url.split('=')[-1])
     show_url = url.rsplit('/', 1)[0]
 
-    html = HTML.ElementFromURL(show_url, headers=Headers.GetHeadersForURL(show_url))
+    #html = HTML.ElementFromURL(show_url, headers=Headers.GetHeadersForURL(show_url))
+    html = Headers.ElementFromURL(show_url)
     Log.Debug('*' * 80)
 
     genres, genres_list = Metadata.GetGenres(html)
@@ -151,7 +152,8 @@ def PlayVideo(url, m, **kwargs):
     else:
         req_url = url
 
-    page_text = HTTP.Request(req_url, headers=Headers.GetHeadersForURL(url)).content
+    #page_text = HTTP.Request(req_url, headers=Headers.GetHeadersForURL(url)).content
+    page_text = Headers.Request(req_url)
 
     onedrive = Regex('src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
     openload = Regex('src\=\"(https?\:\/\/openload.+?)\"').search(page_text)
