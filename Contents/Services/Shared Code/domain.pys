@@ -18,9 +18,9 @@ SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support',
 DOMAIN_FILE = os.path.join(SUPPORT_PATH, 'Domain_Dict')
 
 USER_AGENT = (
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) '
+    'Mozilla/5.0 (Windows NT 6.1; Win64; x64) '
     'AppleWebKit/537.36 (KHTML, like Gecko) '
-    'Chrome/31.0.1650.63 Safari/537.36'
+    'Chrome/49.0.2623.110 Safari/537.36'
     )
 
 # add custom modules to python path
