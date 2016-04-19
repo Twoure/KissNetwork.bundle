@@ -1924,12 +1924,10 @@ def GetThumb(cover_url, cover_file):
         if Prefs['cache_covers'] and cover_file:
             Logger('* cover file name   = %s' %cover_file)
             if Common.CoverImageFileExist(cover_file):
-                if cover_file in Dict['cover_files']:
-                    cover = R(cover_file)
-                else:
+                if cover_file not in Dict['cover_files']:
                     Logger('* cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
                     Dict['cover_files'].update({cover_file: cover_file})
-                    cover = R(cover_file)
+                cover = R(cover_file)
             else:
                 Logger('* cover not yet saved, saving %s now' %cover_file)
                 cover = R(CACHE_COVER_ICON)
