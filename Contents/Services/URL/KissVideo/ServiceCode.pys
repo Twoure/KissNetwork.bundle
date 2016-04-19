@@ -27,7 +27,6 @@ def MetadataObjectForURL(url):
     video_id = int(url.split('=')[-1])
     show_url = url.rsplit('/', 1)[0]
 
-    #html = HTML.ElementFromURL(show_url, headers=Headers.GetHeadersForURL(show_url))
     html = Headers.ElementFromURL(show_url)
     Log.Debug('*' * 80)
 
@@ -138,7 +137,8 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Client.Version     = %s' %Client.Version)
 
     prefs = get_prefs()
-    strategy = 'curl' if prefs['dl_strategy'] == '0' else 'wget'
+    #strategy = 'curl' if prefs['dl_strategy'] == '0' else 'wget'
+    strategy = 'curl'  # currently only curl is setup to work
     if prefs['server'] == '1':
         req_url = url + '&s=openload'
     elif (prefs['server'] == '2') and (is_tool(strategy)):
@@ -165,7 +165,7 @@ def PlayVideo(url, m, **kwargs):
         vurl = get_googlevideo_url(page_text, url, m)
     Log.Debug('* PlayVideo URL      = %s' %vurl)
 
-    if prefs['samsung_fix'] == 'true' and prefs['force_transcode'] == 'false':
+    if (prefs['samsung_fix'] == 'true') and (prefs['force_transcode'] == 'false') and (prefs['server'] == '0'):
         Log.Debug('* Samsung Fix ON')
         Log.Debug('* Note: Videos will NO longer play outside the network connection.')
         try:
@@ -355,8 +355,8 @@ def get_prefs():
     if not 'server' in prefs.keys():
         prefs.update({'server': '0'})
 
-    if not 'dl_strategy' in prefs.keys():
+    #if not 'dl_strategy' in prefs.keys():
         # 0=curl, 1=wget
-        prefs.update({'dl_strategy': '0'})
+        #prefs.update({'dl_strategy': '0'})
 
     return prefs

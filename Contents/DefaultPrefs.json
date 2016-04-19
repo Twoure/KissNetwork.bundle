@@ -14,13 +14,6 @@
     "default": "KissNetwork"
   },
   {
-    "id": "dl_strategy",
-    "label": "Stream.Moe Fetch Program",
-    "type": "enum",
-    "values": ["cURL", "wget"],
-    "default": "cURL"
-  },
-  {
     "id": "kissanime",
     "label": "View Anime (Kissanime.to)",
     "type": "bool",

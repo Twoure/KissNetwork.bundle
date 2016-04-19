@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import os
-import re
 import urllib
 import subprocess
 from io import open
