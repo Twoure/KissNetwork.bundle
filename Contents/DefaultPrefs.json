@@ -10,8 +10,15 @@
     "id": "server",
     "label": "Prefered Video Server",
     "type": "enum",
-    "values": ["KissNetwork", "Stream", "Openload"],
+    "values": ["KissNetwork", "Openload", "Stream"],
     "default": "KissNetwork"
+  },
+  {
+    "id": "dl_strategy",
+    "label": "Stream.Moe Fetch Program",
+    "type": "enum",
+    "values": ["cURL", "wget"],
+    "default": "cURL"
   },
   {
     "id": "kissanime",

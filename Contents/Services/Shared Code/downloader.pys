@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import os
+import re
+import urllib
+import subprocess
+from io import open
+
+def is_tool(name):
+    """Check program exist"""
+
+    try:
+        devnull = open(os.devnull)
+        subprocess.Popen([name], stdout=devnull, stderr=devnull).communicate()
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            Log.Error('* is_tool Error: Something went wrong when testing \"%s\"' %name)
+            Log.Error('* is_tool Error: %s' %str(e))
+            return False
+    return True
+
+def get_streammoe_url(input_url, strategy):
+    """
+    Get Stream.Moe video URL
+    Download temp page with either curl or wget
+    then search temp page for video URL
+    Currently only curl works
+    """
+
+    match = []
+    try:
+        if strategy == 'curl':
+            method = [strategy, '-qs', input_url]
+        elif 'Windows' in os.uname()[0]:
+            method = [strategy, '-q', '-O', 'NUL', input_url]
+        else:
+            method = [strategy, '-qO-', input_url, '&> /dev/null']
+        proc = subprocess.Popen(method, stdout=subprocess.PIPE)
+
+        while True:
+            line = proc.stdout.readline()
+            if line != '':
+                node = Regex(r'(https?\:\/\/\w+\.stream\.moe(?:\/|\:\d+\/)files\/.+?)(?:\'|\")').search(line.rstrip())
+                if node:
+                    url_dirty = node.group(1).rstrip('\\')
+                    url_clean = urllib.quote(url_dirty, ':/[]')
+                    match.append(url_clean)
+            else:
+                break
+    except Exception as e:
+        Log.Error('* StreamMoe Error: Something went wrong, cannot access %s' %input_url)
+        Log.Error('* StreamMoe Error: %s' %str(e))
+
+    if match:
+        return match[0]
+    return False

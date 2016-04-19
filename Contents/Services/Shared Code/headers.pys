@@ -171,8 +171,12 @@ def ElementFromURL(url):
     return html
 
 ####################################################################################################
-def Request(url):
+def Request(url, headers=None):
     """setup requests text page"""
 
-    page = requests.get(url, headers=GetHeadersForURL(url)).text
+    if headers:
+        page = requests.get(url, headers=headers).text
+    else:
+        page = requests.get(url, headers=GetHeadersForURL(url)).text
+
     return page

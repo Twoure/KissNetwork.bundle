@@ -9,15 +9,8 @@ import metadata as Metadata
 import subprefs as SubPrefs
 from RedirectFollower import get_url_redirect
 from openload import decode_openload
-import urllib2
-#import os
-#import sys
-#
-#BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\\\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
-#LIB_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Libraries', 'Shared')
-#if LIB_PATH not in sys.path:
-#    sys.path.append(LIB_PATH)
-#import requests
+from downloader import is_tool
+from downloader import get_streammoe_url
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -145,14 +138,14 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Client.Version     = %s' %Client.Version)
 
     prefs = get_prefs()
+    strategy = 'curl' if prefs['dl_strategy'] == '0' else 'wget'
     if prefs['server'] == '1':
-        req_url = url + '&s=stream'
-    elif prefs['server'] == '2':
         req_url = url + '&s=openload'
+    elif (prefs['server'] == '2') and (is_tool(strategy)):
+        req_url = url + '&s=stream'
     else:
         req_url = url
 
-    #page_text = HTTP.Request(req_url, headers=Headers.GetHeadersForURL(url)).content
     page_text = Headers.Request(req_url)
 
     onedrive = Regex('src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
@@ -165,8 +158,9 @@ def PlayVideo(url, m, **kwargs):
         Log.Debug('* OpenLoad URL       = %s' %openload.group(1))
         vurl = get_openload_url(openload.group(1))
     elif streammoe:
+        Log.Debug('* StreamMoe Strategy = %s' %strategy)
         Log.Debug('* StreamMoe URL      = %s' %streammoe.group(1))
-        vurl = get_streammoe_url(streammoe.group(1))
+        vurl = get_streammoe_url(streammoe.group(1), strategy)
     else:
         vurl = get_googlevideo_url(page_text, url, m)
     Log.Debug('* PlayVideo URL      = %s' %vurl)
@@ -345,37 +339,6 @@ def get_openload_url(openload_url):
     return url
 
 ####################################################################################################
-def get_streammoe_url(streammoe_url):
-    """
-    Testing stream.moe URL support
-    Curretnly Stream.Moe gives an ssl error
-    <urlopen error [Errno 1] _ssl.c:504: error:14077438:SSL routines:SSL23_GET_SERVER_HELLO:tlsv1 alert internal error>
-    This is due to a tls version issue between the site and python2.7
-    On my own python2.7 outside of Plex, I was able to solve the issue but cannot translate it to Plex Framwork
-    Tried using Proxy site, but the video URL's have a hash tied to the request IP,
-    so proxy does not work for playing the final video URL
-    """
-
-    streammoe_url = streammoe_url.replace('embed-', '').replace('.html', '')
-    try:
-        #r = requests.get(streammoe_url).text
-        #proxy = 'https://sslsecureproxy.com/secure.php?u=%s&b=0&f=norefer'
-        #url = proxy % urllib2.quote(streammoe_url, '')
-        #r = HTTP.Request(url).content
-        r = HTTP.Request(streammoe_url).content
-    except Exception as e:
-        Log.Error('* StreamMoe Error: Something went wrong, cannot access %s' %streammoe_url)
-        Log.Error('* StreamMoe Error: %s' %str(e))
-        r = 'none'
-    sm_url_test = Regex('(https?\:\/\/\w+\.stream\.moe\/files\/.+?)\"').search(r)
-    if sm_url_test:
-        test = sm_url_test.group(1).rstrip('\\')
-        return urllib2.quote(test, ':/[]')
-    else:
-        Log.Error('* StreamMoe Error: No Video URL found.')
-        return False
-
-####################################################################################################
 def get_prefs():
     """
     Get Prefs
@@ -391,5 +354,9 @@ def get_prefs():
 
     if not 'server' in prefs.keys():
         prefs.update({'server': '0'})
+
+    if not 'dl_strategy' in prefs.keys():
+        # 0=curl, 1=wget
+        prefs.update({'dl_strategy': '0'})
 
     return prefs
