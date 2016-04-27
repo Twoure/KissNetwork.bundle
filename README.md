@@ -33,7 +33,7 @@ KissNetwork
   - [Anime, Cartoon, Drama, Manga](#anime-cartoon-drama-manga)
   - [Manga, Comic](#manga-comic)
   - [Plex Home Theater](#plex-home-theater)
-  - [OpenLoad-Stream](#openload)
+  - [OpenLoad, Stream](#openload-stream)
 - [Plans](#plans)
   - [General](#general-1)
   - [Bookmarks](#bookmarks)
@@ -90,8 +90,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Unzip and rename the folder to "KissNetwork.bundle"
   - Copy "KissNetwork.bundle" into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
   - ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
-
-Alternatively this channel can be installed via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle).
+- Alternatively this channel can be installed via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle).
 
 [Table of Contents](#table-of-contents)
 
