@@ -7,10 +7,14 @@ import headers as Headers
 import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
-from RedirectFollower import get_url_redirect
+#from RedirectFollower import get_url_redirect
 from openload import decode_openload
 from downloader import is_tool
 from downloader import get_streammoe_url
+import kissenc
+import requests
+
+KissEnc = kissenc.KissEnc()
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -148,9 +152,9 @@ def PlayVideo(url, m, **kwargs):
 
     page_text = Headers.Request(req_url)
 
-    onedrive = Regex('src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
-    openload = Regex('src\=\"(https?\:\/\/openload.+?)\"').search(page_text)
-    streammoe = Regex('src\=\"(https?\:\/\/stream\.moe\/embed.+?)\"').search(page_text)
+    onedrive = Regex(r'src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
+    openload = Regex(r'src\=\"(https?\:\/\/openload.+?)\"').search(page_text)
+    streammoe = Regex(r'src\=\"(https?\:\/\/stream\.moe\/embed.+?)\"').search(page_text)
     if onedrive:
         Log.Debug('* OneDrive URL       = %s' %onedrive.group(1))
         vurl = get_onedrive_url(onedrive.group(1))
@@ -169,7 +173,7 @@ def PlayVideo(url, m, **kwargs):
         Log.Debug('* Samsung Fix ON')
         Log.Debug('* Note: Videos will NO longer play outside the network connection.')
         try:
-            vurl = get_url_redirect(vurl)
+            vurl = get_url_redirect_v2(vurl)
             if 'googlevideo' in vurl and not vurl == False:
                 Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
             else:
@@ -202,6 +206,7 @@ def get_googlevideo_url(page_text, url, m):
     html = HTML.ElementFromString(page_text)
     olist = html.xpath('//select[@id="selectQuality"]/option')
     type_title = Common.GetTypeTitle(url)
+    type_title_lower = type_title.lower()
     if not olist:
         Log.Error('* This Video is broken, Kiss%s is working to fix it.' %type_title)
         raise Ex.MediaNotAvailable
@@ -223,14 +228,17 @@ def get_googlevideo_url(page_text, url, m):
     rfmt_dict = {'1080': '37', '720': '22', '480': '59', '360': '18'}
 
     for node in olist:
-        vurl_old = String.Base64Decode(node.get('value'))
+        if type_title_lower == 'anime':
+            vurl_old = String.Base64Decode(node.get('value'))
+        else:
+            vurl_old = KissEnc.decrypt(node.get('value'), type_title_lower)
         if 'googlevideo' in vurl_old:
             try:
                 itag = vurl_old.split('=m')[1]
                 vurls.append((vurl_old, fmt_dict[itag]))
             except:
                 itag = 'No itag Found!'
-                itag_test = Regex('itag\=(\d+)').search(vurl_old)
+                itag_test = Regex(r'itag\=(\d+)').search(vurl_old)
                 if itag_test:
                     itag = str(itag_test.group(1))
                     if itag in fmt_dict.keys():
@@ -276,16 +284,16 @@ def get_onedrive_url(onedrive_url):
 
     # Pull out the GetItemsLoaderConfing and store info in data dictionary
     for node in html.xpath('//script[@type="text/javascript"]'):
-        match = Regex('(?s)GetItemsLoaderConfig\ \=\ (\{.*?\})\;').search(node.text_content())
+        match = Regex(r'(?s)GetItemsLoaderConfig\ \=\ (\{.*?\})\;').search(node.text_content())
         if match:
             test = match.group(1).replace('\n\r', '').strip()
             for i, s in enumerate(['cid', 'skyApiDomain', 'mkt', 'appId', 'canary', 'oauthToken', 'authKey', 'ticket', 'gb', 'rset']):
                 if i == 0:
-                    data = {s: Regex('%s\:\ \'(.*)\'\,' %s).search(test).group(1)}
+                    data = {s: Regex(r'%s\:\ \'(.*)\'\,' %s).search(test).group(1)}
                 elif not s == 'rset':
-                    data.update({s: Regex('%s\:\ \'(.*)\'\,' %s).search(test).group(1)})
+                    data.update({s: Regex(r'%s\:\ \'(.*)\'\,' %s).search(test).group(1)})
                 else:
-                    data.update({s: Regex('%s\:\ \'(.*?)\'' %s).search(test).group(1)})
+                    data.update({s: Regex(r'%s\:\ \'(.*?)\'' %s).search(test).group(1)})
             break
 
     # parse parameters in URL
@@ -328,15 +336,28 @@ def get_openload_url(openload_url):
     """
 
     try:
-        base = Regex('(https?:\/\/openload.+?)\/\w+\/(.*?)(?:\/|$)').search(openload_url)
+        base = Regex(r'(https?:\/\/openload.+?)\/\w+\/(.*?)(?:\/|$)').search(openload_url)
         s = HTTP.Request(base.group(1) + '/embed/' + base.group(2), encoding=('utf-8')).content
         url = decode_openload(s)
+        r = requests.head(url)
+        url = r.headers['location']
     except Exception as e:
         Log.Error('* OpenLoad Error: Something went wrong, cannot access %s' %openload_url)
         Log.Error('* OpenLoad Error: %s' %str(e))
         url = False
 
     return url
+
+####################################################################################################
+def get_url_redirect_v2(input_url):
+    """URL Redirect V2 using requests.head"""
+
+    r = requests.head(input_url)
+    if 'location' in r.headers.keys():
+        return r.headers['location']
+    else:
+        Log.Debug('* URL Redirect: No Redirect URL for \"%s\"' %input_url)
+        return input_url
 
 ####################################################################################################
 def get_prefs():

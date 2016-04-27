@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+"""
+kissenc.min.js for Kissasian and Kisscaroon
+Created by: Twoure
+Date:       04/26/2016
+"""
+import binascii
+import pyaes
+from sha2 import sha256 as SHA256
+from pbkdf2 import pbkdf2_hmac as PBKDF2
+
+class KissEnc:
+    def __init__(self):
+        #kissasian
+        da = "GnELl19G8trombeuR"
+        di = "32b812e9a1321ae0e84af660c4722b3a"
+        self.derived_drama_key = SHA256(da).digest()
+        self.derived_drama_iv = binascii.a2b_hex(di)
+        #kisscartoon
+        ca = "WrxLl3rnA48iafgCy"
+        ci = "a5e8d2e9c1721ae0e84ad660c472c1f3"
+        cs = "CartKS$2141#"
+        self.derived_cartoon_key = PBKDF2('sha1', ca, cs, 1000, 16)
+        self.derived_cartoon_iv = binascii.a2b_hex(ci)
+
+    def unpad_string(self, text, k=16):
+        """
+        Remove the PKCS#7 padding from a text string
+        Made by https://gist.github.com/chrix2
+        """
+        nl = len(text)
+        val = int(binascii.hexlify(text[-1]), 16)
+        if val > k:
+            raise ValueError('Input is not padded or padding is corrupt')
+        l = nl - val
+        return text[:l]
+
+    def ensure_unicode(self, v):
+        if isinstance(v, str):
+            v = v.decode('utf8')
+        return unicode(v)
+
+    def decrypt(self, f, kind):
+        if kind == 'drama':
+            return self.decrypt_input(f, self.derived_drama_key, self.derived_drama_iv)
+        else:
+            return self.decrypt_input(f, self.derived_cartoon_key, self.derived_cartoon_iv)
+
+    def decrypt_input(self, f, key, iv):
+        """
+        decrypt video URL input depending on what site it came from
+        """
+        aes = pyaes.AESModeOfOperationCBC(key, iv)
+        etb = binascii.a2b_base64(f)
+
+        if len(etb) > 16:
+            dt = []
+            for i in xrange(len(etb)/16):
+                d = aes.decrypt(etb[i*(16):(i+1)*(16)])
+                dt.append(d)
+            r = ''.join(dt)
+            r = self.unpad_string(r)
+            return self.ensure_unicode(r)
+        else:
+            Log.Error('* Kissenc Error: ciphertext block is not lager than 16')
+            raise ValiueError('ciphertext block is not lager than 16')
