@@ -1163,7 +1163,7 @@ def ShowSubPage(item_info, show_info):
     html = Headers.ElementFromURL(item_info['page_url'])
     ep_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if ep_list == 'Not Yet Aired':
-        return MessageContainer('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+        return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
     else:
         tags = Metadata.string_to_list(Common.StringCode(string=show_info['tags'], code='decode')) if show_info['tags'] else []
         thumb = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
