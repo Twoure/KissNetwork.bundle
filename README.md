@@ -30,9 +30,10 @@ KissNetwork
   - [Updater](#updater)
 - [Issues](#issues)
   - [General](#general)
-  - [Anime, Cartoon, Comic, Drama, Manga](#anime-cartoon-comic-drama-manga)
+  - [Anime, Cartoon, Drama, Manga](#anime-cartoon-drama-manga)
+  - [Manga, Comic](#manga-comic)
   - [Plex Home Theater](#plex-home-theater)
-  - [OpenLoad](#openload)
+  - [OpenLoad-Stream](#openload)
 - [Plans](#plans)
   - [General](#general-1)
   - [Bookmarks](#bookmarks)
@@ -207,14 +208,16 @@ Alternatively this channel can be installed via [WebTools.bundle](https://github
 - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 
-##### Anime, Cartoon, Comic, Drama, Manga
+##### Anime, Cartoon, Drama, Manga
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
-- Kisscartoon has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
+- **Kisscartoon** has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
 - Cover art does not load for Videos
   - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
   - I have added a local cover image caching option to work around cloudflare
-- Kissmanga/ReadComicOnline is not the most useful reader for the Plex/Web client, but works reasonably well for Smart phones and Plex Media Center.
 - Cookie timeouts change too often, cannot parse expire time yet
+
+##### Manga, Comics
+- Kissmanga/ReadComicOnline is not the most useful reader for the _Plex Web_ client, but works reasonably well for Smart Phones, PMP, and PHT.
 
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
