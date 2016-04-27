@@ -12,7 +12,7 @@ from io import open
 import json
 
 # constants
-BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\\\?').rsplit('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
+BUNDLE_PATH = os.path.join(os.getcwd().lstrip('\\\?').split('Plug-in Support')[0], 'Plug-ins', 'KissNetwork.bundle')
 MODULE_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Libraries', 'Shared')
 SUPPORT_PATH = os.path.join(BUNDLE_PATH.split('Plug-ins')[0], 'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork')
 DOMAIN_FILE = os.path.join(SUPPORT_PATH, 'Domain_Dict')
@@ -31,7 +31,7 @@ if MODULE_PATH not in sys.path:
     Log.Debug('* %s' %MODULE_PATH)
     Log.Debug('*' * 80)
 
-# Import cfscrape from MODULE_PATH
+# Import Custom modules from MODULE_PATH
 import requests
 
 ####################################################################################################
@@ -56,7 +56,7 @@ def SetDomainURL(string, domain=None, count=0):
     This will find the new domain and return it
     """
 
-    Log('string = %s' %string)
+    Log.Debug('* string = %s' %string)
 
     if string == 'anime':
         test_one = 'https://kissanime.to'  # updated test to match current site
@@ -71,37 +71,50 @@ def SetDomainURL(string, domain=None, count=0):
     elif string == 'retry':
         test_one = domain
 
-    r = requests.get(test_one, headers={'user-agent': USER_AGENT}).headers
-    Log('headers = %s' %str(r))
-    count += 1
-    data = r
-    for item in data['set-cookie'].split(';'):
-        if 'domain' in item:
-            r_domain = ('http://' if not 'https' in test_one else 'https://')  + item.split('=')[1].lstrip('.')
-            if r_domain == test_one:
-                Log('Domain %s is the same as original %s' %(r_domain, test_one))
-                type_title = GetTypeTitle(test_one)
-                Log('Setting %s domain to %s' %(type_title, test_one))
-                return test_one
-            elif count < 3:
-                Log('Domain %s is different from original %s' %(r_domain, test_one))
-                Log('Try %i of 3' %count)
-                return SetDomainURL(string='retry', domain=r_domain, count=count)
+    try:
+        r = requests.head(test_one, headers={'user-agent': USER_AGENT})
+    except Exception as e:
+        Log.Error('* SetDomainURL Error: Unable to handle URL \"%s\"' %test_one)
+        Log.Error('* SetDomainURL Error: %s' %str(e))
+        return test_one
 
-    if not r_domain:
-        Log.Critical('Cannot find domain for %s' %string.title())
-        return
+    status = int(r.status_code)
+    Log.Debug('* Header Status Code = %s' %str(status))
+
+    if status == 301 and count < 3:
+        count += 1
+        try:
+            r_domain = r.headers['location']
+            r_domain = r_domain[:-1] if r_domain.endswith('/') else r_domain
+            Log.Debug('* Current Domain \"%s\" different from test \"%s\"' %(r_domain, test_one))
+            Log.Debug('* Retesting NEW Domain: Try %i of 3' %count)
+            return SetDomainURL(string='retry', domain=r_domain, count=count)
+        except Exception as e:
+            Log.Error('* SetDomainURL Error: Unable to process headers for \"%s\"' %test_one)
+            Log.Error('* SetDomainURL Error: %s' %str(e))
+    elif status == 503 or status == 200:
+        url = r.url[:-1] if r.url.endswith('/') else r.url
+        if url == test_one:
+            Log.Debug('* Current Domain \"%s\" and test \"%s\" are the same.' %(url, test_one))
+        else:
+            Log.Error('* SetDomainURL Error: Status Code check FAILD.')
+            Log.Error('* SetDomainURL Error: Current Domain \"%s\" and \"%s\" are NOT the same.' %(url, test_one))
+    else:
+        Log.Critical('* SetDomainURL Error: Cannot find Domain for %s' %string.title())
+
+    return test_one
 
 ####################################################################################################
 def SaveDomainDict(content=dict):
     """ Save Domains to file json file """
 
-    Log.Debug('Saving Domains to file')
+    Log.Debug('* Saving Domains to file')
 
     with open(DOMAIN_FILE, 'wb') as f:
         json.dump(content, f, indent=4, sort_keys=True, separators=(',', ': '))
 
-    Log.Debug('Domain Dictionary file has been saved')
+    Log.Debug('* Domain Dictionary file has been saved')
+    Log.Debug('*' * 80)
 
     return
 
@@ -110,6 +123,7 @@ def CreateDomainDict():
     """setup the domain dict"""
 
     setup_list = ['anime', 'asian', 'cartoon', 'manga', 'comic']
+    Log.Debug('*' * 80)
     for i, item in enumerate(setup_list):
         if i == 0:
             temp_dict = {item.title(): SetDomainURL(item)}
@@ -123,7 +137,7 @@ def LoadDomainDict():
     """load domain dict to json format string"""
 
     if os.path.isfile(DOMAIN_FILE):
-        Log.Info('loading domain dict in json format')
+        Log.Debug('* loading domain dict in json format')
         with open(DOMAIN_FILE) as data_file:
             data = json.load(data_file)
 
