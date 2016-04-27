@@ -13,11 +13,11 @@ KissNetwork
   - [Preferences](#preferences)
     - [Sort List by...](#sort-list-by)
     - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
+    - [Preferred Video Server](#preferred-video-server)
     - [Cache All Covers Locally](#cache-all-covers-locally)
     - [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally)
     - [Samsung Fix (disables remote play)](#samsung-fix-disables-remote-play)
     - [Force Transcoding (enables remote play)](#force-transcoding-enables-remote-play)
-    - [Use OpenLoad instead of GoogleVideo](#use-openload-instead-of-googlevideo)
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
     - [Auth Admin Through Plex.tv](#auth-admin-through-plextv)
@@ -70,14 +70,15 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
   - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 0.9.16.2
+  - Ubuntu 14.04 LTS: PMS version 0.9.16.6
   - Windows 7 & 10: PMS version 0.9.12.13
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
-  - Android (4.4.2) (Plex Client App v4.23.1.548)
-  - Plex/Web (2.5.9)
+  - Android (4.4.2) (Plex Client App v4.24.2.563)
+  - Plex Media Player (1.0.6)
+  - Plex/Web (2.6.1)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
@@ -88,6 +89,8 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Unzip and rename the folder to "KissNetwork.bundle"
   - Copy "KissNetwork.bundle" into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
   - ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
+
+Alternatively this channel can be installed via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle).
 
 [Table of Contents](#table-of-contents)
 
@@ -100,6 +103,13 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### View Anime, Cartoon, Comic, Drama, Manga
 - If site enabled then it will be availible in the Channel for viewing. This includes Bookmarks and Searching.
+
+##### Preferred Video Server
+- Select a Default Video Server from the drop-down list
+- Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), [Stream](https://stream.moe/)
+  - **Note:** Stream is experimental and requires [cURL](https://curl.haxx.se/). It is set to revert to GoogleVideo links if cURL is not present.
+  - Default behavior: Use GoogleVideo links when available, otherwise try using the provided links
+  - If a server other than _KissNetwork_ is selected: Use selected video server, and default to GoogleVideo links when selected server fails.
 
 ##### Cache All Covers Locally
 - **Enabled:** Will download and index cover images
@@ -123,10 +133,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Resolution will depend on available streams and client settings
   - Overrides [Samsung Fix](#samsung-fix-disables-remote-play), because PMS will properly handle any URL Redirects
 - **Disabled(_default_):** Transcoding depends on clients settings/support
-
-##### Use OpenLoad instead of GoogleVideo
-- **Enabled:** If both OpenLoad and GoogleVideo links provieded, use OpenLoad
-- **Disabled(_default_):** Use the default links provided, normally GoogleVideo but could be OpenLoad, OneDrive, or Steamy.moe
 
 ##### Allow Adult Content
 - **Enabled:** Allows Adult Content to be viewed
@@ -214,8 +220,8 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
   - Working to fix this.  Have new message.py but have yet to integrate with bookmarks fully
 
-##### OpenLoad
-- URL Redirect Follower does not work for OpenLoad links.  If your client needs the fully expanded link, like the Samsung TVs, then use _Force Transcoding_ instead of _Samsung Fix_.  Force transcoding will make the video compatible with all clients.
+##### OpenLoad, Stream
+- OpenLoad and Stream links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
 
 [Table of Contents](#table-of-contents)
 
@@ -224,12 +230,14 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### General
 - Might look into grouping seasons of the same show for the directory list
 - Continue Improving Metadata
+- Remove Page previous to Season Page if only one Season present
 
 ##### Bookmarks
 - Add option to add all seasons at once for a show
 - Group seasons into one show
 - Create separate directories for TV and Movies
 - Might move bookmarks to own file like I did with Header_Dict
+- Add Bookmark backup option, with function to restore old bookmarks
 
 [Table of Contents](#table-of-contents)
 

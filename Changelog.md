@@ -1,5 +1,23 @@
 # ChangeLog
 
+##### 1.1.8
+- _04/27/2016_
+  - Fixes:
+    - KissAsian and KissCartoon new Video URL encryption
+    - Header_Dict empty file check
+    - ShowSubPage message container
+    - cfscrape status_code error: was being called before execution
+  - Updates:
+    - Optimize Openload, Domain, and GetThumb code
+    - Updated requests lib to v2.9.1
+    - Switched all Kiss URLs to requests library, no longer using Plex Framework
+    - Added new Stream.moe server
+      - Requires cURL to work
+      - Only tested on Linux
+    - Switched to requests.head in domain.pys
+    - Switched to requests.head for URL Redirect
+    - Up-to-date User-Agent
+
 ##### 1.1.7
 - _03/21/2016_
   - Fixed Service Code file path error

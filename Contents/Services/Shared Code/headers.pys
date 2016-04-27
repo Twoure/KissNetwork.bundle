@@ -16,7 +16,7 @@ import common as Common
 # constants
 HEADER_FILE = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
 
-# Import Shared Libraries Items
+# Import Shared Library Modules
 import cfscrape
 import requests
 

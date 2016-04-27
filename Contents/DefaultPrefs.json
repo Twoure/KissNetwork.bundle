@@ -8,7 +8,7 @@
   },
   {
     "id": "server",
-    "label": "Prefered Video Server",
+    "label": "Preferred Video Server",
     "type": "enum",
     "values": ["KissNetwork", "Openload", "Stream"],
     "default": "KissNetwork"
