@@ -2,7 +2,7 @@
 """
 kissenc.min.js for Kissasian and Kisscaroon
 Created by: Twoure
-Date:       04/26/2016
+Date:       04/27/2016
 """
 import binascii
 import pyaes
@@ -29,7 +29,7 @@ class KissEnc:
         Made by https://gist.github.com/chrix2
         """
         nl = len(text)
-        val = int(binascii.hexlify(text[-1]), 16)
+        val = int(binascii.b2a_hex(text[-1]), 16)
         if val > k:
             raise ValueError('Input is not padded or padding is corrupt')
         l = nl - val
@@ -41,19 +41,20 @@ class KissEnc:
         return unicode(v)
 
     def decrypt(self, f, kind):
+        """
+        decrypt video URL input depending on what site it came from
+        """
         if kind == 'drama':
             return self.decrypt_input(f, self.derived_drama_key, self.derived_drama_iv)
         else:
             return self.decrypt_input(f, self.derived_cartoon_key, self.derived_cartoon_iv)
 
     def decrypt_input(self, f, key, iv):
-        """
-        decrypt video URL input depending on what site it came from
-        """
+        """decrypt video URL"""
         aes = pyaes.AESModeOfOperationCBC(key, iv)
         etb = binascii.a2b_base64(f)
 
-        if len(etb) > 16:
+        if len(etb) >= 16:
             dt = []
             for i in xrange(len(etb)/16):
                 d = aes.decrypt(etb[i*(16):(i+1)*(16)])
@@ -62,5 +63,5 @@ class KissEnc:
             r = self.unpad_string(r)
             return self.ensure_unicode(r)
         else:
-            Log.Error('* Kissenc Error: ciphertext block is not lager than 16')
-            raise ValiueError('ciphertext block is not lager than 16')
+            Log.Error('* Kissenc Error: ciphertext block is not larger than 16')
+            raise ValueError('ciphertext block is not larger than 16')
