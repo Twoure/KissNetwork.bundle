@@ -18,7 +18,6 @@ from AuthTools import CheckAdmin
 from DevTools import add_dev_tools
 from DevTools import SaveCoverImage
 from DevTools import SetUpCFTest
-from DevTools import ResetCustomDict
 from slugify import slugify
 
 # import Shared Service Code
@@ -2005,16 +2004,30 @@ def ElementFromURL(url):
     return html
 
 ####################################################################################################
-def get_element_from_url(url, name):
+def get_element_from_url(url, name, count=0):
     """error handling for URL requests"""
 
     try:
         page = requests.get(url, headers=Headers.GetHeadersForURL(url))
-        Data.Save(name, page.text)
-        html = HTML.ElementFromString(page.text)
+        if int(page.status_code) == 503:
+            Log.Error('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
+            if count <= 1:
+                count += 1
+                Headers.GetHeadersForURL(url, update=True)
+                return get_element_from_url(url, name, count)
+            else:
+                Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
+                if Data.Exists(name):
+                    Log.Error('* Using old cached page')
+                    html = HTML.ElementFromString(page.text)
+                else:
+                    html = HTML.Element('head', 'Error')
+        else:
+            Data.Save(name, page.text)
+            html = HTML.ElementFromString(page.text)
     except Exception as e:
-        Log.Error('* ElementFromURL Error: Cannot load %s' %url)
-        Log.Error('* ElementFromURL Error: %s' %str(e))
+        Log.Error('* get_element_from_url Error: Cannot load %s' %url)
+        Log.Error('* get_element_from_url Error: %s' %str(e))
         html = HTML.Element('head', 'Error')
 
     return html
