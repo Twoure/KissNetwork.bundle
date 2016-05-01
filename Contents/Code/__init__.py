@@ -7,17 +7,14 @@
 import os
 import sys
 import shutil
+import messages
+import requests
 from io import open
-import urllib2
 from time import sleep
 from updater import Updater
-from DumbTools import DumbKeyboard
-from DumbTools import DumbPrefs
-import messages
+from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
-from DevTools import add_dev_tools
-from DevTools import SaveCoverImage
-from DevTools import SetUpCFTest
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest
 from slugify import slugify
 
 # import Shared Service Code
@@ -25,9 +22,6 @@ Headers = SharedCodeService.headers
 Domain = SharedCodeService.domain
 Common = SharedCodeService.common
 Metadata = SharedCodeService.metadata
-
-# import custom modules
-import requests
 
 # set global variables
 PREFIX = '/video/kissnetwork'
@@ -154,9 +148,10 @@ def MainMenu():
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
 
-    admin = CheckAdmin()
+    #admin = CheckAdmin()
 
-    oc = ObjectContainer(title2=TITLE, no_cache=admin)
+    #oc = ObjectContainer(title2=TITLE, no_cache=admin)
+    oc = ObjectContainer(title2=TITLE)
 
     cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
 
@@ -202,8 +197,8 @@ def MainMenu():
     status = Dict['Bookmark_Deleted']
     Dict.Save()
 
-    if admin:
-        Updater(PREFIX + '/updater', oc)
+    #if admin:
+        #Updater(PREFIX + '/updater', oc)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']
@@ -228,7 +223,7 @@ def MainMenu():
 
     if Client.Product in DumbPrefs.clients:
         DumbPrefs(PREFIX, oc, title='Preferences', thumb=prefs_thumb)
-    elif admin:
+    elif CheckAdmin():
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
@@ -343,7 +338,7 @@ def TopList(type_title, url, art):
 def About():
     """Return Resource Directory Size, and KissNetwork's Current Channel Version"""
 
-    oc = ObjectContainer(title2='About / Help')
+    oc = ObjectContainer(title2='About / Help', no_cache=True)
 
     # Get Resources Directory Size
     d = GetDirSize(Common.RESOURCES_PATH)
@@ -356,8 +351,11 @@ def About():
         Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
     version = plist['CFBundleVersion']
     # show developer tools if enabled in prefs and current user is admin
-    if Prefs['devtools'] and CheckAdmin():
-        add_dev_tools(oc)
+    if CheckAdmin():
+        Updater(PREFIX + '/updater', oc)
+
+        if Prefs['devtools']:
+            add_dev_tools(oc)
 
     oc.add(DirectoryObject(key=Callback(About),
         title='Version %s' %version, summary='Current Channel Version'))
@@ -393,7 +391,7 @@ def ValidatePrefs(start=False, skip=False):
 def BookmarksMain(title, status):
     """Create Bookmark Main Menu"""
 
-    if status['bool']:
+    if (status['bool']) and (Client.Platform not in ['Plex Home Theater', 'OpenPHT']):
         oc = ObjectContainer(title2=title, header="My Bookmarks",
             message='%s bookmarks have been cleared.' % status['type_title'], no_cache=True)
     else:
@@ -589,8 +587,6 @@ def GenreList(url, title, art):
     genre_url = url + '/%sList' % title  # setup url for finding current Genre list
 
     # formate url response into html for xpath
-    #html = HTML.ElementFromURL(genre_url, headers=Headers.GetHeadersForURL(genre_url))
-    #html = Headers.ElementFromURL(genre_url)
     html = ElementFromURL(genre_url)
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
@@ -621,8 +617,6 @@ def CountryList(url, title, art):
 
     country_url = url + '/DramaList'  # setup url for finding current Country list
 
-    #html = HTML.ElementFromURL(country_url, headers=Headers.GetHeadersForURL(country_url))
-    #html = Headers.ElementFromURL(country_url)
     html = ElementFromURL(country_url)
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
@@ -687,8 +681,6 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     Logger('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
     Logger('Category= %s | URL= %s' % (pname, item_url))
 
-    #html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
-    #html = Headers.ElementFromURL(item_url)
     html = ElementFromURL(item_url)
 
     pages = "Last Page"
@@ -851,8 +843,6 @@ def HomePageList(tab, category, base_url, type_title, art):
     main_title = '%s | %s' % (type_title, category)
     oc = ObjectContainer(title2=main_title, art=R(art))
 
-    #html = HTML.ElementFromURL(base_url, headers=Headers.GetHeadersForURL(base_url))
-    #html = Headers.ElementFromURL(base_url)
     html = ElementFromURL(base_url)
 
     # scrape home page for Top (Day, Week, and Month) list
@@ -914,8 +904,6 @@ def ItemPage(item_info):
     title2 = '%s | %s' % (type_title, item_title_decode)
     oc = ObjectContainer(title2=title2, art=R(art))
 
-    #html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
-    #html = Headers.ElementFromURL(page_url)
     html = ElementFromURL(page_url)
     genres, genres_list = Metadata.GetGenres(html)
 
@@ -1058,8 +1046,6 @@ def MovieSubPage(item_info, movie_info):
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
-    #html = HTML.ElementFromURL(item_info['page_url'], headers=Headers.GetHeadersForURL(item_info['base_url']))
-    #html = Headers.ElementFromURL(item_info['page_url'])
     html = ElementFromURL(item_info['page_url'])
 
     movie_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
@@ -1094,8 +1080,6 @@ def MangaSubPage(item_info, manga_info):
     title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
-    #html = HTML.ElementFromURL(item_info['page_url'], headers=Headers.GetHeadersForURL(item_info['base_url']))
-    #html = Headers.ElementFromURL(item_info['page_url'])
     html = ElementFromURL(item_info['page_url'])
 
     cp_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
@@ -1129,8 +1113,6 @@ def GetPhotoAlbum(url, source_title, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
 
     # get relevant javascript block
-    #html = HTML.ElementFromURL(url, headers=Headers.GetHeadersForURL(url))
-    #html = Headers.ElementFromURL(url)
     html = ElementFromURL(url)
 
     for java in html.xpath('//script[@type="text/javascript"]'):
@@ -1171,8 +1153,6 @@ def ShowSubPage(item_info, show_info):
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
-    #html = HTML.ElementFromURL(item_info['page_url'], headers=Headers.GetHeadersForURL(item_info['base_url']))
-    #html = Headers.ElementFromURL(item_info['page_url'])
     html = ElementFromURL(item_info['page_url'])
     ep_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if ep_list == 'Not Yet Aired':
@@ -1262,8 +1242,6 @@ def SeasonSubPage(season_info):
 
     oc = ObjectContainer(title2=title2, art=R(season_info['art']))
 
-    #html = HTML.ElementFromURL(season_info['page_url'], headers=Headers.GetHeadersForURL(season_info['page_url']))
-    #html = Headers.ElementFromURL(season_info['page_url'])
     html = ElementFromURL(season_info['page_url'])
 
     ep_list = GetItemList(html, season_info['page_url'], season_info['item_title'], season_info['type_title'])
@@ -1365,8 +1343,6 @@ def Search(query=''):
         type_title = 'Drama' if b_prefs_name == 'kissasian' else (b_prefs_name.split('kiss')[1].title() if 'kiss' in b_prefs_name else 'Comic')
         art = 'art-%s.jpg' %type_title.lower()
 
-        #html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
-        #html = Headers.ElementFromURL(search_url_filled)
         html = ElementFromURL(search_url_filled)
         if html.xpath('//table[@class="listing"]'):
             return SearchPage(type_title=type_title, search_url=search_url_filled, art=art)
@@ -1384,8 +1360,6 @@ def Search(query=''):
                 Logger('* Search url = %s' %search_url_filled)
                 Logger('* type title = %s' %type_title)
 
-                #html = HTML.ElementFromURL(search_url_filled, headers=Headers.GetHeadersForURL(search_url))
-                #html = Headers.ElementFromURL(search_url_filled)
                 html = ElementFromURL(search_url_filled)
                 if html.xpath('//table[@class="listing"]'):
                     oc.add(DirectoryObject(
@@ -1412,8 +1386,6 @@ def SearchPage(type_title, search_url, art):
     If normal seach result then send to DirectoryList
     """
 
-    #html = HTML.ElementFromURL(search_url, headers=Headers.GetHeadersForURL(search_url))
-    #html = Headers.ElementFromURL(search_url)
     html = ElementFromURL(search_url)
 
     # Check for results if none then give a pop up window saying so
@@ -1496,8 +1468,6 @@ def AddBookmark(item_info):
     Logger('* item to add = %s | %s' %(item_title_decode, item_sys_name), kind='Info')
 
     # setup html for parsing
-    #html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(base_url))
-    #html = Headers.ElementFromURL(page_url)
     html = ElementFromURL(page_url)
 
     # Genres
@@ -1799,8 +1769,6 @@ def UpdateLegacyBookmark(bm_info=dict):
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
 
-    #html = HTML.ElementFromURL(page_url, headers=Headers.GetHeadersForURL(bm_info['base_url']))
-    #html = Headers.ElementFromURL(page_url)
     html = ElementFromURL(page_url)
 
     if bm_info['cover_url'] and base_url in bm_info['cover_url']:
