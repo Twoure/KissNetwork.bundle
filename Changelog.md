@@ -4,6 +4,7 @@
 - _05/01/2016_
   - Fixes:
     - `Kissenc.pys` spelling error, updated an equality
+    - PHT and OpenPHT Bookmark message error when bookmarks cleared
   - Updates:
     - New URL caching
     - New `HTTP 503` error handling for `requests`. Will try and pull fresh headers if `HTTP 503` error occurs.

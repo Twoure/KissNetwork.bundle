@@ -1942,7 +1942,6 @@ def ElementFromURL(url):
     """setup requests html"""
 
     cachetime = Datetime.Now()
-    #timeout = Datetime.Delta(hours=1)
     name = slugify(url) + '__cachetime__%i' %Datetime.TimestampFromDatetime(cachetime)
 
     match = False
