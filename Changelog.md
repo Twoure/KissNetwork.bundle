@@ -1,5 +1,14 @@
 # ChangeLog
 
+##### 1.1.9
+- _05/01/2016_
+  - Fixes:
+    - `Kissenc.pys` spelling error, updated an equality
+  - Updates:
+    - New URL caching
+    - New `HTTP 503` error handling for `requests`. Will try and pull fresh headers if `HTTP 503` error occurs.
+    - Cleaned old code
+
 ##### 1.1.8
 - _04/27/2016_
   - Fixes:

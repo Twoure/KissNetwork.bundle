@@ -192,7 +192,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
 
 ### Updater
-
 - Update button visible only to PMS admin and when update avalible
 - Checks KissNetwork.bundle Github [atom feed](https://github.com/Twoure/KissNetwork.bundle/commits/master.atom) every 12 hours.
 
@@ -232,7 +231,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### General
 - Might look into grouping seasons of the same show for the directory list
 - Continue Improving Metadata
-- Remove Page previous to Season Page if only one Season present
+- Change Itempage to TVShowObject, so have Bookmark function within TVShowObject.
 
 ##### Bookmarks
 - Add option to add all seasons at once for a show
