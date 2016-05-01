@@ -148,10 +148,9 @@ def MainMenu():
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
 
-    #admin = CheckAdmin()
+    admin = CheckAdmin()
 
-    #oc = ObjectContainer(title2=TITLE, no_cache=admin)
-    oc = ObjectContainer(title2=TITLE)
+    oc = ObjectContainer(title2=TITLE, no_cache=admin)
 
     cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
 
@@ -197,8 +196,8 @@ def MainMenu():
     status = Dict['Bookmark_Deleted']
     Dict.Save()
 
-    #if admin:
-        #Updater(PREFIX + '/updater', oc)
+    if admin:
+        Updater(PREFIX + '/updater', oc)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']
@@ -223,7 +222,7 @@ def MainMenu():
 
     if Client.Product in DumbPrefs.clients:
         DumbPrefs(PREFIX, oc, title='Preferences', thumb=prefs_thumb)
-    elif CheckAdmin():
+    elif admin:
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
@@ -338,7 +337,7 @@ def TopList(type_title, url, art):
 def About():
     """Return Resource Directory Size, and KissNetwork's Current Channel Version"""
 
-    oc = ObjectContainer(title2='About / Help', no_cache=True)
+    oc = ObjectContainer(title2='About / Help')
 
     # Get Resources Directory Size
     d = GetDirSize(Common.RESOURCES_PATH)
@@ -351,11 +350,8 @@ def About():
         Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
     version = plist['CFBundleVersion']
     # show developer tools if enabled in prefs and current user is admin
-    if CheckAdmin():
-        Updater(PREFIX + '/updater', oc)
-
-        if Prefs['devtools']:
-            add_dev_tools(oc)
+    if Prefs['devtools'] and CheckAdmin():
+        add_dev_tools(oc)
 
     oc.add(DirectoryObject(key=Callback(About),
         title='Version %s' %version, summary='Current Channel Version'))
