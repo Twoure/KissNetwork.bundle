@@ -17,7 +17,11 @@ import common as Common
 HEADER_FILE = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
 
 # Import Shared Library Modules
-import cfscrape
+try:
+    import cfscrape
+except Exception as e:
+    cfscrape = None
+    Log.Critical('* cfscrape import ERROR: %s' %str(e))
 import requests
 
 ####################################################################################################
@@ -66,7 +70,6 @@ def GetHeadersForURL(url, update=False):
     If cookies have expired then get new ones.
     """
 
-    Log.Debug('*' * 80)
     Log.Debug('* URL to get headers = %s' %url)
 
     # get base url for headers

@@ -9,8 +9,8 @@ import sys
 import shutil
 import messages
 import requests
+import rhtml as RHTML
 from io import open
-from time import sleep
 from updater import Updater
 from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
@@ -137,14 +137,6 @@ def MainMenu():
     # if cfscrape failed then stop the channel, and return error message.
     SetUpCFTest()
     if not Dict['cfscrape_test']:
-        Log.Error(
-            """
-            ----------CFTest Failed----------
-            You need to install a JavaScript Runtime like node.js or equivalent
-            Once JavaScript Runtime installed, Restart channel
-            """
-            )
-        Log.Debug('*' * 80)
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
 
@@ -158,7 +150,6 @@ def MainMenu():
         thumb = 'icon-%s.png' %t.lower()
         rthumb = None if cp_match else R(thumb)
         art = 'art-%s.jpg' %t.lower()
-        #rart = None if cp_match else R(art)
         rart = R(art)
         prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
         new_data = {
@@ -583,7 +574,7 @@ def GenreList(url, title, art):
     genre_url = url + '/%sList' % title  # setup url for finding current Genre list
 
     # formate url response into html for xpath
-    html = ElementFromURL(genre_url)
+    html = RHTML.ElementFromURL(genre_url)
 
     oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
 
@@ -613,7 +604,7 @@ def CountryList(url, title, art):
 
     country_url = url + '/DramaList'  # setup url for finding current Country list
 
-    html = ElementFromURL(country_url)
+    html = RHTML.ElementFromURL(country_url)
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
 
@@ -677,7 +668,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     Logger('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
     Logger('Category= %s | URL= %s' % (pname, item_url))
 
-    html = ElementFromURL(item_url)
+    html = RHTML.ElementFromURL(item_url)
 
     pages = "Last Page"
     nextpg_node = None
@@ -839,7 +830,7 @@ def HomePageList(tab, category, base_url, type_title, art):
     main_title = '%s | %s' % (type_title, category)
     oc = ObjectContainer(title2=main_title, art=R(art))
 
-    html = ElementFromURL(base_url)
+    html = RHTML.ElementFromURL(base_url)
 
     # scrape home page for Top (Day, Week, and Month) list
     for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
@@ -900,7 +891,7 @@ def ItemPage(item_info):
     title2 = '%s | %s' % (type_title, item_title_decode)
     oc = ObjectContainer(title2=title2, art=R(art))
 
-    html = ElementFromURL(page_url)
+    html = RHTML.ElementFromURL(page_url)
     genres, genres_list = Metadata.GetGenres(html)
 
     if not Prefs['adult']:
@@ -1042,7 +1033,7 @@ def MovieSubPage(item_info, movie_info):
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
-    html = ElementFromURL(item_info['page_url'])
+    html = RHTML.ElementFromURL(item_info['page_url'])
 
     movie_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if movie_list == 'Not Yet Aired':
@@ -1076,7 +1067,7 @@ def MangaSubPage(item_info, manga_info):
     title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
-    html = ElementFromURL(item_info['page_url'])
+    html = RHTML.ElementFromURL(item_info['page_url'])
 
     cp_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if cp_list == 'Not Yet Aired':
@@ -1109,7 +1100,7 @@ def GetPhotoAlbum(url, source_title, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
 
     # get relevant javascript block
-    html = ElementFromURL(url)
+    html = RHTML.ElementFromURL(url)
 
     for java in html.xpath('//script[@type="text/javascript"]'):
         javatext = java.text
@@ -1149,7 +1140,7 @@ def ShowSubPage(item_info, show_info):
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
-    html = ElementFromURL(item_info['page_url'])
+    html = RHTML.ElementFromURL(item_info['page_url'])
     ep_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if ep_list == 'Not Yet Aired':
         return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
@@ -1238,7 +1229,7 @@ def SeasonSubPage(season_info):
 
     oc = ObjectContainer(title2=title2, art=R(season_info['art']))
 
-    html = ElementFromURL(season_info['page_url'])
+    html = RHTML.ElementFromURL(season_info['page_url'])
 
     ep_list = GetItemList(html, season_info['page_url'], season_info['item_title'], season_info['type_title'])
     tags = Metadata.string_to_list(Common.StringCode(string=season_info['tags'], code='decode')) if season_info['tags'] else []
@@ -1339,7 +1330,7 @@ def Search(query=''):
         type_title = 'Drama' if b_prefs_name == 'kissasian' else (b_prefs_name.split('kiss')[1].title() if 'kiss' in b_prefs_name else 'Comic')
         art = 'art-%s.jpg' %type_title.lower()
 
-        html = ElementFromURL(search_url_filled)
+        html = RHTML.ElementFromURL(search_url_filled)
         if html.xpath('//table[@class="listing"]'):
             return SearchPage(type_title=type_title, search_url=search_url_filled, art=art)
     else:
@@ -1356,7 +1347,7 @@ def Search(query=''):
                 Logger('* Search url = %s' %search_url_filled)
                 Logger('* type title = %s' %type_title)
 
-                html = ElementFromURL(search_url_filled)
+                html = RHTML.ElementFromURL(search_url_filled)
                 if html.xpath('//table[@class="listing"]'):
                     oc.add(DirectoryObject(
                         key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
@@ -1382,7 +1373,7 @@ def SearchPage(type_title, search_url, art):
     If normal seach result then send to DirectoryList
     """
 
-    html = ElementFromURL(search_url)
+    html = RHTML.ElementFromURL(search_url)
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
@@ -1464,7 +1455,7 @@ def AddBookmark(item_info):
     Logger('* item to add = %s | %s' %(item_title_decode, item_sys_name), kind='Info')
 
     # setup html for parsing
-    html = ElementFromURL(page_url)
+    html = RHTML.ElementFromURL(page_url)
 
     # Genres
     genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
@@ -1662,7 +1653,7 @@ def CacheCovers(start=False, skip=True):
             if 'Anime' in bm.keys():
                 Thread.Create(BookmarksSub, type_title='Anime', art='anime-art.jpg')
                 Logger('* Attempting to update Anime Bookmarks', kind='Debug', force=True)
-        Logger('* Skipping Caching Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
+        Logger('* Skipping Cache Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
         return
 
     if not Prefs['cache_bookmark_covers'] and not Prefs['cache_covers']:
@@ -1683,6 +1674,7 @@ def CacheCovers(start=False, skip=True):
         # remove cached covers not in Dict['Bookmarks']
         # and save covers from Dict['Bookmarks'] in not already saved
         bookmark_cache = set([])
+        count = 0
         if bm:
             for key in bm.keys():
                 for sbm in bm[key]:
@@ -1697,14 +1689,15 @@ def CacheCovers(start=False, skip=True):
                             ftimer = float(Util.RandomInt(0,30)) + Util.Random()
                             Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
                         elif Common.CoverImageFileExist(cover_file):
-                            Logger('* file %s already exist' %cover_file, kind='Info')
+                            count =+ 1
                         else:
                             Log.Error('* %s | %s | Unknown Error Occurred' %(cover_file, thumb))
                     else:
                         Log.Error('* %s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
 
-        Logger('* Caching Bookmark Cover images if they have not been already.', kind='Info')
+        Logger('* Loaded %i Bookmark Covers from cache' %count, kind='Info')
         if cf:
+            Logger('* Removing cached covers BUT keeping cached Bookmark Covers.', kind='Info')
             cover_cache = set([c for c in cf])
             cover_cache_diff = cover_cache.difference(bookmark_cache)
             for cover in cover_cache_diff:
@@ -1715,6 +1708,7 @@ def CacheCovers(start=False, skip=True):
             Logger('* But kept Bookmarks cached covers.', kind='Info')
     elif Prefs['cache_covers']:
         # cache bookmark covers from Dict['Bookmarks']
+        count = 0
         if bm:
             for key in bm.keys():
                 for sbm in bm[key]:
@@ -1728,14 +1722,14 @@ def CacheCovers(start=False, skip=True):
                             ftimer = float(Util.RandomInt(0,30)) + Util.Random()
                             Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
                         elif Common.CoverImageFileExist(cover_file):
-                            Logger('* file %s already exist' %cover_file, kind='Info')
+                            count += 1
                         else:
                             Log.Error('* %s | %s | Unknown Error Occurred' %(cover_file, thumb))
                     else:
                         Log.Error('* %s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
 
-        Logger('* Caching Bookmark Cover images if they have not been already.', kind='Info')
-        Logger('* All covers cached set to True.', kind='Info')
+        Logger('* Loaded %i Bookmark Covers from cache' %count, kind='Info')
+        Logger('* All Covers will be cached.', kind='Info')
     Logger('*' * 80)
     Dict.Save()
     return
@@ -1765,7 +1759,7 @@ def UpdateLegacyBookmark(bm_info=dict):
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
 
-    html = ElementFromURL(page_url)
+    html = RHTML.ElementFromURL(page_url)
 
     if bm_info['cover_url'] and base_url in bm_info['cover_url']:
         cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
@@ -1926,7 +1920,7 @@ def ClearCache(timeout):
 
     cachetime = Datetime.Now()
     count = 0
-    Log.Debug('* Clearing Cached URLs older than %s' %str(cachetime - timeout))
+    Logger('* Clearing Cached URLs older than %s' %str(cachetime - timeout))
     path = os.path.join(Common.SUPPORT_PATH, "DataItems")
     files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
     for filename in files:
@@ -1934,66 +1928,8 @@ def ClearCache(timeout):
         if (Datetime.FromTimestamp(int(item[1])) + timeout) <= cachetime:
             Data.Remove(filename)
             count += 1
-    Log.Debug('* Cleaned %i Cached files' %count)
+    Logger('* Cleaned %i Cached files' %count)
     return
-
-####################################################################################################
-def ElementFromURL(url):
-    """setup requests html"""
-
-    cachetime = Datetime.Now()
-    name = slugify(url) + '__cachetime__%i' %Datetime.TimestampFromDatetime(cachetime)
-
-    match = False
-    path = os.path.join(Common.SUPPORT_PATH, "DataItems")
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
-    for filename in files:
-        item = filename.split('__cachetime__')
-        if slugify(url) == item[0]:
-            match = True
-            if (Datetime.FromTimestamp(int(item[1])) + TIMEOUT) <= cachetime:
-                Log.Debug('* Re-Caching URL')
-                html = get_element_from_url(url, name)
-                break
-            else:
-                Log.Debug('* Reading URL from Cache')
-                html = HTML.ElementFromString(Data.Load(filename))
-                break
-
-    if not match:
-        Log.Debug('* Caching URL')
-        html = get_element_from_url(url, name)
-
-    return html
-
-####################################################################################################
-def get_element_from_url(url, name, count=0):
-    """error handling for URL requests"""
-
-    try:
-        page = requests.get(url, headers=Headers.GetHeadersForURL(url))
-        if int(page.status_code) == 503:
-            Log.Error('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
-            if count <= 1:
-                count += 1
-                Headers.GetHeadersForURL(url, update=True)
-                return get_element_from_url(url, name, count)
-            else:
-                Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
-                if Data.Exists(name):
-                    Log.Error('* Using old cached page')
-                    html = HTML.ElementFromString(page.text)
-                else:
-                    html = HTML.Element('head', 'Error')
-        else:
-            Data.Save(name, page.text)
-            html = HTML.ElementFromString(page.text)
-    except Exception as e:
-        Log.Error('* get_element_from_url Error: Cannot load %s' %url)
-        Log.Error('* get_element_from_url Error: %s' %str(e))
-        html = HTML.Element('head', 'Error')
-
-    return html
 
 ####################################################################################################
 @route(PREFIX + '/logger', force=bool)

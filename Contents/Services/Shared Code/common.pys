@@ -58,7 +58,7 @@ def GetBaseURL(url):
     type_title = GetTypeTitle(url)
     base_url = ('http://' if not type_title == 'Anime' else 'https://') + url.split('/')[2]
     if not (type_title, base_url) in BASE_URL_LIST_T:
-        for node in BASE_URL_LIST:
+        for node in BASE_URL_LIST_T:
             if node[0] == type_title:
                 base_url = node[1]
                 break

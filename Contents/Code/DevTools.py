@@ -3,6 +3,8 @@ Headers = SharedCodeService.headers
 Domain = SharedCodeService.domain
 Common = SharedCodeService.common
 import requests
+from time import sleep
+import rhtml as RHTML
 
 PREFIX = '/video/kissnetwork'
 
@@ -305,8 +307,7 @@ def CacheAllCovers(category, qevent, page=1):
     base_url = Common.Domain_Dict[ncategory]
     item_url = base_url + '/%sList?page=%s' % (category, page)
 
-    #html = HTML.ElementFromURL(item_url, headers=Headers.GetHeadersForURL(base_url))
-    html = Headers.ElementFromURL(item_url)
+    html = RHTML.ElementFromURL(item_url)
 
     nextpg_node = None
     # parse html for 'next' page node
@@ -403,13 +404,13 @@ def SaveCoverImage(image_url, count=0):
         elif r.status_code == 503 and count < 3:
             count += 1
             timer = float(Util.RandomInt(5,10)) + Util.Random()
-            Log.Debug(
+            Log.Warn(
                 '* %s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i'
-                %(r.status_code, timer, count), kind='Warn', force=True)
-            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count, name=name)
+                %(r.status_code, timer, count))
+            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
         else:
             Log.Debug('* status code for image url = %s' %r.status_code)
-            Log.Debug('* image url not found | %s' %content_url, force=True, kind='Error')
+            Log.Error('* image url not found | %s' %content_url)
             return None  #replace with "no image" icon later
     else:
         Log.Debug('* file %s already exists' %image_file)
@@ -423,21 +424,21 @@ def SetUpCFTest():
     if not Dict['cfscrape_test']:
         try:
             cftest = Headers.CFTest()
-            Log.Info('\n----------CFTest passed! Aime Cookies:----------\n%s' %cftest)
+            Log.Info('*' * 80)
+            Log.Info('----------CFTest passed! Aime Cookies:----------')
+            Log.Info(cftest)
             Dict['cfscrape_test'] = True
             Dict.Save()
         except:
             Dict['cfscrape_test'] = False
             Dict.Save()
-            Log.Error(
-                """
-                ----------CFTest Fail----------
-                You need to install a JavaScript Runtime like node.js or equivalent
-                """
-                )
+            Log.Error('*' * 80)
+            Log.Error('----------CFTest Fail----------')
+            Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
+            Log.Error('Once JavaScript Runtime installed, Restart channel')
+            Log.Error('*' * 80)
     else:
         Log.Debug('* CFTest Previously Passed, not running again.')
-        Log.Debug('*' * 80)
 
     return
 
@@ -450,6 +451,6 @@ def RestartChannel():
         plist_path = Core.storage.join_path(Common.BUNDLE_PATH, "Contents", "Info.plist")
         Core.storage.utime(plist_path, None)
         return True
-    except Exception, e:
-        Log.Error(e)
+    except Exception as e:
+        Log.Error(str(e))
         return False
