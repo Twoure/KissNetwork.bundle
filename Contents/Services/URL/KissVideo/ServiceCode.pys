@@ -239,7 +239,7 @@ def get_googlevideo_url(page_text, url, m, dh):
         if type_title_lower == 'anime':
             vurl_old = String.Base64Decode(node.get('value'))
         else:
-            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, dh)
+            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, dh)
         if 'googlevideo' in vurl_old:
             try:
                 itag = vurl_old.split('=m')[1]

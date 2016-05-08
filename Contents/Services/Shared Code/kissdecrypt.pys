@@ -7,6 +7,7 @@ Date:       07/07/2016
 import binascii
 import pyaes
 import requests
+import common as Common
 from sha2 import sha256 as SHA256
 from pbkdf2 import pbkdf2_hmac as PBKDF2
 
@@ -39,14 +40,14 @@ class KissDecrypt:
             v = v.decode('utf8')
         return unicode(v)
 
-    def decrypt(self, f, kind, dh=None):
+    def decrypt(self, f, kind, url=None, dh=None):
         """
         decrypt video URL input depending on what site it came from
         """
         if kind == 'drama':
-            #self.derived_drama_key = SHA256(da).digest()
             dh.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
-            r = requests.post('http://kissasian.com/External/RSK', headers=dh)
+            base_url = Common.GetBaseURL(url)
+            r = requests.post(base_url + '/External/RSK', headers=dh)
             dkey = str(r.text)
             derived_drama_key = SHA256(dkey).digest()
             return self.decrypt_input(f, derived_drama_key, self.derived_drama_iv)
