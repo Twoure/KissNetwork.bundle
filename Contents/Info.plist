@@ -5,30 +5,14 @@
   <key>CFBundleIdentifier</key>
   <string>com.plexapp.plugins.kissnetwork</string>
   <key>CFBundleVersion</key>
-  <string>1.1.9</string>
+  <string>1.2.0</string>
   <key>PlexPluginVersionUrl</key>
   <string>https://api.github.com/repos/Twoure/KissNetwork.bundle/releases/latest</string>
   <key>PlexClientPlatforms</key>
   <string>*</string>
   <key>PlexFrameworkVersion</key>
   <string>2</string>
-  <key>PlexPluginConsoleLogging</key>
-  <string>1</string>
-  <key>PlexPluginDevMode</key>
-  <string>1</string>
   <key>PlexPluginCodePolicy</key>
   <string>Elevated</string>
-  <key>PlexMediaContainer</key>
-  <array>
-    <string>MP4</string>
-  </array>
-  <key>PlexVideoCodec</key>
-  <array>
-    <string>H.264</string>
-  </array>
-  <key>PlexAudioCodec</key>
-  <array>
-    <string>AAC</string>
-  </array>
 </dict>
 </plist>

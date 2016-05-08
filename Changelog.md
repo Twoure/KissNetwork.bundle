@@ -1,5 +1,10 @@
 # ChangeLog
 
+##### 1.2.0
+- _05/07/2016_
+  - Fixed Kissasian video URL decryption v3
+  - Updated `Info.plist`, removed unused code
+
 ##### 1.1.9
 - _05/01/2016_
   - Fixes:
