@@ -2,7 +2,7 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       07/07/2016
+Date:       05/07/2016
 """
 import binascii
 import pyaes
