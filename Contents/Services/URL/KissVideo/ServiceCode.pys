@@ -11,10 +11,10 @@ import subprefs as SubPrefs
 from openload import decode_openload
 from downloader import is_tool
 from downloader import get_streammoe_url
-import kissenc
+import kissdecrypt
 import requests
 
-KissEnc = kissenc.KissEnc()
+KissDecrypt = kissdecrypt.KissDecrypt()
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -150,7 +150,15 @@ def PlayVideo(url, m, **kwargs):
     else:
         req_url = url
 
-    page_text = Headers.Request(req_url)
+    if 'Drama' in Common.GetTypeTitle(url):
+        r = Headers.Request(req_url, raw=True)
+        dh = Headers.GetHeadersForURL(url)
+        dc = dh['cookie']
+        dh.update({'cookie': '; '.join([dc, 'k_token=%s' %str(r.cookies['k_token'])])})
+        page_text = r.text
+    else:
+        dh = None
+        page_text = Headers.Request(req_url)
 
     onedrive = Regex(r'src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
     openload = Regex(r'src\=\"(https?\:\/\/openload.+?)\"').search(page_text)
@@ -166,7 +174,7 @@ def PlayVideo(url, m, **kwargs):
         Log.Debug('* StreamMoe URL      = %s' %streammoe.group(1))
         vurl = get_streammoe_url(streammoe.group(1), strategy)
     else:
-        vurl = get_googlevideo_url(page_text, url, m)
+        vurl = get_googlevideo_url(page_text, url, m, dh)
     Log.Debug('* PlayVideo URL      = %s' %vurl)
 
     if (prefs['samsung_fix'] == 'true') and (prefs['force_transcode'] == 'false') and (prefs['server'] == '0'):
@@ -192,7 +200,7 @@ def PlayVideo(url, m, **kwargs):
         return IndirectResponse(VideoClipObject, key=vurl)
 
 ####################################################################################################
-def get_googlevideo_url(page_text, url, m):
+def get_googlevideo_url(page_text, url, m, dh):
     """
     Get GoogleVideo URLs
     Returns the Hights stream playable depending on the previous Stream Selections
@@ -231,7 +239,7 @@ def get_googlevideo_url(page_text, url, m):
         if type_title_lower == 'anime':
             vurl_old = String.Base64Decode(node.get('value'))
         else:
-            vurl_old = KissEnc.decrypt(node.get('value'), type_title_lower)
+            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, dh)
         if 'googlevideo' in vurl_old:
             try:
                 itag = vurl_old.split('=m')[1]

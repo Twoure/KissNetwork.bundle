@@ -1,25 +1,24 @@
 #!/usr/bin/env python
 """
-kissenc.min.js for Kissasian and Kisscaroon
+Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       04/27/2016
+Date:       07/07/2016
 """
 import binascii
 import pyaes
+import requests
 from sha2 import sha256 as SHA256
 from pbkdf2 import pbkdf2_hmac as PBKDF2
 
-class KissEnc:
+class KissDecrypt:
     def __init__(self):
         #kissasian
-        da = "GnELl19G8trombeuR"
-        di = "32b812e9a1321ae0e84af660c4722b3a"
-        self.derived_drama_key = SHA256(da).digest()
+        di = String.Base64Decode("XzMyYjgxMmU5YTEzMjFhZTBlODRhZjY2MGM0NzIyYjNhXw==")[1:-1]
         self.derived_drama_iv = binascii.a2b_hex(di)
         #kisscartoon
-        ca = "WrxLl3rnA48iafgCy"
-        ci = "a5e8d2e9c1721ae0e84ad660c472c1f3"
-        cs = "CartKS$2141#"
+        ca = String.Base64Decode("X1dyeExsM3JuQTQ4aWFmZ0N5Xw==")[1:-1]
+        ci = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
+        cs = String.Base64Decode("X0NhcnRLUyQyMTQxI18=")[1:-1]
         self.derived_cartoon_key = PBKDF2('sha1', ca, cs, 1000, 16)
         self.derived_cartoon_iv = binascii.a2b_hex(ci)
 
@@ -40,12 +39,17 @@ class KissEnc:
             v = v.decode('utf8')
         return unicode(v)
 
-    def decrypt(self, f, kind):
+    def decrypt(self, f, kind, dh=None):
         """
         decrypt video URL input depending on what site it came from
         """
         if kind == 'drama':
-            return self.decrypt_input(f, self.derived_drama_key, self.derived_drama_iv)
+            #self.derived_drama_key = SHA256(da).digest()
+            dh.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
+            r = requests.post('http://kissasian.com/External/RSK', headers=dh)
+            dkey = str(r.text)
+            derived_drama_key = SHA256(dkey).digest()
+            return self.decrypt_input(f, derived_drama_key, self.derived_drama_iv)
         else:
             return self.decrypt_input(f, self.derived_cartoon_key, self.derived_cartoon_iv)
 
