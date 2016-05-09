@@ -15,27 +15,63 @@ BUNDLE_PATH = Domain.BUNDLE_PATH
 RESOURCES_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Resources')
 SUPPORT_PATH = Domain.SUPPORT_PATH
 LIST_VIEW_CLIENTS = ['Android', 'iOS']
-
-# set constants from shared domain.pys
-Domain_Dict = Domain.LoadDomainDict()
 USER_AGENT = Domain.USER_AGENT
 
-if len(Domain_Dict.keys()) != 5:
-    Domain.CreateDomainDict()
-    Domain_Dict = Domain.LoadDomainDict()
+####################################################################################################
+def TypeTitleList():
+    return ['Anime', 'Drama', 'Cartoon', 'Manga', 'Comic']
 
-ANIME_BASE_URL = Domain_Dict['Anime']
-ASIAN_BASE_URL = Domain_Dict['Asian']
-CARTOON_BASE_URL = Domain_Dict['Cartoon']
-MANGA_BASE_URL = Domain_Dict['Manga']
-COMIC_BASE_URL = Domain_Dict['Comic']
+####################################################################################################
+def BaseURL(kind):
+    return [u for t, u in BaseURLListTuple() if t == kind][0]
 
-BASE_URL_LIST = [ANIME_BASE_URL, ASIAN_BASE_URL, CARTOON_BASE_URL, MANGA_BASE_URL, COMIC_BASE_URL]
+####################################################################################################
+def SearchURL(kind):
+    return BaseURL(kind) + '/Search/%s' %kind + '?keyword=%s'
 
-BASE_URL_LIST_T = [
-    ('Anime', ANIME_BASE_URL), ('Drama', ASIAN_BASE_URL),
-    ('Cartoon', CARTOON_BASE_URL), ('Manga', MANGA_BASE_URL), ('Comic', COMIC_BASE_URL)
-    ]
+####################################################################################################
+def SearchURLList():
+    search_url_list = []
+    for t in TypeTitleList():
+        search_url_list.append(SearchURL(t))
+    return search_url_list
+
+####################################################################################################
+def BaseURLList():
+    base_url_list = []
+    for u in URLList():
+        base_url_list.append(u)
+    return base_url_list
+
+####################################################################################################
+def URLList():
+    url_list = []
+    for t in TypeTitleList():
+        url_list.append(DomainDict(t))
+    return url_list
+
+####################################################################################################
+def BaseURLListTuple():
+    base_url_list_t = []
+    for u in URLList():
+        base_url_list_t.append((GetTypeTitle(u), u))
+    return base_url_list_t
+
+####################################################################################################
+def DomainDict(kind):
+    d = Domain.LoadDomainDict()
+    if len(d.keys()) != 5 or 'Asian' in d.keys():
+        Domain.CreateDomainDict()
+        d = Domain.LoadDomainDict()
+    return d[kind]
+
+####################################################################################################
+def CorrectURL(url):
+    if len(url.split('/')) > 3:
+        url = GetBaseURL(url) + '/' + url.split('/', 3)[3]
+    else:
+        url = GetBaseURL(url)
+    return url
 
 ####################################################################################################
 def GetTypeTitle(url):
@@ -56,9 +92,9 @@ def GetBaseURL(url):
     """ Get base url for headers """
 
     type_title = GetTypeTitle(url)
-    base_url = ('http://' if not type_title == 'Anime' else 'https://') + url.split('/')[2]
-    if not (type_title, base_url) in BASE_URL_LIST_T:
-        for node in BASE_URL_LIST_T:
+    base_url = ('https://' if type_title == 'Anime' else 'http://') + url.split('/')[2]
+    if not (type_title, base_url) in BaseURLListTuple():
+        for node in BaseURLListTuple():
             if node[0] == type_title:
                 base_url = node[1]
                 break

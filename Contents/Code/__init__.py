@@ -31,32 +31,22 @@ CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 TIMEOUT = Datetime.Delta(hours=1)
 
 # KissAnime
-ANIME_BASE_URL = Common.ANIME_BASE_URL
-ANIME_SEARCH_URL = ANIME_BASE_URL + '/Search/Anime?keyword=%s'
 ANIME_ART = 'art-anime.jpg'
 ANIME_ICON = 'icon-anime.png'
 
 # KissAsian
-ASIAN_BASE_URL = Common.ASIAN_BASE_URL
-ASIAN_SEARCH_URL = ASIAN_BASE_URL + '/Search/Drama?keyword=%s'
 ASIAN_ART = 'art-drama.jpg'
 ASIAN_ICON = 'icon-drama.png'
 
 # KissCartoon
-CARTOON_BASE_URL = Common.CARTOON_BASE_URL
-CARTOON_SEARCH_URL = CARTOON_BASE_URL + '/Search/Cartoon?keyword=%s'
 CARTOON_ART = 'art-cartoon.jpg'
 CARTOON_ICON = 'icon-cartoon.png'
 
 # KissManga
-MANGA_BASE_URL = Common.MANGA_BASE_URL
-MANGA_SEARCH_URL = MANGA_BASE_URL + '/Search/Manga?keyword=%s'
 MANGA_ART = 'art-manga.jpg'
 MANGA_ICON = 'icon-manga.png'
 
 # ReadComincOnline
-COMIC_BASE_URL = Common.COMIC_BASE_URL
-COMIC_SEARCH_URL = COMIC_BASE_URL + '/Search/Comic?keyword=%s'
 COMIC_ART = 'art-comic.jpg'
 COMIC_ICON = 'icon-comic.png'
 
@@ -146,7 +136,7 @@ def MainMenu():
 
     cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
 
-    for i, (t, u) in enumerate(Common.BASE_URL_LIST_T):
+    for i, (t, u) in enumerate(Common.BaseURLListTuple()):
         thumb = 'icon-%s.png' %t.lower()
         rthumb = None if cp_match else R(thumb)
         art = 'art-%s.jpg' %t.lower()
@@ -1315,8 +1305,6 @@ def Search(query=''):
     title2 = 'Search for \"%s\" in...' % query
 
     oc = ObjectContainer(title2=title2)
-    # create list of search URL's
-    all_search_urls = [ANIME_SEARCH_URL, CARTOON_SEARCH_URL, ASIAN_SEARCH_URL, MANGA_SEARCH_URL, COMIC_SEARCH_URL]
 
     # format each search url and send to 'SearchPage'
     # can't check each url here, would take too long since behind cloudflare and timeout the server
@@ -1335,7 +1323,7 @@ def Search(query=''):
             return SearchPage(type_title=type_title, search_url=search_url_filled, art=art)
     else:
         Logger('*' * 80)
-        for search_url in all_search_urls:
+        for search_url in Common.SearchURLList():
             search_url_filled = search_url % String.Quote(query, usePlus=True)
             type_title = Common.GetTypeTitle(search_url_filled)
             # change kissasian info to 'Drama'
@@ -1856,7 +1844,7 @@ def BackgroundAutoCache():
             Logger('* Header Dictionary already found, writing new Headers to old Dictionary', force=True)
 
             # get headers for each url
-            for (t, u) in Common.BASE_URL_LIST_T:
+            for (t, u) in Common.BaseURLListTuple():
                 prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
                 if Prefs[prefs_name]:
                     Headers.GetHeadersForURL(u)
@@ -1874,7 +1862,7 @@ def BackgroundAutoCache():
         Dict['Headers Auto Cached'] = True
         Dict.Save()
     else:
-        for (t, u) in Common.BASE_URL_LIST_T:
+        for (t, u) in Common.BaseURLListTuple():
             prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
             if Prefs[prefs_name]:
                 Logger('* Checking %s headers' %u, kind='Info', force=True)

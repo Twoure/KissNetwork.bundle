@@ -27,6 +27,7 @@ def MetadataObjectForURL(url):
 
     Log.Debug('*' * 80)
     Log.Debug('* MetadataObjectForURL url = %s' %url)
+    url = Common.CorrectURL(url)
 
     video_id = int(url.split('=')[-1])
     show_url = url.rsplit('/', 1)[0]
@@ -99,6 +100,7 @@ def MediaObjectsForURL(url):
     mo = []
     fmt_list = [('1080p', 'm37'), ('720p', 'm22'), ('480p', 'm59'), ('360p', 'm18')]
     prefs = get_prefs()
+    url = Common.CorrectURL(url)
 
     if prefs['force_transcode'] == 'true':
         Log.Debug('* Force Transcoding ON')

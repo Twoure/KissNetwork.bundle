@@ -49,7 +49,7 @@ def GetTypeTitle(url):
     return type_title
 
 ####################################################################################################
-def SetDomainURL(string, domain=None, count=0):
+def SetDomainURL(string, rbool=False):
     """
     Get the domain url dynamically
     Sites like the Kiss Sites sometimes change thier domain names
@@ -58,18 +58,13 @@ def SetDomainURL(string, domain=None, count=0):
 
     Log.Debug('* string = %s' %string)
 
-    if string == 'anime':
-        test_one = 'https://kissanime.to'  # updated test to match current site
-    elif string == 'asian':
-        test_one = 'http://kissasian.com'
-    elif string == 'cartoon':
-        test_one = 'http://kisscartoon.me'
-    elif string == 'manga':
-        test_one = 'http://kissmanga.com'
-    elif string == 'comic':
-        test_one = 'http://readcomiconline.com'
-    elif string == 'retry':
-        test_one = domain
+    url_dict = {
+        'anime': 'https://kissanime.com', 'drama': 'http://kissasian.to',
+        'cartoon': 'http://kisscartoon.me', 'comic': 'http://readcomiconline.me',
+        'manga': 'http://kissmanga.com'
+        }
+
+    test_one = url_dict[string]
 
     try:
         r = requests.head(test_one, headers={'user-agent': USER_AGENT})
@@ -81,14 +76,12 @@ def SetDomainURL(string, domain=None, count=0):
     status = int(r.status_code)
     Log.Debug('* Header Status Code = %s' %str(status))
 
-    if status == 301 and count < 3:
-        count += 1
+    if status == 301:
         try:
             r_domain = r.headers['location']
             r_domain = r_domain[:-1] if r_domain.endswith('/') else r_domain
             Log.Debug('* Current Domain \"%s\" different from test \"%s\"' %(r_domain, test_one))
-            Log.Debug('* Retesting NEW Domain: Try %i of 3' %count)
-            return SetDomainURL(string='retry', domain=r_domain, count=count)
+            return r_domain
         except Exception as e:
             Log.Error('* SetDomainURL Error: Unable to process headers for \"%s\"' %test_one)
             Log.Error('* SetDomainURL Error: %s' %str(e))
@@ -122,22 +115,20 @@ def SaveDomainDict(content=dict):
 def CreateDomainDict():
     """setup the domain dict"""
 
-    setup_list = ['anime', 'asian', 'cartoon', 'manga', 'comic']
+    setup_list = ['anime', 'drama', 'cartoon', 'manga', 'comic']
     Log.Debug('*' * 80)
     for i, item in enumerate(setup_list):
         if i == 0:
             temp_dict = {item.title(): SetDomainURL(item)}
         else:
             temp_dict.update({item.title(): SetDomainURL(item)})
-
     return SaveDomainDict(temp_dict)
 
 ####################################################################################################
 def LoadDomainDict():
     """load domain dict to json format string"""
 
-    if os.path.isfile(DOMAIN_FILE):
-        Log.Debug('* loading domain dict in json format')
+    if os.path.isfile(DOMAIN_FILE) and os.stat(DOMAIN_FILE).st_size != 0:
         with open(DOMAIN_FILE) as data_file:
             data = json.load(data_file)
 
@@ -145,3 +136,9 @@ def LoadDomainDict():
     else:
         CreateDomainDict()
         return LoadDomainDict()
+
+####################################################################################################
+def UpdateDomain(kind):
+    d = LoadDomainDict()
+    d.update({kind: SetDomainURL(kind.lower())})
+    return SaveDomainDict(d)
