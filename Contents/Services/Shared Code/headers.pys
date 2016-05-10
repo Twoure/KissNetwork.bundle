@@ -33,6 +33,31 @@ def CFTest():
     return str(cookie)
 
 ####################################################################################################
+def set_header(url):
+    """
+    Set header for given URL
+    Parse cf_clearance for cookie expire time
+    """
+
+    base_url = Common.GetBaseURL(url)
+    type_title = Common.GetTypeTitle(url)
+    cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=Common.USER_AGENT)
+    r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
+
+    if r_cf_clearance:
+        date = int(r_cf_clearance.group(1))
+        expire = date + int(r_cf_clearance.group(2))
+    else:
+        expire = Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364))
+
+    return {
+        type_title: {
+            'cookie': cookie, 'user-agent': user_agent, 'referer': base_url,
+            'expire': '%i' %expire
+            }
+        }
+
+####################################################################################################
 def CreateHeadersDict():
     """Genreate Header Dict Data, then send to SaveHeaderDict()"""
 
@@ -40,21 +65,10 @@ def CreateHeadersDict():
 
     # Get cookies for URLs and save to Header Dict for future use.
     for i, (type_title, base_url) in enumerate(Common.BASE_URL_LIST_T):
-        cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=Common.USER_AGENT)
         if i == 0:
-            temp_dict = {
-                type_title: {
-                    'cookie': cookie, 'user-agent': user_agent,
-                    'date': str(Datetime.Now()), 'referer': base_url
-                    }
-                }
+            temp_dict = set_header(base_url)
         else:
-            temp_dict.update({
-                type_title: {
-                    'cookie': cookie, 'user-agent': user_agent,
-                    'date': str(Datetime.Now()), 'referer': base_url
-                    }
-                })
+            temp_dict.update(set_header(base_url))
 
         Log.Debug('* cookies for %s = %s' %(type_title, temp_dict[type_title]['cookie']))
         Log.Debug('* current header dict = %s' %temp_dict)
@@ -70,7 +84,7 @@ def GetHeadersForURL(url, update=False):
     If cookies have expired then get new ones.
     """
 
-    Log.Debug('* URL to get headers = %s' %url)
+    #Log.Debug('* URL to get headers = %s' %url)
 
     # get base url for headers
     base_url = Common.GetBaseURL(url)
@@ -79,34 +93,26 @@ def GetHeadersForURL(url, update=False):
     type_title = Common.GetTypeTitle(url)
 
     # get current datetime
-    current_datetime = Datetime.Now()
+    current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
 
-    # cookie time constants for each site.
-    time_constants = {
-        'Anime': Datetime.Delta(hours=20), 'Cartoon': Datetime.Delta(days=5),
-        'Drama': Datetime.Delta(minutes=30), 'Manga': Datetime.Delta(hours=20),
-        'Comic': Datetime.Delta(days=364)}
-
-    test = None
+    # load current header dict
     header_data = LoadHeaderDict()
 
     if len(header_data) > 1:
         # Update Header Dictionary
         if type_title in header_data.keys():
-            cachetime = Datetime.ParseDate(header_data[type_title]['date'])
+            if 'expire' in header_data[type_title].keys():
+                expire = int(header_data[type_title]['expire'])
+                update = True if update else (True if current_timestamp >= expire else False)
+            else:
+                update = True
         else:
-            cachetime = Datetime.Now()
             update = True
-        deltatime = current_datetime - cachetime
 
-        if deltatime >= time_constants[type_title] or update:
+        if update:
             Log.Debug('* Time to update %s cookies' %type_title)
 
-            cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=Common.USER_AGENT)
-            header_data.update({
-                type_title: {
-                    'cookie': cookie, 'user-agent': user_agent,
-                    'referer': base_url, 'date': str(Datetime.Now())}})
+            header_data.update(set_header(base_url))
 
             Log.Debug('* Updated %s Header to >>' %type_title)
             Log.Debug('* %s' %header_data[type_title])
@@ -115,7 +121,13 @@ def GetHeadersForURL(url, update=False):
             SaveHeaderDict(header_data)
             Log.Debug('* New Cookies saved for %s Header' %base_url)
         else:
-            Log.Debug('* Time left until %s cookies need to be updated = %s' %(type_title, str(time_constants[type_title] - deltatime)))
+            if 'expire' in header_data[type_title].keys():
+                current_datetime = Datetime.FromTimestamp(int(current_timestamp))
+                expire_datetime = Datetime.FromTimestamp(int(expire))
+                deltatime = str(expire_datetime - current_datetime)
+                Log.Debug('* Time left until %s cookies need to be updated = %s' %(type_title, deltatime))
+            else:
+                Log.Warn('* No Expire time within %s cookies' %type_title)
     else:
         CreateHeadersDict()
         header_data = LoadHeaderDict()
@@ -127,9 +139,9 @@ def GetHeadersForURL(url, update=False):
         'referer': header_data[type_title]['referer']
         }
 
-    Log.Debug('* Header for %s Loaded >>' %base_url)
-    Log.Debug('* %s' %headers_to_return)
-    Log.Debug('*' * 80)
+    #Log.Debug('* Header for %s Loaded >>' %base_url)
+    #Log.Debug('* %s' %headers_to_return)
+    #Log.Debug('*' * 80)
 
     return headers_to_return
 

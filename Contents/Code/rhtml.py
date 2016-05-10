@@ -47,18 +47,18 @@ def get_element_from_url(url, name, count=0):
                 count += 1
                 if len(page.history) > 0:
                     type_title = Common.GetTypeTitle(url)
-                    Log.Error('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
-                    Log.Error('* get_element_from_url Error: page history %s | %s' %(url, page.history))
+                    Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
+                    Log.Warn('* get_element_from_url Error: page history %s | %s' %(url, page.history))
                     Domain.UpdateDomain(type_title)
                     url = Common.CorrectURL(url)
                 else:
-                    Log.Error('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
+                    Log.Warn('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
                     Headers.GetHeadersForURL(url, update=True)
                 return get_element_from_url(url, name, count)
             else:
                 Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
                 if Data.Exists(name):
-                    Log.Error('* Using old cached page')
+                    Log.Warn('* Using old cached page')
                     html = HTML.ElementFromString(page.text)
                 else:
                     html = HTML.Element('head', 'Error')

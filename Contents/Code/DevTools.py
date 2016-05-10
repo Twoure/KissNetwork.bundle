@@ -52,12 +52,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
 
     if file_to_reset:
         header = 'Developer Tools'
-        if file_to_reset == 'Domain_Dict':
-            ResetCustomDict(file_to_reset)
-            message = 'Reset %s. New values for %s written' %(file_to_reset, file_to_reset)
-
-            return DevTools(header=header, message=message)
-        elif file_to_reset == 'cfscrape_test':
+        if file_to_reset == 'cfscrape_test':
             Log('\n----------Deleting cfscrape test key from Channel Dict----------')
             if Dict['cfscrape_test']:
                 del Dict['cfscrape_test']
@@ -79,15 +74,15 @@ def DevTools(file_to_reset=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsBM),
         title='Bookmark Tools',
         summary='Tools to Clean dirty bookmarks dictionary, and Toggle "Clear Bookmarks".'))
-    oc.add(DirectoryObject(key=Callback(DevToolsH),
-        title='Header Tools',
-        summary='Tools to Reset "Header_Dict" or Update parts of "Header_Dict".'))
     oc.add(DirectoryObject(key=Callback(DevToolsC),
         title='Cover Cache Tools',
         summary='Tools to Cache All Covers or just certain sites. Includes Tool to Clean Dirty Resources Directory.'))
-    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='Domain_Dict'),
-        title='Reset Domain_Dict File',
-        summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
+    oc.add(DirectoryObject(key=Callback(DevToolsD),
+        title='Domain Tools',
+        summary='Tools to Reset "Domain_Dict" or Update parts of "Domain_Dict".'))
+    oc.add(DirectoryObject(key=Callback(DevToolsH),
+        title='Header Tools',
+        summary='Tools to Reset "Header_Dict" or Update parts of "Header_Dict".'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
         title='Reset Dict cfscrape Test Key',
         summary='Delete previous test key so the channel can retest for a valid JavaScript Runtime.'))
@@ -115,16 +110,12 @@ def DevToolsH(title=None, header=None, message=None):
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating %s Headers in Header_Dict----------' %title)
 
-            for (h_name, h_url) in Common.BASE_URL_LIST_T:
+            for (h_name, h_url) in Common.BaseURLListTuple():
                 if h_name == title:
                     Headers.GetHeadersForURL(h_url, update=True)
                     break
 
             message = 'Updated %s Headers.' %title
-            return DevTools(header=header, message=message)
-        elif title == 'test':
-            sub_list = Test()
-            message = 'list =\n%s' %sub_list
             return DevTools(header=header, message=message)
     else:
         pass
@@ -132,10 +123,45 @@ def DevToolsH(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
         summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
-    for (name, url) in sorted(Common.BASE_URL_LIST_T):
+    for (name, url) in sorted(Common.BaseURLListTuple()):
         oc.add(DirectoryObject(key=Callback(DevToolsH, title=name),
             title='Update %s Headers' %name,
             summary='Update %s Headers Only in the "Header_Dict" file.' %name))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/devtools-domain')
+def DevToolsD(title=None, header=None, message=None):
+    """URL Domain Tools"""
+
+    oc = ObjectContainer(title2='Domain Tools', header=header, message=message)
+
+    if title:
+        header = 'Domain Tools'
+        if title == 'Domain_Dict':
+            Thread.Create(ResetCustomDict, file_to_reset=title)
+            message = 'Resetting %s. New values for %s will be written soon' %(title, title)
+
+            return DevToolsD(header=header, message=message)
+        elif ( title == 'Anime' or title == 'Cartoon'
+            or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
+            Log('\n----------Updating %s Domain in Domain_Dict----------' %title)
+
+            Domain.UpdateDomain(title)
+
+            message = 'Updated %s Domain.' %title
+            return DevTools(header=header, message=message)
+    else:
+        pass
+
+    oc.add(DirectoryObject(key=Callback(DevToolsH, title='Domain_Dict'),
+        title='Reset Domain_Dict File',
+        summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
+    for (name, url) in sorted(Common.BaseURLListTuple()):
+        oc.add(DirectoryObject(key=Callback(DevToolsD, title=name),
+            title='Update %s Domain' %name,
+            summary='Update %s Domain Only in the "Domain_Dict" file.' %name))
 
     return oc
 
@@ -186,7 +212,7 @@ def DevToolsC(title=None, header=None, message=None):
     else:
         pass
 
-    for (name, url) in [('All', '')] + sorted(Common.BASE_URL_LIST_T):
+    for (name, url) in [('All', '')] + sorted(Common.BaseURLListTuple()):
         oc.add(DirectoryObject(key=Callback(DevToolsC, title='%s_cache' %name),
             title='Cache All %s Covers' %name if not name == 'All' else 'Cache All Covers',
             summary='Download all %s Covers' %name if not name == 'All' else 'Download All Covers'))
@@ -210,7 +236,7 @@ def CacheCoverQ():
 
     qevent = Thread.Event()  # create new Event object
     qevent.set()  # set new Event object to True for first iteration of 'for loop'
-    for (cat, url) in sorted(Common.BASE_URL_LIST_T):
+    for (cat, url) in sorted(Common.BaseURLListTuple()):
         if qevent.is_set():
             Log('Create the First Cache All Covers Thread for %s' %cat)
             qevent.clear()  # set Event object to Flase for next iteration of 'for loop'
@@ -282,7 +308,7 @@ def DevToolsBM(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsBM, title='hide_bm_clear'),
         title='Toggle Hiding "Clear Bookmarks" Function',
         summary='Hide the "Clear Bookmarks" Function from "My Bookmarks" and sub list. For those of us who do not want people randomly clearing our bookmarks.'))
-    for (name, url) in [('All', '')] + sorted(Common.BASE_URL_LIST_T):
+    for (name, url) in [('All', '')] + sorted(Common.BaseURLListTuple()):
         if name == 'All':
             oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
                 title='Reset "%s" Bookmarks' %name,
@@ -299,12 +325,10 @@ def CacheAllCovers(category, qevent, page=1):
     """Cache All, or any one of the Categories"""
 
     if category == 'Drama':
-        ncategory = 'Asian'
         drama_test = True
     else:
-        ncategory = category
         drama_test = False
-    base_url = Common.Domain_Dict[ncategory]
+    base_url = Common.DomainDict[category]
     item_url = base_url + '/%sList?page=%s' % (category, page)
 
     html = RHTML.ElementFromURL(item_url)

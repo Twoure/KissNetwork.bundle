@@ -49,7 +49,7 @@ def GetTypeTitle(url):
     return type_title
 
 ####################################################################################################
-def SetDomainURL(string, rbool=False):
+def SetDomainURL(string):
     """
     Get the domain url dynamically
     Sites like the Kiss Sites sometimes change thier domain names
@@ -58,11 +58,9 @@ def SetDomainURL(string, rbool=False):
 
     Log.Debug('* string = %s' %string)
 
-    url_dict = {
-        'anime': 'https://kissanime.com', 'drama': 'http://kissasian.to',
-        'cartoon': 'http://kisscartoon.me', 'comic': 'http://readcomiconline.me',
-        'manga': 'http://kissmanga.com'
-        }
+    url_dict = JSON.ObjectFromURL(
+        String.Base64Decode('aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9Ud291cmUvOGJiNTQwMzM3ZGVmYWY3MTg4ZTZjMDE5NDUzMDc2NjEvcmF3'),
+        cacheTime=CACHE_1DAY)
 
     test_one = url_dict[string]
 
