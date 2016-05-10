@@ -342,14 +342,17 @@ def DevToolsBMB(title=None, header=None, message=None):
 def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
     """Load/Delete list"""
 
-    oc = ObjectContainer(title2='Load/Delete Backup List', header=header, message=message)
+    oc = ObjectContainer(title2='Load/Delete Backup List', header=header, message=message, no_cache=True)
 
     if title and file_name:
         if title == 'delete_backup':
             Log('\n----------Remove Bookmark Backup----------')
-            df = os.path.join(Common.SUPPORT_PATH, file_name)
-            Core.storage.remove(df)
-            message = 'Removed %s Bookmark Backup' %file_name
+            dfp = os.path.join(Common.SUPPORT_PATH, file_name)
+            if os.path.isfile(dfp):
+                Core.storage.remove(dfp)
+                message = 'Removed %s Bookmark Backup' %file_name
+            else:
+                message = '%s file already removed, not removing again' %file_name
         elif title == 'load_backup':
             Log('\n----------Loading Bookmarks from Backup----------')
             new_bookmarks = LoadBMBackup(file_name)
