@@ -25,8 +25,9 @@ KissNetwork
   - [About / Help](#about--help)
     - [Developer Tools](#developer-tools)
       - [Bookmark Tools](#bookmark-tools)
-      - [Header Tools](#header-tools)
       - [Cover Cache Tools](#cover-cache-tools)
+      - [Domain Tools](#domain-tools)
+      - [Header Tools](#header-tools)
   - [Updater](#updater)
 - [Issues](#issues)
   - [General](#general)
@@ -179,17 +180,22 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
 - **Reset... :** Same for Drama, Cartoon, Comic, and Manga
 
-##### Header Tools
-- **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
-- **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
-- **Update... :** Same for Drama, Cartoon, Comic, and Manga
-
 ##### Cover Cache Tools
 - The Cache Cover tools are experimental, and could result in a temporary IP ban from using the Kiss sites. If this happens, just wait for the allotted time to pass (usually an hour, but could be up to 24 hours, do not remember).  I have yet to hear people report this issue, but did encounter it while developing these tools since I had to test and re-test the download functions multiple times.
 - **Cache All Covers:** Download cover images from all sites.  Background process.
 - **Cache All Anime Covers:** Download All Anime covers only.  Do not download covers from the other sites.
 - **Cache All... :** Same for Drama, Cartoon, Comic, and Manga
 - **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
+
+##### Domain Tools
+- **Reset Domain_Dict File:** Create backup of old Domain_Dict, then delete current, and write new Domain_Dict with freash domains
+- **Update Anime Domain:** Update Anime Domain in the `Domain_Dict` file only
+- **Update... :** Same for Drama, Cartoon, Comic, and Manga
+
+##### Header Tools
+- **Reset Header_Dict File:** Create backup of old Header_Dict, then delete current, and write new Header_Dict with freash headers
+- **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
+- **Update... :** Same for Drama, Cartoon, Comic, and Manga
 
 ### Updater
 - Update button visible only to PMS admin and when update avalible
@@ -200,7 +206,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ## Issues
 
 ##### General
-- Cookie cache times keep changing. I try and keep these up-to-date, untill I create a checker for valid cookie cache times.
 - First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
 - If the headers are not set before Plex Framework tries to scrape the site then an error will occur.
 - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
@@ -212,7 +217,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Cover art does not load for Videos
   - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
   - I have added a local cover image caching option to work around cloudflare
-- Cookie timeouts change too often, cannot parse expire time yet
 
 ##### Manga, Comics
 - Kissmanga/ReadComicOnline is not the most useful reader for the _Plex Web_ client, but works reasonably well for Smart Phones, PMP, and PHT.
