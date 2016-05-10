@@ -3,6 +3,7 @@ Headers = SharedCodeService.headers
 Domain = SharedCodeService.domain
 Common = SharedCodeService.common
 import requests
+import json
 from time import sleep
 import rhtml as RHTML
 
@@ -61,15 +62,11 @@ def DevTools(file_to_reset=None, header=None, message=None):
                 message = 'Reset cfscrape Code Test'
             else:
                 message = 'No Dict cfscrape Code Test Key to Remove'
-
-            return DevTools(header=header, message=message)
         elif file_to_reset == 'restart_channel':
             Log('\n----------Attempting to Restart KissNetwork Channel----------')
             RestartChannel()
             message = 'Restarting channel'
-            return DevTools(header=header, message=message)
-    else:
-        pass
+        return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsBM),
         title='Bookmark Tools',
@@ -105,7 +102,7 @@ def DevToolsH(title=None, header=None, message=None):
             Thread.Create(ResetCustomDict, file_to_reset=title)
             message = 'Resetting %s. New values for %s will be written soon' %(title, title)
 
-            return DevToolsH(header=header, message=message)
+            return DevToolsH(header=header, message=message, title=None)
         elif ( title == 'Anime' or title == 'Cartoon'
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating %s Headers in Header_Dict----------' %title)
@@ -116,9 +113,7 @@ def DevToolsH(title=None, header=None, message=None):
                     break
 
             message = 'Updated %s Headers.' %title
-            return DevTools(header=header, message=message)
-    else:
-        pass
+            return DevTools(header=header, message=message, title=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
@@ -143,7 +138,7 @@ def DevToolsD(title=None, header=None, message=None):
             Thread.Create(ResetCustomDict, file_to_reset=title)
             message = 'Resetting %s. New values for %s will be written soon' %(title, title)
 
-            return DevToolsD(header=header, message=message)
+            return DevToolsD(header=header, message=message, title=None)
         elif ( title == 'Anime' or title == 'Cartoon'
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating %s Domain in Domain_Dict----------' %title)
@@ -151,9 +146,7 @@ def DevToolsD(title=None, header=None, message=None):
             Domain.UpdateDomain(title)
 
             message = 'Updated %s Domain.' %title
-            return DevTools(header=header, message=message)
-    else:
-        pass
+            return DevTools(header=header, message=message, title=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Domain_Dict'),
         title='Reset Domain_Dict File',
@@ -189,7 +182,6 @@ def DevToolsC(title=None, header=None, message=None):
                 del Dict['cover_files']
 
             message = 'Reset Resources Directory, and Deleted Dict[\'cover_files\']'
-            return DevToolsC(header=header, message=message)
         elif ( title == 'Anime_cache' or title == 'Cartoon_cache'
             or title == 'Drama_cache' or title == 'Manga_cache' or title == 'Comic_cache' ):
             category = title.split('_')[0]
@@ -201,16 +193,13 @@ def DevToolsC(title=None, header=None, message=None):
             Log('\n\n%s\n\n' %test)
             message = 'All %s Cover Images are being Cached' %category
 
-            return DevToolsC(header=header, message=message)
         elif title == 'All_cache':
             Log('\n----------Start Caching All Cover Images----------')
 
             Thread.Create(CacheCoverQ)
 
             message = 'All Cover Images are being Cached'
-            return DevToolsC(header=header, message=message)
-    else:
-        pass
+        return DevToolsC(header=header, message=message, title=None)
 
     for (name, url) in [('All', '')] + sorted(Common.BaseURLListTuple()):
         oc.add(DirectoryObject(key=Callback(DevToolsC, title='%s_cache' %name),
@@ -280,31 +269,30 @@ def DevToolsBM(title=None, header=None, message=None):
                 Dict['hide_bm_clear'] = 'hide'
                 Dict.Save()
                 message = '"Clear Bookmarks" is Hidden Now'
-
-            return DevToolsBM(header='Hide BM Clear Opts', message=message)
+            return DevToolsBM(header='Hide BM Clear Opts', message=message, title=None)
         elif title == 'All' and Dict['Bookmarks']:
             Log('\n----------Deleting Bookmark section from Channel Dict----------')
             del Dict['Bookmarks']
             Dict.Save()
             message = 'Bookmarks Section Cleaned.'
-            return DevToolsBM(header='BookmarkTools', message=message)
         elif title and title in Dict['Bookmarks'].keys():
             Log('\n----------Deleting %s Bookmark section from Channel Dict----------' %title)
             del Dict['Bookmarks'][title]
             Dict.Save()
             message = '%s Bookmark Section Cleaned.' %title
-            return DevToolsBM(header='BookmarkTools', message=message)
         elif not Dict['Bookmarks']:
             Log('\n----------Bookmarks Section Alread Removed----------')
             message = 'Bookmarks Section Already Cleaned.'
-            return DevToolsBM(header='BookmarkTools', message=message)
         elif not title in Dict['Bookmarks'].keys():
             Log('\n----------%s Bookmark Section Already Removed----------' %title)
             message = '%s Bookmark Section Already Cleaned.' %title
-            return DevToolsBM(header='BookmarkTools', message=message)
+        return DevToolsBM(header='BookmarkTools', message=message, title=None)
     else:
         pass
 
+    oc.add(DirectoryObject(key=Callback(DevToolsBMB),
+        title='Backup Tools',
+        summary='Manage bookmark backups.'))
     oc.add(DirectoryObject(key=Callback(DevToolsBM, title='hide_bm_clear'),
         title='Toggle Hiding "Clear Bookmarks" Function',
         summary='Hide the "Clear Bookmarks" Function from "My Bookmarks" and sub list. For those of us who do not want people randomly clearing our bookmarks.'))
@@ -319,6 +307,109 @@ def DevToolsBM(title=None, header=None, message=None):
                 summary='Delete Entire "%s" Bookmark Section. Same as "Clear %s Bookmarks".' %(name, name)))
 
     return oc
+
+####################################################################################################
+@route(PREFIX + '/devtools-bookmarks/backup')
+def DevToolsBMB(title=None, header=None, message=None):
+    """Tools to Manage Bookmark backups"""
+
+    oc = ObjectContainer(title2='Bookmark Backup Tools', header=header, message=message)
+
+    if title:
+        if title == 'create_backup':
+            Log('\n----------Creating Bookmark Backup from Current Bookmarks----------')
+            cbmb = CreateBMBackup()
+            if cbmb:
+                message = 'Bookmark Backup Created'
+            else:
+                message = 'No Bookmarks to Backup yet'
+        return DevToolsBMB(header='BookmarkTools', message=message, title=None)
+
+    oc.add(DirectoryObject(key=Callback(DevToolsBMB, title='create_backup'),
+        title='Backup Bookmarks',
+        summary='Create a Backup file of all bookmarks'))
+    oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title='delete_backup'),
+        title='Delete Backups',
+        summary='Open menu to Delete old bookmark backups'))
+    oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title='load_backup'),
+        title='Load Bookmarks from Backup',
+        summary='Open menu to Load bookmarks from previously created backup file'))
+
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/devtools-bookmarks/backup/list')
+def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
+    """Load/Delete list"""
+
+    oc = ObjectContainer(title2='Load/Delete Backup List', header=header, message=message)
+
+    if title and file_name:
+        if title == 'delete_backup':
+            Log('\n----------Remove Bookmark Backup----------')
+            df = os.path.join(Common.SUPPORT_PATH, file_name)
+            Core.storage.remove(df)
+            message = 'Removed %s Bookmark Backup' %file_name
+        elif title == 'load_backup':
+            Log('\n----------Loading Bookmarks from Backup----------')
+            new_bookmarks = LoadBMBackup(file_name)
+            if new_bookmarks:
+                del Dict['Bookmarks']
+                Dict['Bookmarks'] = new_bookmarks
+                Dict.Save()
+                message = 'Replaced Current Bookmarks with %s backup file' %file_name
+            else:
+                message = 'Error: %s file does not exist' %file_name
+        return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
+
+    bmb_list = []
+    for dirpath, dirnames, filenames in os.walk(Common.SUPPORT_PATH):
+        for f in filenames:
+            # filter out default files
+            bmb = Regex(r'bookmark_backup_(\d+)\.json').search(f)
+            if bmb:
+                timestamp = Datetime.FromTimestamp(int(bmb.group(1)))
+                bmb_list.append(('Backup %s' %str(timestamp), bmb.group(0)))
+
+    for n, fn in bmb_list:
+        oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title=title, file_name=fn),
+            title=n,
+            summary="%s %s" %(title.split('_')[0].title(), n)
+            ))
+
+    if len(oc) > 0:
+        return oc
+    else:
+        message = 'No Bookmark Backups Yet'
+        return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
+
+####################################################################################################
+def CreateBMBackup():
+    """Create bookmark backup from current bookmarks"""
+
+    timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
+    bm_bkup_file = Core.storage.join_path(Common.SUPPORT_PATH, 'bookmark_backup_%i.json' %timestamp)
+
+    if Dict['Bookmarks']:
+        with open(bm_bkup_file, 'wb') as f:
+            json.dump(Dict['Bookmarks'], f, indent=4, sort_keys=True, separators=(',', ': '))
+        return True
+    else:
+        Log.Warn('* No Bookmarks to backup yet')
+        return False
+
+####################################################################################################
+def LoadBMBackup(file_name):
+    """load bookmark backup into json format string"""
+
+    fp = os.path.join(Common.SUPPORT_PATH, file_name)
+    if os.path.isfile(fp) and os.stat(fp).st_size != 0:
+        with open(fp) as data_file:
+            data = json.load(data_file)
+
+        return data
+    else:
+        return False
 
 ####################################################################################################
 def CacheAllCovers(category, qevent, page=1):
