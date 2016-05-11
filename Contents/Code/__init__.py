@@ -757,7 +757,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         if 'Movie' in pname:
             title2 = item_title
         else:
-            item_title_cleaned = Regex('[^a-zA-Z0-9 \n]').sub('', item_title)
+            item_title_cleaned = Regex(r'[^a-zA-Z0-9 \n]').sub('', item_title)
 
             if not drama_test:
                 latest = item.xpath('./following-sibling::td')[0].text_content().strip().replace(item_title_cleaned, '')
@@ -978,7 +978,7 @@ def GetItemList(html, url, item_title, type_title):
 
     episode_list = html.xpath('//table[@class="listing"]/tr/td')
     item_title_decode = Common.StringCode(string=item_title, code='decode')
-    item_title_regex = Regex('[^a-zA-Z0-9 \n\.]').sub('', item_title_decode)
+    item_title_regex = Regex(r'[^a-zA-Z0-9 \n\.]').sub('', item_title_decode)
 
     # if no shows, then none have been added yet
     if not episode_list:
@@ -996,7 +996,7 @@ def GetItemList(html, url, item_title, type_title):
                 media_page_url = url + '/' + node[0].get('href').rsplit('/')[-1]
 
                 # title for Video/Chapter, cleaned
-                raw_title = Regex('[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
+                raw_title = Regex(r'[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
                 if ('Manga' in type_title) or ('Comic' in type_title):
                     media_title = raw_title.replace('Read Online', '').strip()
                 else:
@@ -1097,7 +1097,7 @@ def GetPhotoAlbum(url, source_title, title, art):
         if javatext:
             if "lstImages" in javatext:
                 # then do a regex search to pull out relevant text
-                m = Regex('(?s)lstImages\.push\(\"([\S].*)\"\);').search(javatext).group(0)
+                m = Regex(r'(?s)lstImages\.push\(\"([\S].*)\"\);').search(javatext).group(0)
                 break
 
     # then split the string by the ';' to get each relevant line in an array
@@ -1105,7 +1105,7 @@ def GetPhotoAlbum(url, source_title, title, art):
 
     # now iterate over each line and pull out the image url
     for item in image_lines:
-        m = Regex('lstImages\.push\(\"([\S].*?)\"\)').search(item)
+        m = Regex(r'lstImages\.push\(\"([\S].*?)\"\)').search(item)
 
         if m:  # test for empty results
             image = m.group(1)
@@ -1313,7 +1313,7 @@ def Search(query=''):
     if len(b_prefs_names) == 1:
         b_prefs_name = b_prefs_names[0]
         b_prefs_name = 'comic' if b_prefs_name == 'kisscomic' else b_prefs_name
-        search_url = [s for s in all_search_urls if b_prefs_name in s][0]
+        search_url = [s for s in Common.SearchURLList() if b_prefs_name in s][0]
         search_url_filled = search_url %String.Quote(query, usePlus=True)
         type_title = 'Drama' if b_prefs_name == 'kissasian' else (b_prefs_name.split('kiss')[1].title() if 'kiss' in b_prefs_name else 'Comic')
         art = 'art-%s.jpg' %type_title.lower()
@@ -1367,7 +1367,7 @@ def SearchPage(type_title, search_url, art):
     if html.xpath('//table[@class="listing"]'):
         # Test for "exact" match, if True then send to 'ItemPage'
         node = html.xpath('//div[@id="headnav"]/script/text()')[0]
-        search_match = Regex('var\ path\ =\ (\'Search\')').search(node)
+        search_match = Regex(r'var\ path\ =\ (\'Search\')').search(node)
         if not search_match:
             # Send url to 'ItemPage'
             base_url = Common.GetBaseURL(search_url)
@@ -1805,7 +1805,7 @@ def GetDirSize(start_path='.'):
         for dirpath, dirnames, filenames in os.walk(start_path):
             for f in filenames:
                 # filter out default files
-                if not Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
+                if not Regex(r'(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
                     fp = os.path.join(dirpath, f)
                     total_size += os.path.getsize(fp)
                     count += 1
