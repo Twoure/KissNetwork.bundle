@@ -1,4 +1,3 @@
-import os
 import requests
 from slugify import slugify
 Common = SharedCodeService.common
@@ -15,8 +14,8 @@ def ElementFromURL(url):
     name = slugify(url) + '__cachetime__%i' %Datetime.TimestampFromDatetime(cachetime)
 
     match = False
-    path = os.path.join(Common.SUPPORT_PATH, "DataItems")
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    path = Core.storage.join_path(Core.storage.data_path, 'DataItems')
+    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
     for filename in files:
         item = filename.split('__cachetime__')
         if slugify(url) == item[0]:

@@ -4,9 +4,6 @@
 #                                                                                                  #
 ####################################################################################################
 # import section(s) not included in Plex Plug-In Framework
-import os
-import sys
-import shutil
 import messages
 import requests
 import rhtml as RHTML
@@ -321,7 +318,7 @@ def About():
     oc = ObjectContainer(title2='About / Help')
 
     # Get Resources Directory Size
-    d = GetDirSize(Common.RESOURCES_PATH)
+    d = GetDirSize(Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
     if d == 'Error':
         cache_string = 'N/A | Removing Files Still'
     else:
@@ -689,7 +686,6 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         # set title2 for last page
         main_title = '%s | %s | Page %s, Last Page' % (type_title, str(category), str(page))
 
-    #oc = ObjectContainer(title2=main_title, art=R(art), no_cache=True)
     oc = ObjectContainer(title2=main_title, art=R(art))
 
     # parse url for each Item and pull out its title, summary, and cover image
@@ -1727,7 +1723,7 @@ def CacheCovers(start=False, skip=True):
 def RemoveCoverImage(image_file):
     """Remove Cover Image"""
     if image_file:
-        path = Core.storage.join_path(Common.RESOURCES_PATH, image_file)
+        path = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources', image_file)
 
         if Core.storage.file_exists(path):
             Core.storage.remove(path)
@@ -1802,12 +1798,12 @@ def GetDirSize(start_path='.'):
         bsize = 1000  #1000 decimal, 1024 binary
         total_size = 0
         count = 0
-        for dirpath, dirnames, filenames in os.walk(start_path):
+        for dirpath, dirnames, filenames in Core.storage.walk(start_path):
             for f in filenames:
                 # filter out default files
                 if not Regex(r'(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
-                    fp = os.path.join(dirpath, f)
-                    total_size += os.path.getsize(fp)
+                    fp = Core.storage.join_path(dirpath, f)
+                    total_size += Core.storage.file_size(fp)
                     count += 1
 
         if total_size > float(1000000000):
@@ -1909,8 +1905,8 @@ def ClearCache(timeout):
     cachetime = Datetime.Now()
     count = 0
     Logger('* Clearing Cached URLs older than %s' %str(cachetime - timeout))
-    path = os.path.join(Common.SUPPORT_PATH, "DataItems")
-    files = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    path = Core.storage.join_path(Core.storage.data_path, "DataItems")
+    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
     for filename in files:
         item = filename.split('__cachetime__')
         if (Datetime.FromTimestamp(int(item[1])) + timeout) <= cachetime:

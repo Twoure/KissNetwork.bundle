@@ -1,3 +1,4 @@
+import shutil
 from io import open
 Headers = SharedCodeService.headers
 Domain = SharedCodeService.domain
@@ -172,11 +173,11 @@ def DevToolsC(title=None, header=None, message=None):
         if title == 'resources_cache':
             Log('\n----------Cleaning Dirty Resources Directory, and deleating Dict Keys if any----------')
 
-            for dirpath, dirnames, filenames in os.walk(Common.RESOURCES_PATH):
+            for dirpath, dirnames, filenames in Core.storage.walk(Core.bundle_path, 'Contents', 'Resources'):
                 for f in filenames:
                     # filter out default files
                     if not Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
-                        fp = os.path.join(dirpath, f)
+                        fp = Core.storage.join_path(dirpath, f)
                         Core.storage.remove(fp)
             if Dict['cover_files']:
                 del Dict['cover_files']
@@ -347,9 +348,9 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
     if title and file_name:
         if title == 'delete_backup':
             Log('\n----------Remove Bookmark Backup----------')
-            dfp = os.path.join(Common.SUPPORT_PATH, file_name)
-            if os.path.isfile(dfp):
-                Core.storage.remove(dfp)
+            fp = Core.storage.join_path(Core.storage.data_path, file_name)
+            if Core.storage.file_exists(fp):
+                Core.storage.remove(fp)
                 message = 'Removed %s Bookmark Backup' %file_name
             else:
                 message = '%s file already removed, not removing again' %file_name
@@ -366,7 +367,7 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
         return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
 
     bmb_list = []
-    for dirpath, dirnames, filenames in os.walk(Common.SUPPORT_PATH):
+    for dirpath, dirnames, filenames in Core.storage.walk(Core.storage.data_path):
         for f in filenames:
             # filter out default files
             bmb = Regex(r'bookmark_backup_(\d+)\.json').search(f)
@@ -391,7 +392,7 @@ def CreateBMBackup():
     """Create bookmark backup from current bookmarks"""
 
     timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
-    bm_bkup_file = Core.storage.join_path(Common.SUPPORT_PATH, 'bookmark_backup_%i.json' %timestamp)
+    bm_bkup_file = Core.storage.join_path(Core.storage.data_path, 'bookmark_backup_%i.json' %timestamp)
 
     if Dict['Bookmarks']:
         with open(bm_bkup_file, 'wb') as f:
@@ -405,8 +406,8 @@ def CreateBMBackup():
 def LoadBMBackup(file_name):
     """load bookmark backup into json format string"""
 
-    fp = os.path.join(Common.SUPPORT_PATH, file_name)
-    if os.path.isfile(fp) and os.stat(fp).st_size != 0:
+    fp = Core.stroage.join_path(Core.storage.data_path, file_name)
+    if Core.storage.file_exists(fp) and Core.storage.file_size(fp) != 0:
         with open(fp) as data_file:
             data = json.load(data_file)
 
@@ -495,7 +496,7 @@ def SaveCoverImage(image_url, count=0):
         content_url = image_url
         image_file = image_url.split('/', 3)[3].replace('/', '_')
 
-    path = Core.storage.join_path(Common.RESOURCES_PATH, image_file)
+    path = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources', image_file)
     Log.Debug('image file path = %s' %path)
 
     if not Core.storage.file_exists(path):
