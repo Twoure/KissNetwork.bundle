@@ -904,6 +904,18 @@ def ItemPage(item_info):
     Logger('* page url = %s' %page_url)
     Logger('* base url = %s' %base_url)
     Logger('*' * 80)
+    if not item_info['cover_url']:
+        try:
+            cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+            if 'kiss' in cover_url or 'readcomiconline' in cover_url:
+                content_url = Common.GetBaseURL(cover_url) + '/' + cover_url.split('/', 3)[3]
+                image_file = content_url.rsplit('/')[-1]
+            else:
+                content_url = cover_url
+                image_file = cover_url.split('/', 3)[3].replace('/', '_')
+            item_info.update({'cover_url': content_url, 'cover_file': image_file})
+        except:
+            pass
     cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
 
     if ('Manga' in type_title) or ('Comic' in type_title):
@@ -951,6 +963,41 @@ def ItemPage(item_info):
             thumb=cover, art=R(art)
             ))
 
+    # Setup related links
+    related = []
+    if type_title == 'Comic':
+        jdata = JSON.ObjectFromURL(
+            base_url + '/GetRelatedLinks', method='POST', cacheTime=CACHE_1HOUR,
+            values={'keyword': page_url.split('/')[-1].replace('-', '+')},
+            headers=Headers.GetHeadersForURL(base_url)
+            )
+        for jd in jdata:
+            rel_title = jd['Name']
+            rel_url = jd['Link']
+            rel_item_info = {
+                'item_sys_name': Common.StringCode(string=rel_url.split('/')[-1], code='encode'),
+                'item_title': Common.StringCode(string=rel_title, code='encode'),
+                'short_summary': 'NA', 'cover_url': "", 'cover_file': "",
+                'type_title': type_title, 'base_url': base_url, 'page_url': rel_url, 'art': art
+                }
+            related.append(rel_item_info)
+    else:
+        for rel in html.xpath('//a[starts-with(@href, "/%s/")]' %type_title):
+            hrel = rel.get('href')
+            if (len(hrel.split('/')) == 3) and (hrel != '/'+page_url.split('/', 3)[3]):
+                rel_title = rel.text_content().strip()
+                rel_item_info = {
+                    'item_sys_name': Common.StringCode(string=hrel.split('/')[-1], code='encode'),
+                    'item_title': Common.StringCode(string=rel_title, code='encode'),
+                    'short_summary': 'NA', 'cover_url': "", 'cover_file': "",
+                    'type_title': type_title, 'base_url': base_url, 'page_url': base_url + hrel, 'art': art
+                    }
+                related.append(rel_item_info)
+    if related:
+        oc.add(DirectoryObject(
+            key=Callback(RelatedList, r_list=related, title=item_title_decode, art=art),
+            title='Related Links', thumb=R('icon-related.png'), art=R(art)))
+
     # Test if the Dict does have the 'Bookmarks' section
     bm = Dict['Bookmarks']
     if ((True if [b[type_title] for b in bm[type_title] if b[type_title] == item_sys_name] else False) if type_title in bm.keys() else False) if bm else False:
@@ -967,6 +1014,23 @@ def ItemPage(item_info):
             summary='Add \"%s\" to your Bookmarks list.' % item_title_decode))
 
     return oc
+
+####################################################################################################
+@route(PREFIX + '/item/related', r_list=list)
+def RelatedList(r_list, title, art):
+    """Setup Related shows list"""
+
+    if len(r_list) == 1:
+        return ItemPage(r_list[0])
+    else:
+        oc = ObjectContainer(title2=title + ' / Related', art=R(art))
+        for r_info in r_list:
+            oc.add(DirectoryObject(
+                key=Callback(ItemPage, item_info=r_info),
+                title=Common.StringCode(string=r_info['item_title'], code='decode'),
+                art=R(art)
+                ))
+        return oc
 
 ####################################################################################################
 def GetItemList(html, url, item_title, type_title):

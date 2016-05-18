@@ -50,7 +50,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
     Reset Domain_Dict and CloudFlare Test Key
     """
 
-    oc = ObjectContainer(title2='Developer Tools', header=header, message=message)
+    oc = ObjectContainer(title2='Developer Tools', header=header, message=message, no_cache=True)
 
     if file_to_reset:
         header = 'Developer Tools'
@@ -114,7 +114,7 @@ def DevToolsH(title=None, header=None, message=None):
                     break
 
             message = 'Updated %s Headers.' %title
-            return DevTools(header=header, message=message, title=None)
+            return DevTools(header=header, message=message)
 
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',

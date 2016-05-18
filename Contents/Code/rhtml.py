@@ -46,10 +46,18 @@ def get_element_from_url(url, name, count=0):
                 count += 1
                 if len(page.history) > 0:
                     type_title = Common.GetTypeTitle(url)
-                    Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
-                    Log.Warn('* get_element_from_url Error: page history %s | %s' %(url, page.history))
-                    Domain.UpdateDomain(type_title)
-                    url = Common.CorrectURL(url)
+                    req_base_url = ('https://' if type_title == 'Anime' else 'http://') + page.url.split('/')[2]
+                    base_url = ('https://' if type_title == 'Anime' else 'http://') + url.split('/')[2]
+                    if req_base_url == base_url:
+                        page = requests.get(page.url, headers=Headers.GetHeadersForURL(req_base_url))
+                        Data.Save(name, page.text)
+                        html = HTML.ElementFromString(page.text)
+                        return html
+                    else:
+                        Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
+                        Log.Warn('* get_element_from_url Error: page history %s | %s' %(url, page.history))
+                        Domain.UpdateDomain(type_title)
+                        url = Common.CorrectURL(url)
                 else:
                     Log.Warn('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
                     Headers.GetHeadersForURL(url, update=True)
