@@ -114,7 +114,7 @@ def DevToolsH(title=None, header=None, message=None):
                     break
 
             message = 'Updated %s Headers.' %title
-            return DevTools(header=header, message=message)
+            return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
@@ -140,6 +140,12 @@ def DevToolsD(title=None, header=None, message=None):
             message = 'Resetting %s. New values for %s will be written soon' %(title, title)
 
             return DevToolsD(header=header, message=message, title=None)
+        elif title == 'recache_default_domains':
+            Log('\n----------Re-Caching Default Domains----------')
+            Domain.get_domain_dict(True)
+            message = 'Default Domains Re-Cached'
+
+            return DevToolsD(header=header, message=message, title=None)
         elif ( title == 'Anime' or title == 'Cartoon'
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating %s Domain in Domain_Dict----------' %title)
@@ -147,9 +153,12 @@ def DevToolsD(title=None, header=None, message=None):
             Domain.UpdateDomain(title)
 
             message = 'Updated %s Domain.' %title
-            return DevTools(header=header, message=message, title=None)
+            return DevTools(header=header, message=message, file_to_reset=None)
 
-    oc.add(DirectoryObject(key=Callback(DevToolsH, title='Domain_Dict'),
+    oc.add(DirectoryObject(key=Callback(DevToolsD, title='recache_default_domains'),
+        title='Re-Cache Default Domains',
+        summary='Default Domains are pulled from Cached Gist URL. Use to Re-Cache Gist URL.'))
+    oc.add(DirectoryObject(key=Callback(DevToolsD, title='Domain_Dict'),
         title='Reset Domain_Dict File',
         summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
     for (name, url) in sorted(Common.BaseURLListTuple()):
@@ -173,7 +182,7 @@ def DevToolsC(title=None, header=None, message=None):
         if title == 'resources_cache':
             Log('\n----------Cleaning Dirty Resources Directory, and deleating Dict Keys if any----------')
 
-            for dirpath, dirnames, filenames in Core.storage.walk(Core.bundle_path, 'Contents', 'Resources'):
+            for dirpath, dirnames, filenames in Core.storage.walk(Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources')):
                 for f in filenames:
                     # filter out default files
                     if not Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):

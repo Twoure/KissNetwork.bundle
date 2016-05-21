@@ -49,6 +49,18 @@ def GetTypeTitle(url):
     return type_title
 
 ####################################################################################################
+def get_domain_dict(fresh=False):
+    """cache control for deafutl domain dictionary"""
+
+    url = String.Base64Decode('aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9Ud291cmUvOGJiNTQwMzM3ZGVmYWY3MTg4ZTZjMDE5NDUzMDc2NjEvcmF3')
+    if fresh:
+        default_domain_dict = JSON.ObjectFromURL(url, cacheTime=0)
+    else:
+        default_domain_dict = JSON.ObjectFromURL(url, cacheTime=CACHE_1DAY)
+
+    return default_domain_dict
+
+####################################################################################################
 def SetDomainURL(string):
     """
     Get the domain url dynamically
@@ -56,13 +68,10 @@ def SetDomainURL(string):
     This will find the new domain and return it
     """
 
-    Log.Debug('* string = %s' %string)
+    Log.Debug('* SetDomainURL: string = %s' %string)
 
-    url_dict = JSON.ObjectFromURL(
-        String.Base64Decode('aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9Ud291cmUvOGJiNTQwMzM3ZGVmYWY3MTg4ZTZjMDE5NDUzMDc2NjEvcmF3'),
-        cacheTime=CACHE_1DAY)
-
-    test_one = url_dict[string]
+    default_domain_dict = get_domain_dict(False)
+    test_one = default_domain_dict[string]
 
     try:
         r = requests.head(test_one, headers={'user-agent': USER_AGENT})
