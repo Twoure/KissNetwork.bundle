@@ -2,7 +2,7 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       05/07/2016
+Date:       05/28/2016
 """
 import binascii
 import pyaes
@@ -68,5 +68,5 @@ class KissDecrypt:
             r = self.unpad_string(r)
             return self.ensure_unicode(r)
         else:
-            Log.Error('* Kissenc Error: ciphertext block is not larger than 16')
+            Log.Error('* KissDecrypt Error: ciphertext block is not larger than 16')
             raise ValueError('ciphertext block is not larger than 16')
