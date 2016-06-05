@@ -10,9 +10,10 @@
     - Common error within `headers.pys`
     - Common error within `CFTest` function
   - Updates:
-    - `cloudflare-scrape` v1.6.3
-    - `PyExecJS` v1.4.0
-    - `six` v1.10.0 _(required for `PyExecJS` v1.4.0)_
+    - `cloudflare-scrape` _v1.6.3_
+    - `PyExecJS` _v1.4.0_
+    - `six` _v1.10.0_ _(required for `PyExecJS` v1.4.0)_
+    - Added new Related links
     - Improved dynamic domain handling
     - Improved cookie expire time handling
     - New Bookmark Backup tools within DevTools
