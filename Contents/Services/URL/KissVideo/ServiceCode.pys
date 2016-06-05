@@ -151,14 +151,14 @@ def PlayVideo(url, m, **kwargs):
     else:
         req_url = url
 
-    if 'Drama' in Common.GetTypeTitle(url):
+    if not 'Anime' in Common.GetTypeTitle(url):
         r = Headers.Request(req_url, raw=True)
-        dh = Headers.GetHeadersForURL(url)
-        dc = dh['cookie']
-        dh.update({'cookie': '; '.join([dc, 'k_token=%s' %str(r.cookies['k_token'])])})
+        headers = Headers.GetHeadersForURL(url)
+        dc = headers['cookie']
+        headers.update({'cookie': '; '.join([dc, 'k_token=%s' %str(r.cookies['k_token'])])})
         page_text = r.text
     else:
-        dh = None
+        headers = None
         page_text = Headers.Request(req_url)
 
     onedrive = Regex(r'src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
@@ -175,7 +175,7 @@ def PlayVideo(url, m, **kwargs):
         Log.Debug('* StreamMoe URL      = %s' %streammoe.group(1))
         vurl = get_streammoe_url(streammoe.group(1), strategy)
     else:
-        vurl = get_googlevideo_url(page_text, url, m, dh)
+        vurl = get_googlevideo_url(page_text, url, m, headers)
     Log.Debug('* PlayVideo URL      = %s' %vurl)
 
     if (prefs['samsung_fix'] == 'true') and (prefs['force_transcode'] == 'false') and (prefs['server'] == '0'):
@@ -201,7 +201,7 @@ def PlayVideo(url, m, **kwargs):
         return IndirectResponse(VideoClipObject, key=vurl)
 
 ####################################################################################################
-def get_googlevideo_url(page_text, url, m, dh):
+def get_googlevideo_url(page_text, url, m, headers):
     """
     Get GoogleVideo URLs
     Returns the Hights stream playable depending on the previous Stream Selections
@@ -240,7 +240,7 @@ def get_googlevideo_url(page_text, url, m, dh):
         if type_title_lower == 'anime':
             vurl_old = String.Base64Decode(node.get('value'))
         else:
-            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, dh)
+            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers)
         if 'googlevideo' in vurl_old:
             try:
                 itag = vurl_old.split('=m')[1]
