@@ -492,7 +492,7 @@ def BookmarksSub(type_title, art):
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
             if cover_url:
-                if ('kissanime' in cover_url) and not ('https' in cover_url):
+                if Regex(r'^http\:\/\/(kissanime)\.[^\/]+\/.+$').search(cover_url):
                     bm_info = item_info.copy()
                     bm_info.update({'type_title': type_title})
                     ftimer = float(Util.RandomInt(0,30)) + Util.Random()
@@ -907,7 +907,7 @@ def ItemPage(item_info):
     if not item_info['cover_url']:
         try:
             cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
-            if 'kiss' in cover_url or 'readcomiconline' in cover_url:
+            if Common.is_kiss_url(cover_url):
                 content_url = Common.GetBaseURL(cover_url) + '/' + cover_url.split('/', 3)[3]
                 image_file = content_url.rsplit('/')[-1]
             else:
@@ -1441,7 +1441,7 @@ def SearchPage(type_title, search_url, art):
                 if not 'http' in cover_url:
                     cover_url = None
                     cover_file = None
-                elif 'kiss' in cover_url:
+                elif Common.is_kiss_url(cover_url):
                     cover_file = cover_url.rsplit('/')[-1]
                 else:
                     cover_file = None
@@ -1945,7 +1945,7 @@ def GetThumb(cover_url, cover_file):
     cover = None
     if not cover_url:
         return cover
-    elif 'kiss' in cover_url:
+    elif Common.is_kiss_url(cover_url):
         if Prefs['cache_covers'] and cover_file:
             Logger('* cover file name   = %s' %cover_file)
             if Common.CoverImageFileExist(cover_file):

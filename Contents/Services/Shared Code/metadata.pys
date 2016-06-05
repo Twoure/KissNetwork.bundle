@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import common as Common
 
 ########################################################################################
@@ -91,7 +92,7 @@ def get_thumb_and_art(html, url):
     """setup thumb and art for video"""
 
     cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
-    if 'kiss' in cover_url:
+    if Common.is_kiss_url(cover_url):
         cover_file = cover_url.rsplit('/')[-1]
     elif 'http' in cover_url:
         cover_file = cover_url.split('/', 3)[3].replace('/', '_')
@@ -398,7 +399,7 @@ def GetSourceTitle(url):
     """Get Source Title"""
 
     if 'kiss' in url:
-        source_title = 'Kiss' + Common.GetBaseURL(url).split('kiss')[1].split('.')[0].title()
+        source_title = 'Kiss' + Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url).group(1).title()
     else:
         source_title = 'KissComic'
 

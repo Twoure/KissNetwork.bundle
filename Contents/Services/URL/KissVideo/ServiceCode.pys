@@ -9,8 +9,7 @@ import metadata as Metadata
 import subprefs as SubPrefs
 #from RedirectFollower import get_url_redirect
 from openload import decode_openload
-from downloader import is_tool
-from downloader import get_streammoe_url
+from downloader import is_tool, get_streammoe_url
 import kissdecrypt
 import requests
 

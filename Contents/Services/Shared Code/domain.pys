@@ -38,15 +38,12 @@ import requests
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    if 'kiss' in url:
-        type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-        # correct type_title
-        if type_title == 'Asian':
-            type_title = 'Drama'
+    if Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url):
+        type_title = Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url).group(1).title()
     else:
         type_title = 'Comic'
 
-    return type_title
+    return 'Drama' if type_title == 'Asian' else type_title
 
 ####################################################################################################
 def get_domain_dict(fresh=False):
@@ -71,14 +68,14 @@ def SetDomainURL(string):
     Log.Debug('* SetDomainURL: string = %s' %string)
 
     default_domain_dict = get_domain_dict(False)
-    test_one = default_domain_dict[string]
+    test = default_domain_dict[string]
 
     try:
-        r = requests.head(test_one, headers={'user-agent': USER_AGENT})
+        r = requests.head(test, headers={'user-agent': USER_AGENT})
     except Exception as e:
-        Log.Error('* SetDomainURL Error: Unable to handle URL \"%s\"' %test_one)
+        Log.Error('* SetDomainURL Error: Unable to handle URL \"%s\"' %test)
         Log.Error('* SetDomainURL Error: %s' %str(e))
-        return test_one
+        return test
 
     status = int(r.status_code)
     Log.Debug('* Header Status Code = %s' %str(status))
@@ -87,22 +84,22 @@ def SetDomainURL(string):
         try:
             r_domain = r.headers['location']
             r_domain = r_domain[:-1] if r_domain.endswith('/') else r_domain
-            Log.Debug('* Current Domain \"%s\" different from test \"%s\"' %(r_domain, test_one))
+            Log.Debug('* Current Domain \"%s\" different from test \"%s\"' %(r_domain, test))
             return r_domain
         except Exception as e:
-            Log.Error('* SetDomainURL Error: Unable to process headers for \"%s\"' %test_one)
+            Log.Error('* SetDomainURL Error: Unable to process headers for \"%s\"' %test)
             Log.Error('* SetDomainURL Error: %s' %str(e))
     elif status == 503 or status == 200:
         url = r.url[:-1] if r.url.endswith('/') else r.url
-        if url == test_one:
-            Log.Debug('* Current Domain \"%s\" and test \"%s\" are the same.' %(url, test_one))
+        if url == test:
+            Log.Debug('* Current Domain \"%s\" and test \"%s\" are the same.' %(url, test))
         else:
             Log.Error('* SetDomainURL Error: Status Code check FAILD.')
-            Log.Error('* SetDomainURL Error: Current Domain \"%s\" and \"%s\" are NOT the same.' %(url, test_one))
+            Log.Error('* SetDomainURL Error: Current Domain \"%s\" and \"%s\" are NOT the same.' %(url, test))
     else:
         Log.Critical('* SetDomainURL Error: Cannot find Domain for %s' %string.title())
 
-    return test_one
+    return test
 
 ####################################################################################################
 def SaveDomainDict(content=dict):
@@ -146,6 +143,8 @@ def LoadDomainDict():
 
 ####################################################################################################
 def UpdateDomain(kind):
+    """Update only one domain"""
+
     d = LoadDomainDict()
     d.update({kind: SetDomainURL(kind.lower())})
     return SaveDomainDict(d)

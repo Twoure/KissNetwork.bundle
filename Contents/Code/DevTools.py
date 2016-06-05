@@ -460,7 +460,8 @@ def CacheAllCovers(category, qevent, page=1):
                 thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
             else:
                 thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
-            if 'kiss' in thumb:
+
+            if Common.is_kiss_url(thumb):
                 cover_file = thumb.rsplit('/')[-1]
             elif 'http' in thumb:
                 cover_file = thumb.split('/', 3)[3].replace('/', '_')
@@ -474,8 +475,8 @@ def CacheAllCovers(category, qevent, page=1):
             thumb = None
             cover_file = None
 
-        if thumb:
-            if (not Common.CoverImageFileExist(cover_file)) and ('kiss' in thumb):
+        if thumb and (not Common.CoverImageFileExist(cover_file)):
+            if Common.is_kiss_url(thumb):
                 timer = float(Util.RandomInt(0,30)) + Util.Random()
                 Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=thumb)
 
@@ -498,7 +499,7 @@ def CacheAllCovers(category, qevent, page=1):
 def SaveCoverImage(image_url, count=0):
     """Save image to Cover Image Path and return the file name"""
 
-    if 'kiss' in image_url or 'readcomiconline' in image_url:
+    if Common.is_kiss_url(image_url):
         content_url = Common.GetBaseURL(image_url) + '/' + image_url.split('/', 3)[3]
         image_file = content_url.rsplit('/')[-1]
     else:
@@ -509,7 +510,7 @@ def SaveCoverImage(image_url, count=0):
     Log.Debug('image file path = %s' %path)
 
     if not Core.storage.file_exists(path):
-        if 'kiss' in content_url:
+        if Common.is_kiss_url(content_url):
             r = requests.get(content_url, headers=Headers.GetHeadersForURL(content_url), stream=True)
         else:
             r = requests.get(content_url, stream=True)

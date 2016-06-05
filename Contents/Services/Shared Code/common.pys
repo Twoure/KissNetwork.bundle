@@ -77,15 +77,12 @@ def CorrectURL(url):
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    if 'kiss' in url:
-        type_title = url.rsplit('/')[2].rsplit('kiss')[1].rsplit('.')[0].title()
-        # correct type_title
-        if type_title == 'Asian':
-            type_title = 'Drama'
+    if Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url):
+        type_title = Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url).group(1).title()
     else:
         type_title = 'Comic'
 
-    return type_title
+    return 'Drama' if type_title == 'Asian' else type_title
 
 ####################################################################################################
 def GetBaseURL(url):
@@ -113,16 +110,18 @@ def CoverImageFileExist(image_file):
         return False
 
 ####################################################################################################
+def is_kiss_url(url):
+    return Regex(r'^https?\:\/\/(readcomiconline|kiss\w+)\.[^\/]+\/.+$').search(url)
+
+####################################################################################################
 def CorrectCoverImage(string):
     """Correct Cover Image file name"""
 
     if string:
-        if 'kiss' in string and 'http' in string:
+        if is_kiss_url(string):
             string = GetBaseURL(string) + '/' + string.split('/', 3)[3]
         elif 'cdn.myanimelist.net' in string:
             string = 'http://' + string.split('/', 2)[2]
-        elif 'readcomiconline' in string:
-            string = GetBaseURL(string) + '/' + string.split('/', 3)[3]
 
         name, ext = os.path.splitext(string)
         ext_l = ext.lower()
