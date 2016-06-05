@@ -440,7 +440,7 @@ def CacheAllCovers(category, qevent, page=1):
         drama_test = True
     else:
         drama_test = False
-    base_url = Common.DomainDict[category]
+    base_url = Common.DomainDict(category)
     item_url = base_url + '/%sList?page=%s' % (category, page)
 
     html = RHTML.ElementFromURL(item_url)
