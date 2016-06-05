@@ -558,13 +558,14 @@ def SetUpCFTest():
             Log.Info(cftest)
             Dict['cfscrape_test'] = True
             Dict.Save()
-        except:
+        except Exception as e:
             Dict['cfscrape_test'] = False
             Dict.Save()
             Log.Error('*' * 80)
             Log.Error('----------CFTest Fail----------')
             Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
             Log.Error('Once JavaScript Runtime installed, Restart channel')
+            Log.Error('%s' %str(e))
             Log.Error('*' * 80)
     else:
         Log.Debug('* CFTest Previously Passed, not running again.')
