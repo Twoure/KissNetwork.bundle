@@ -20,6 +20,7 @@
     - Improved URL caching
     - Added Reset URL cache to DevTools
     - Switched to `Core` when available
+    - New Domain tools within DevTools
 
 ##### 1.2.0
 - _05/07/2016_
