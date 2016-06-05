@@ -67,6 +67,11 @@ def DevTools(file_to_reset=None, header=None, message=None):
             Log('\n----------Attempting to Restart KissNetwork Channel----------')
             RestartChannel()
             message = 'Restarting channel'
+        elif file_to_reset == 'clear_url_cache':
+            Log('\n----------Clearing URL Cache----------')
+            count = ClearCache(Datetime.Delta())
+            message = 'Cleaned %i Cached URL files' %count
+            Log('\n----------Cleaned %i Cached files----------' %count)
         return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsBM),
@@ -84,6 +89,9 @@ def DevTools(file_to_reset=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
         title='Reset Dict cfscrape Test Key',
         summary='Delete previous test key so the channel can retest for a valid JavaScript Runtime.'))
+    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='clear_url_cache'),
+        title='Reset URL Cache',
+        summary='Force delete current URL Cache.'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='restart_channel'),
         title='Restart KissNetwork Channel',
         summary='Should manually Restart the KissNetwork Channel.'))
@@ -565,7 +573,7 @@ def SetUpCFTest():
             Log.Error('----------CFTest Fail----------')
             Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
             Log.Error('Once JavaScript Runtime installed, Restart channel')
-            Log.Error('%s' %str(e))
+            Log.Error(str(e))
             Log.Error('*' * 80)
     else:
         Log.Debug('* CFTest Previously Passed, not running again.')
@@ -584,3 +592,20 @@ def RestartChannel():
     except Exception as e:
         Log.Error(str(e))
         return False
+
+####################################################################################################
+def ClearCache(timeout):
+    """Clear old Cached URLs depending on input timeout"""
+
+    cachetime = Datetime.Now()
+    count = 0
+    Log.Debug('* Clearing Cached URLs older than %s' %str(cachetime - timeout))
+    path = Core.storage.join_path(Core.storage.data_path, "DataItems")
+    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
+    for filename in files:
+        item = filename.split('__cachetime__')
+        if (Datetime.FromTimestamp(int(item[1])) + timeout) <= cachetime:
+            Data.Remove(filename)
+            count += 1
+    Log.Debug('* Cleaned %i Cached files' %count)
+    return count

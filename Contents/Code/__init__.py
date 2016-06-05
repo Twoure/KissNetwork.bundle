@@ -11,7 +11,7 @@ from io import open
 from updater import Updater
 from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
-from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 from slugify import slugify
 
 # import Shared Service Code
@@ -1961,23 +1961,6 @@ def GetThumb(cover_url, cover_file):
         cover = Common.CorrectCoverImage(cover_url)
 
     return cover
-
-####################################################################################################
-def ClearCache(timeout):
-    """Clear old Cached URLs depending on input timeout"""
-
-    cachetime = Datetime.Now()
-    count = 0
-    Logger('* Clearing Cached URLs older than %s' %str(cachetime - timeout))
-    path = Core.storage.join_path(Core.storage.data_path, "DataItems")
-    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
-    for filename in files:
-        item = filename.split('__cachetime__')
-        if (Datetime.FromTimestamp(int(item[1])) + timeout) <= cachetime:
-            Data.Remove(filename)
-            count += 1
-    Logger('* Cleaned %i Cached files' %count)
-    return
 
 ####################################################################################################
 @route(PREFIX + '/logger', force=bool)
