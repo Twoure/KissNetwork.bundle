@@ -1,7 +1,7 @@
 import time
 import re
-import requests
-from requests.adapters import HTTPAdapter
+import os
+from requests.sessions import Session
 import execjs
 
 try:
@@ -9,115 +9,153 @@ try:
 except ImportError:
     from urllib.parse import urlparse
 
-DEFAULT_USER_AGENT = (
-    'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0 '
-    'Ubuntu Chromium/34.0.1847.116 Chrome/34.0.1847.116 Safari/537.36'
-    )
-JS_ENGINE = execjs.get().name
+DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
 
-#if not ("Node" in JS_ENGINE or "V8" in JS_ENGINE):
-#    raise EnvironmentError("Your Javascript runtime '%s' is not supported due to security concerns. "
-#                           "Please use Node.js, V8, or PyV8." % JS_ENGINE)
 
-class CloudflareAdapter(HTTPAdapter):
-    def send(self, request, **kwargs):
-        domain = request.url.split("/")[2]
-        resp = super(CloudflareAdapter, self).send(request, **kwargs)
+class CloudflareScraper(Session):
+    def __init__(self, *args, **kwargs):
+        self.js_engine = kwargs.pop("js_engine", None)
+        super(CloudflareScraper, self).__init__(*args, **kwargs)
 
-        # Check if we already solved a challenge
-        if request._cookies.get("cf_clearance", domain="." + domain):
-            return resp
+        if "requests" in self.headers["User-Agent"]:
+            # Spoof Firefox on Linux if no custom User-Agent has been set
+            self.headers["User-Agent"] = DEFAULT_USER_AGENT
+
+    def request(self, method, url, *args, **kwargs):
+        resp = super(CloudflareScraper, self).request(method, url, *args, **kwargs)
 
         # Check if Cloudflare anti-bot is on
         if ( "URL=/cdn-cgi/" in resp.headers.get("Refresh", "") and
              resp.headers.get("Server", "") == "cloudflare-nginx" ):
-            return self.solve_cf_challenge(resp, request.headers, resp.cookies, **kwargs)
+            return self.solve_cf_challenge(resp, **kwargs)
 
         # Otherwise, no Cloudflare anti-bot detected
         return resp
 
-    def add_headers(self, request):
-        # Spoof Chrome on Linux if no custom User-Agent has been set
-        if "requests" in request.headers["User-Agent"]:
-            request.headers["User-Agent"] = DEFAULT_USER_AGENT
+    def solve_cf_challenge(self, resp, **kwargs):
+        time.sleep(5)  # Cloudflare requires a delay before solving the challenge
 
-    def format_js(self, js):
-        js = re.sub(r"[\n\\']", "", js)
-        if "Node" in JS_ENGINE:
-            return "return require('vm').runInNewContext('%s');" % js
-        return js.replace("parseInt", "return parseInt")
+        body = resp.text
+        parsed_url = urlparse(resp.url)
+        domain = urlparse(resp.url).netloc
+        submit_url = "%s://%s/cdn-cgi/l/chk_jschl" % (parsed_url.scheme, domain)
 
-    def solve_cf_challenge(self, resp, headers, cookies, **kwargs):
-        time.sleep(5) # Cloudflare requires a delay before solving the challenge
+        params = kwargs.setdefault("params", {})
+        headers = kwargs.setdefault("headers", {})
+        headers["Referer"] = resp.url
 
-        headers = headers.copy()
-        url = resp.url
-        parsed = urlparse(url)
-        domain = parsed.netloc
-        page = resp.text
-        kwargs.pop("params", None) # Don't pass on params
         try:
-            challenge = re.search(r'name="jschl_vc" value="(\w+)"', page).group(1)
-            challenge_pass = re.search(r'name="pass" value="(.+?)"', page).group(1)
+            params["jschl_vc"] = re.search(r'name="jschl_vc" value="(\w+)"', body).group(1)
+            params["pass"] = re.search(r'name="pass" value="(.+?)"', body).group(1)
 
             # Extract the arithmetic operation
-            builder = re.search(r"setTimeout\(function\(\){\s+(var t,r,a,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n", page).group(1)
-            builder = re.sub(r"a\.value =(.+?) \+ .+?;", r"\1", builder)
-            builder = re.sub(r"\s{3,}[a-z](?: = |\.).+", "", builder)
+            js = self.extract_js(body)
 
-        except Exception as e:
-            # Something is wrong with the page. This may indicate Cloudflare has changed their
-            # anti-bot technique. If you see this and are running the latest version,
+        except Exception:
+            # Something is wrong with the page.
+            # This may indicate Cloudflare has changed their anti-bot
+            # technique. If you see this and are running the latest version,
             # please open a GitHub issue so I can update the code accordingly.
-            print ("[!] Unable to parse Cloudflare anti-bots page. Try upgrading cloudflare-scrape, or submit "
-                   "a bug report if you are running the latest version. Please read "
-                   "https://github.com/Anorov/cloudflare-scrape#updates before submitting a bug report.\n")
+            print("[!] Unable to parse Cloudflare anti-bots page. "
+                  "Try upgrading cloudflare-scrape, or submit a bug report "
+                  "if you are running the latest version. Please read "
+                  "https://github.com/Anorov/cloudflare-scrape#updates "
+                  "before submitting a bug report.\n")
             raise
 
         # Safely evaluate the Javascript expression
-        js = self.format_js(builder)
-        answer = str(int(execjs.exec_(js)) + len(domain))
+        params["jschl_answer"] = str(int(execjs.exec_(js)) + len(domain))
 
-        params = {"jschl_vc": challenge, "jschl_answer": answer, "pass": challenge_pass}
-        submit_url = "%s://%s/cdn-cgi/l/chk_jschl" % (parsed.scheme, domain)
-        headers["Referer"] = url
+        return self.get(submit_url, **kwargs)
 
-        resp = requests.get(submit_url, params=params, headers=headers, cookies=cookies, **kwargs)
-        resp.cookies.set("__cfduid", cookies.get("__cfduid"))
-        return resp
+    def extract_js(self, body):
+        js = re.search(r"setTimeout\(function\(\){\s+(var "
+                        "s,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n", body).group(1)
+        js = re.sub(r"a\.value =(.+?) \+ .+?;", r"\1", js)
+        js = re.sub(r"\s{3,}[a-z](?: = |\.).+", "", js)
+
+        # Strip characters that could be used to exit the string context
+        # These characters are not currently used in Cloudflare's arithmetic snippet
+        js = re.sub(r"[\n\\']", "", js)
+
+        if "Node" in self.js_engine:
+            # Use vm.runInNewContext to safely evaluate code
+            # The sandboxed code cannot use the Node.js standard library
+            return "return require('vm').runInNewContext('%s');" % js
+
+        return js.replace("parseInt", "return parseInt")
+
+    @classmethod
+    def create_scraper(cls, sess=None, js_engine=None):
+        """
+        Convenience function for creating a ready-to-go requests.Session (subclass) object.
+        """
+        if js_engine:
+            os.environ["EXECJS_RUNTIME"] = js_engine
+
+        js_engine = execjs.get().name
+
+        if not js_engine:
+            raise EnvironmentError("No Javascript runtime installed. "
+                                   "Please install Node.js or equivalent Javascript runtime. ")
+
+        #if not ("Node" in js_engine or "V8" in js_engine):
+            #raise EnvironmentError("Your Javascript runtime '%s' is not supported due to security concerns. "
+                                   #"Please use Node.js or PyV8. To force a specific engine, "
+                                   #"such as Node, call create_scraper(js_engine=\"Node\")" % js_engine)
+
+        scraper = cls(js_engine=js_engine)
+
+        if sess:
+            attrs = ["auth", "cert", "cookies", "headers", "hooks", "params", "proxies", "data"]
+            for attr in attrs:
+                val = getattr(sess, attr, None)
+                if val:
+                    setattr(scraper, attr, val)
+
+        return scraper
 
 
-def create_scraper(session=None):
-    """
-    Convenience function for creating a ready-to-go requests.Session object.
-    You may optionally pass in an existing Session to mount the CloudflareAdapter to it.
-    """
-    sess = session or requests.session()
-    adapter = CloudflareAdapter()
-    sess.mount("http://", adapter)
-    sess.mount("https://", adapter)
-    return sess
+    ## Functions for integrating cloudflare-scrape with other applications and scripts
 
-def get_tokens(url, user_agent=None):
-    scraper = create_scraper()
-    user_agent = user_agent or DEFAULT_USER_AGENT
-    scraper.headers["User-Agent"] = user_agent
+    @classmethod
+    def get_tokens(cls, url, user_agent=None, js_engine=None):
+        scraper = cls.create_scraper(js_engine=js_engine)
+        if user_agent:
+            scraper.headers["User-Agent"] = user_agent
 
-    try:
-        resp = scraper.get(url)
-        resp.raise_for_status()
-    except Exception as e:
-        print("'%s' returned error, could not collect tokens.\n%s\n" % (url, str(e)))
-        raise
+        try:
+            resp = scraper.get(url)
+            resp.raise_for_status()
+        except Exception as e:
+            print("'%s' returned an error. Could not collect tokens.\n" % url)
+            raise
 
-    return ( {
-                 "__cfduid": resp.cookies.get("__cfduid", ""),
-                 "cf_clearance": scraper.cookies.get("cf_clearance", "")
-                 #"ASP.NET_SessionId": resp.cookies.get("ASP.NET_SessionId", "")
-             },
-             user_agent
-           )
+        domain = urlparse(resp.url).netloc
+        cookie_domain = None
 
-def get_cookie_string(url, user_agent=None):
-    tokens, user_agent = get_tokens(url, user_agent=user_agent)
-    return "; ".join("=".join(pair) for pair in tokens.items()), user_agent
+        for d in scraper.cookies.list_domains():
+            if d.startswith(".") and d in ("." + domain):
+                cookie_domain = d
+                break
+        else:
+            raise ValueError("Unable to find cookies")
+
+        return ({
+                    "__cfduid": scraper.cookies.get("__cfduid", "", domain=cookie_domain),
+                    "cf_clearance": scraper.cookies.get("cf_clearance", "", domain=cookie_domain)
+                },
+                scraper.headers["User-Agent"]
+               )
+
+    @classmethod
+    def get_cookie_string(cls, url, user_agent=None, js_engine=None):
+        """
+        Convenience function for building a Cookie HTTP header value.
+        """
+        tokens, user_agent = cls.get_tokens(url, user_agent=user_agent, js_engine=None)
+        return "; ".join("=".join(pair) for pair in tokens.items()), user_agent
+
+create_scraper = CloudflareScraper.create_scraper
+get_tokens = CloudflareScraper.get_tokens
+get_cookie_string = CloudflareScraper.get_cookie_string
