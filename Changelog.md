@@ -1,5 +1,25 @@
 # ChangeLog
 
+##### 1.2.1
+- _06/05/2016_
+  - Fixes:
+    - `KissDecrypt.pys` KissCartoon updated to `v3` decryption
+    - Comic cover URLs, added to caching rules
+    - First attempt at error handling for offline host
+    - Many DevTools errors
+    - Common error within `headers.pys`
+    - Common error within `CFTest` function
+  - Updates:
+    - `cloudflare-scrape` v1.6.3
+    - `PyExecJS` v1.4.0
+    - `six` v1.10.0 _(required for `PyExecJS` v1.4.0)_
+    - Improved dynamic domain handling
+    - Improved cookie expire time handling
+    - New Bookmark Backup tools within DevTools
+    - Improved URL caching
+    - Added Reset URL cache to DevTools
+    - Switched to `Core` when available
+
 ##### 1.2.0
 - _05/07/2016_
   - Fixed Kissasian video URL decryption v3

@@ -73,12 +73,12 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
   - Ubuntu 14.04 LTS: PMS version 0.9.16.6
-  - Windows 7 & 10: PMS version 0.9.12.13
+  - Windows 7: PMS version 0.9.16.6
 
 ##### Plex Clients:
 - Tested Working:
-  - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7 & 10)
-  - Android (4.4.2) (Plex Client App v4.24.2.563)
+  - Plex Home Theater (Ubuntu 14.04 LTS, and Windows 7)
+  - Android (4.4.2) (Plex Client App v4.26.0.648)
   - Plex Media Player (1.0.6)
   - Plex/Web (2.6.1)
   - Chromecast (Videos & Pictures)
@@ -168,13 +168,18 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Developer Tools
 - [**Bookmark Tools**](#bookmark-tools)
-- [**Header Tools**](#header-tools)
 - [**Cover Cache Tools**](#cover-cache-tools)
-- **Reset Domain_Dict File:** Create backup of old Domain_Dict, then delete current, and write new Domain_Dict with freash domains
+- [**Domain Tools**](#domain-tools)
+- [**Header Tools**](#header-tools)
 - **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test. It is testing for a valid JavaScript Runtime
+- **Reset URL Cache:** Delete custom URL cache, separate from Plex Framework
 - **Restart KissNetwork Channel:** Will restart KissNetwork Channel in PMS, but will not refresh URL Service Code.
 
 ##### Bookmark Tools
+- **Backup Tools:**
+  - _Backup Bookmarks_ - Creates a Backup file of all bookmarks
+  - _Delete Backups_ - Open menu to Detele old bookmark backups
+  - _Load Bookmarks from Backup_ - Open menu to Load bookmarks from previously created backup file
 - **Toggle Hiding "Clear Bookmarks" Function:** For those of us who accidentally delete our bookmarks but don't mean to
 - **Reset "All" Bookmarks:** Same as "Clear All Bookmarks"
 - **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
@@ -211,7 +216,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 
-##### Anime, Cartoon, Drama, Manga
+##### Anime, Cartoon, Drama, Manga, Comics
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
 - **Kisscartoon** has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
 - Cover art does not load for Videos
@@ -242,7 +247,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Group seasons into one show
 - Create separate directories for TV and Movies
 - Might move bookmarks to own file like I did with Header_Dict
-- Add Bookmark backup option, with function to restore old bookmarks
 
 [Table of Contents](#table-of-contents)
 
