@@ -7,7 +7,6 @@ import headers as Headers
 import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
-#from RedirectFollower import get_url_redirect
 from openload import decode_openload
 from downloader import is_tool, get_streammoe_url
 import kissdecrypt
@@ -240,7 +239,16 @@ def get_googlevideo_url(page_text, url, m, headers):
         if type_title_lower == 'anime':
             vurl_old = String.Base64Decode(node.get('value'))
         else:
-            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers)
+            post_data = None
+            if type_title_lower == 'drama':
+                try:
+                    encv = int(Regex(r'\/Scripts\/kissenc\.min\.js\?v\=(\d+)').search(page_text).group(1))
+                    if encv == 5:
+                        rpost_data = Regex(r'var(?:\s+)?[^\=]+\=(?:\s+)?([^\;]+)\;(?:\s+)?window').search(page_text).group(1)
+                        post_data = JSON.ObjectFromString(rpost_data.decode('unicode_escape'))
+                except Exception as e:
+                    Log.Error('* get_googlevideo_url Error: %s' %str(e))
+            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)
         if 'googlevideo' in vurl_old:
             try:
                 itag = vurl_old.split('=m')[1]

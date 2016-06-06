@@ -2,7 +2,7 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       06/04/2016
+Date:       06/06/2016
 """
 import binascii
 import pyaes
@@ -36,12 +36,16 @@ class KissDecrypt:
             v = v.decode('utf8')
         return unicode(v)
 
-    def decrypt(self, f, kind, url=None, headers=None):
+    def decrypt(self, f, kind, url=None, headers=None, post_data=None):
         """
         decrypt video URL input depending on what site it came from
         """
         headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
-        r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
+        if post_data:
+            data = {post_data[0]: post_data[1]}
+            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=data)
+        else:
+            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
         key = str(r.text)
         derived_key = SHA256(key).digest()
         if kind == 'drama':
