@@ -69,6 +69,9 @@ def get_element_from_url(url, name, count=0):
                     html = HTML.ElementFromString(page.text)
                 else:
                     html = HTML.Element('head', 'Error')
+        elif (int(page.status_code) == 522):
+            Log.Error('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
+            html = HTML.Element('head', 'Error')
         else:
             Data.Save(name, page.text)
             html = HTML.ElementFromString(page.text)
