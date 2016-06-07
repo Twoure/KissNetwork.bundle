@@ -2,14 +2,19 @@ import time
 import re
 import os
 from requests.sessions import Session
-import execjs
+
+try:
+    import execjs
+    execjs.eval("{a:true,b:function (){}}")
+except:
+    import execjs_110 as execjs
 
 try:
     from urlparse import urlparse
 except ImportError:
     from urllib.parse import urlparse
 
-DEFAULT_USER_AGENT = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
+DEFAULT_USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36"
 
 
 class CloudflareScraper(Session):
