@@ -87,10 +87,10 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ## Install
 
-- [Download](https://github.com/Twoure/KissNetwork.bundle/releases) the latest release and install **KissNetwork** by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
-  - Unzip and rename the folder to "KissNetwork.bundle"
-  - Copy "KissNetwork.bundle" into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
-  - ~~Restart PMS~~ **This is old, should not have to restart PMS.  If channel does not appear then Restart PMS**
+- [Download](https://github.com/Twoure/KissNetwork.bundle/releases) the latest release and install _KissNetwork_ by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
+  - Unzip and rename the folder to **KissNetwork.bundle**
+  - Copy **KissNetwork.bundle** into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
+  - Restart PMS
 - Alternatively this channel can be installed via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle).
 
 [Table of Contents](#table-of-contents)
