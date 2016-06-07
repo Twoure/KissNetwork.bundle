@@ -12,6 +12,13 @@ from downloader import is_tool, get_streammoe_url
 import kissdecrypt
 import requests
 
+try:
+    import execjs
+    execjs.eval("{a:true,b:function (){}}")
+except:
+    import execjs_110 as execjs
+    Log.Warn('* PyExecJS Warn: Error using execjs v1.4.0, loaded v1.1.0 instead')
+
 KissDecrypt = kissdecrypt.KissDecrypt()
 
 ########################################################################################
@@ -160,6 +167,10 @@ def PlayVideo(url, m, **kwargs):
         headers = None
         page_text = Headers.Request(req_url)
 
+    gtest = True if Regex(r'id\=(?:\"|\')(selectQuality)').search(page_text) else False
+    if (gtest == False) and (prefs['server'] == '0'):
+        page_text = Headers.Request(req_url + '&s=openload')
+
     onedrive = Regex(r'src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
     openload = Regex(r'src\=\"(https?\:\/\/openload.+?)\"').search(page_text)
     streammoe = Regex(r'src\=\"(https?\:\/\/stream\.moe\/embed.+?)\"').search(page_text)
@@ -244,8 +255,10 @@ def get_googlevideo_url(page_text, url, m, headers):
                 try:
                     encv = int(Regex(r'\/Scripts\/kissenc\.min\.js\?v\=(\d+)').search(page_text).group(1))
                     if encv == 5:
-                        rpost_data = Regex(r'var(?:\s+)?[^\=]+\=(?:\s+)?([^\;]+)\;(?:\s+)?window').search(page_text).group(1)
-                        post_data = JSON.ObjectFromString(rpost_data.decode('unicode_escape'))
+                        rpost_data = Regex(r'(?s)type\=(?:\"|\')text\/javascript(?:\"|\')\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
+                        test = rpost_data.group(1).replace(rpost_data.group(2), 'var temp ').strip()
+                        ctest = execjs.compile(test)
+                        post_data = {u'krsk': ctest.exec_('return temp')}
                 except Exception as e:
                     Log.Error('* get_googlevideo_url Error: %s' %str(e))
             vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)

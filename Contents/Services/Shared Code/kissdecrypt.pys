@@ -2,7 +2,7 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       06/06/2016
+Date:       06/07/2016
 """
 import binascii
 import pyaes
@@ -42,8 +42,7 @@ class KissDecrypt:
         """
         headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
         if post_data:
-            data = {post_data[0]: post_data[1]}
-            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=data)
+            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
         else:
             r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
         key = str(r.text)
