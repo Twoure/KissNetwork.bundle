@@ -49,7 +49,7 @@ def CFTest():
         Log.Error('* PyExecJS Error:')
         Log.Critical(str(e))
 
-    cookie, ua = cfscrape.get_cookie_string(url=Common.GetBaseURL(Common.DomainDict('Anime')), user_agent=Common.USER_AGENT)
+    cookie, ua = cfscrape.get_cookie_string(url=Common.GetBaseURL(Common.DomainDict('Manga')), user_agent=Common.USER_AGENT)
 
     return str(cookie)
 
