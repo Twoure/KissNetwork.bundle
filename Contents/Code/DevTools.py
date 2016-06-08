@@ -375,7 +375,8 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
             Log('\n----------Loading Bookmarks from Backup----------')
             new_bookmarks = LoadBMBackup(file_name)
             if new_bookmarks:
-                del Dict['Bookmarks']
+                if Dict['Bookmarks']:
+                    del Dict['Bookmarks']
                 Dict['Bookmarks'] = new_bookmarks
                 Dict.Save()
                 message = 'Replaced Current Bookmarks with %s backup file' %file_name
@@ -423,7 +424,7 @@ def CreateBMBackup():
 def LoadBMBackup(file_name):
     """load bookmark backup into json format string"""
 
-    fp = Core.stroage.join_path(Core.storage.data_path, file_name)
+    fp = Core.storage.join_path(Core.storage.data_path, file_name)
     if Core.storage.file_exists(fp) and Core.storage.file_size(fp) != 0:
         with open(fp) as data_file:
             data = json.load(data_file)
