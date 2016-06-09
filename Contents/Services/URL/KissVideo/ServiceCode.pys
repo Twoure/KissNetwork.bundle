@@ -253,10 +253,22 @@ def get_googlevideo_url(page_text, url, m, headers):
             post_data = None
             if encv == 5:
                 try:
-                    rpost_data = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
-                    test = rpost_data.group(1).replace(rpost_data.group(2), 'var temp ').strip()
-                    ctest = execjs.compile(test)
-                    post_data = {u'krsk': ctest.exec_('return temp')}
+                    js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
+                    ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
+                    for s, ws, w in ra:
+                        s = s.replace(ws, 'var krsktest = %s; var temp' %w)
+
+                        jsc = execjs.compile(s)
+                        jskt = jsc.exec_('return krsktest')
+                        jst = jsc.exec_('return temp')
+
+                        try: jskt = jskt[0]
+                        except: pass
+
+                        if 'fake' in jskt.lower():
+                            continue
+                        else:
+                            post_data = {jskt: jst}
                 except Exception as e:
                     Log.Error('* get_googlevideo_url Error: %s' %str(e))
             vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)
