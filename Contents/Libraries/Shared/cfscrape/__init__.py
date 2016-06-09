@@ -83,10 +83,10 @@ class CloudflareScraper(Session):
         # These characters are not currently used in Cloudflare's arithmetic snippet
         js = re.sub(r"[\n\\']", "", js)
 
-        if "Node" in self.js_engine:
+        #if "Node" in self.js_engine:
             # Use vm.runInNewContext to safely evaluate code
             # The sandboxed code cannot use the Node.js standard library
-            return "return require('vm').runInNewContext('%s');" % js
+            #return "return require('vm').runInNewContext('%s');" % js
 
         return js.replace("parseInt", "return parseInt")
 
