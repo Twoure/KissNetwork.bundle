@@ -63,8 +63,14 @@ def set_header(url):
     base_url = Common.GetBaseURL(url)
     type_title = Common.GetTypeTitle(url)
     try:
-        cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=Common.USER_AGENT)
-        r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
+        try:
+            cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=Common.USER_AGENT)
+            r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
+        except Exception as e:
+            Log.Error('* set_header cfscrape.get_cookie_string Error: %s' %str(e))
+            cookie = 'na'
+            user_agent = Common.USER_AGENT
+            r_cf_clearance = None
 
         if r_cf_clearance:
             date = int(r_cf_clearance.group(1))
@@ -163,10 +169,6 @@ def GetHeadersForURL(url, update=False):
         'user-agent': header_data[type_title]['user-agent'],
         'referer': header_data[type_title]['referer']
         }
-
-    #Log.Debug('* Header for %s Loaded >>' %base_url)
-    #Log.Debug('* %s' %headers_to_return)
-    #Log.Debug('*' * 80)
 
     return headers_to_return
 
