@@ -25,7 +25,7 @@ except Exception as e:
 import requests
 
 ####################################################################################################
-def CFTest():
+def CFTest(kind):
     """
     test cfscrape
     if error then may need javascript runtime
@@ -49,7 +49,7 @@ def CFTest():
         Log.Error('* PyExecJS Error:')
         Log.Critical(str(e))
 
-    cookie, ua = cfscrape.get_cookie_string(url=Common.GetBaseURL(Common.DomainDict('Manga')), user_agent=Common.USER_AGENT)
+    cookie, ua = cfscrape.get_cookie_string(url=Common.GetBaseURL(Common.DomainDict(kind)), user_agent=Common.USER_AGENT)
 
     return str(cookie)
 

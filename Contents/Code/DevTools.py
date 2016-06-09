@@ -561,9 +561,10 @@ def SetUpCFTest():
 
     if not Dict['cfscrape_test']:
         try:
-            cftest = Headers.CFTest()
+            test = 'Manga'
+            cftest = Headers.CFTest(test)
             Log.Info('*' * 80)
-            Log.Info('----------CFTest passed! Aime Cookies:----------')
+            Log.Info('----------CFTest passed! %s Cookies:----------' %test)
             Log.Info(cftest)
             Dict['cfscrape_test'] = True
             Dict.Save()
@@ -571,7 +572,7 @@ def SetUpCFTest():
             Dict['cfscrape_test'] = False
             Dict.Save()
             Log.Error('*' * 80)
-            Log.Error('----------CFTest Fail----------')
+            Log.Error('----------%s Failed CFTest----------' %test)
             Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
             Log.Error('Once JavaScript Runtime installed, Restart channel')
             Log.Error(str(e))
