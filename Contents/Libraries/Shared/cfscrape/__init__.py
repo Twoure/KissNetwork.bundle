@@ -76,17 +76,17 @@ class CloudflareScraper(Session):
     def extract_js(self, body):
         js = re.search(r"setTimeout\(function\(\){\s+(var "
                         "s,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n", body).group(1)
-        js = re.sub(r"a\.value =(.+?) \+ .+?;", r"\1", js)
+        js = re.sub(r"a\.value = (parseInt\(.+?\)).+", r"\1", js)
         js = re.sub(r"\s{3,}[a-z](?: = |\.).+", "", js)
 
         # Strip characters that could be used to exit the string context
         # These characters are not currently used in Cloudflare's arithmetic snippet
         js = re.sub(r"[\n\\']", "", js)
 
-        #if "Node" in self.js_engine:
+        if "Node" in self.js_engine:
             # Use vm.runInNewContext to safely evaluate code
             # The sandboxed code cannot use the Node.js standard library
-            #return "return require('vm').runInNewContext('%s');" % js
+            return "return require('vm').runInNewContext('%s');" % js
 
         return js.replace("parseInt", "return parseInt")
 
