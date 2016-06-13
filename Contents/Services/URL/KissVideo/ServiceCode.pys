@@ -265,9 +265,7 @@ def get_googlevideo_url(page_text, url, m, headers):
                         try: jskt = jskt[0]
                         except: pass
 
-                        if 'fake' in jskt.lower():
-                            continue
-                        else:
+                        if jskt.lower() == 'krsk':
                             post_data = {jskt: jst}
                 except Exception as e:
                     Log.Error('* get_googlevideo_url Error: %s' %str(e))
