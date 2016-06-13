@@ -26,6 +26,7 @@ TITLE = L('title')
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 TIMEOUT = Datetime.Delta(hours=1)
+CFTest_KEY = 'Manga'
 
 # KissAnime
 ANIME_ART = 'art-anime.jpg'
@@ -88,7 +89,7 @@ def Start():
     Dict['First Headers Cached'] = False
 
     # setup test for cfscrape
-    SetUpCFTest()
+    SetUpCFTest(CFTest_KEY)
 
     if Dict['cfscrape_test']:
         if Dict['Headers Auto Cached']:
@@ -122,7 +123,7 @@ def MainMenu():
     Log.Debug('* Client.Version         = %s' %Client.Version)
 
     # if cfscrape failed then stop the channel, and return error message.
-    SetUpCFTest()
+    SetUpCFTest(CFTest_KEY)
     if not Dict['cfscrape_test']:
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')

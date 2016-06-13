@@ -556,12 +556,11 @@ def SaveCoverImage(image_url, count=0):
 
 ####################################################################################################
 @route(PREFIX + '/cftest')
-def SetUpCFTest():
+def SetUpCFTest(test):
     """setup test for cfscrape"""
 
     if not Dict['cfscrape_test']:
         try:
-            test = 'Manga'
             cftest = Headers.CFTest(test)
             Log.Info('*' * 80)
             Log.Info('----------CFTest passed! %s Cookies:----------' %test)
