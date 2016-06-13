@@ -8,7 +8,6 @@ import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
 from openload import decode_openload
-from downloader import is_tool, get_streammoe_url
 import kissdecrypt
 import requests
 
@@ -148,11 +147,10 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Client.Version     = %s' %Client.Version)
 
     prefs = get_prefs()
-    #strategy = 'curl' if prefs['dl_strategy'] == '0' else 'wget'
-    strategy = 'curl'  # currently only curl is setup to work
+
     if prefs['server'] == '1':
         req_url = url + '&s=openload'
-    elif (prefs['server'] == '2') and (is_tool(strategy)):
+    elif prefs['server'] == '2':
         req_url = url + '&s=stream'
     else:
         req_url = url
@@ -181,9 +179,8 @@ def PlayVideo(url, m, **kwargs):
         Log.Debug('* OpenLoad URL       = %s' %openload.group(1))
         vurl = get_openload_url(openload.group(1))
     elif streammoe:
-        Log.Debug('* StreamMoe Strategy = %s' %strategy)
         Log.Debug('* StreamMoe URL      = %s' %streammoe.group(1))
-        vurl = get_streammoe_url(streammoe.group(1), strategy)
+        vurl = get_streammoe_url(streammoe.group(1))
     else:
         vurl = get_googlevideo_url(page_text, url, m, headers)
     Log.Debug('* PlayVideo URL      = %s' %vurl)
@@ -205,10 +202,10 @@ def PlayVideo(url, m, **kwargs):
 
     Log.Debug('*' * 80)
 
-    if not vurl:
-        raise Ex.MediaNotAvailable
-    else:
+    if vurl:
         return IndirectResponse(VideoClipObject, key=vurl)
+
+    raise Ex.MediaNotAvailable
 
 ####################################################################################################
 def get_googlevideo_url(page_text, url, m, headers):
@@ -390,6 +387,27 @@ def get_openload_url(openload_url):
     return url
 
 ####################################################################################################
+def get_streammoe_url(moe_url):
+    """Get Stream.moe URLs"""
+
+    try:
+        page = HTTP.Request(moe_url).content
+    except Exception as e:
+        Log.Error('* StreamMoe Error: %s' %str(e))
+        return False
+
+    r = Regex(r'contents\s*?\=\s*?atob\([\'\"]([^\'\"]+)').search(page)
+    if r:
+        html_text = String.Base64Decode(r.group(1))
+        html = HTML.ElementFromString(html_text)
+
+        vurl = html.xpath('//source/@src')
+        if vurl:
+            return vurl[0]
+
+    return False
+
+####################################################################################################
 def get_url_redirect_v2(input_url):
     """URL Redirect V2 using requests.head"""
 
@@ -416,9 +434,5 @@ def get_prefs():
 
     if not 'server' in prefs.keys():
         prefs.update({'server': '0'})
-
-    #if not 'dl_strategy' in prefs.keys():
-        # 0=curl, 1=wget
-        #prefs.update({'dl_strategy': '0'})
 
     return prefs
