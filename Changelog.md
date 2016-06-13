@@ -1,5 +1,23 @@
 # ChangeLog
 
+##### 1.2.2
+- _06/13/2016_
+  - Fixes:
+    - `DevTools`: `CacheAllCovers` error
+    - `DevTools`: bookmark tools, load bookmark error when loading fresh bookmarks
+    - `CFTest`: input errors
+  - Updates:
+    - `KissDecrypt.pys`: KissAsian updated to `v5` decryption _(they are changing it every day so don't expect this to work long)_
+    - `rhtml.py`: added new HTTP 522 exception
+    - `PyExecJS`: added `v1.1.0` as fallback
+    - `PlayVideo`: added Openload redirect if kiss server video not present
+    - `headers.pys`: added added javascript runtime engine test info to `CFTest`
+    - `headers.pys`: updated `set_header` to skip off line sites _(still in testing)_
+    - `CFTest`: changed test site to manga
+    - `DefaultPrefs.json`: changed default pref for _Enable Debug Logging_ to `True`.  Allows errors to be caught on first run.
+    - `cloudflare-scrape`: updated to `v1.6.4`
+    - Stream.moe: site resolved ssl error. Removed `curl` code, and updated video URL code.
+
 ##### 1.2.1
 - _06/05/2016_
   - Fixes:

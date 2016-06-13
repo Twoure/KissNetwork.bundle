@@ -108,7 +108,6 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Preferred Video Server
 - Select a Default Video Server from the drop-down list
 - Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), [Stream](https://stream.moe/)
-  - **Note:** Stream is experimental and requires [cURL](https://curl.haxx.se/). It is set to revert to GoogleVideo links if cURL is not present.
   - Default behavior: Use GoogleVideo links when available, otherwise try using the provided links
   - If a server other than _KissNetwork_ is selected: Use selected video server, and default to GoogleVideo links when selected server fails.
 
@@ -226,12 +225,17 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Manga, Comics
 - Kissmanga/ReadComicOnline is not the most useful reader for the _Plex Web_ client, but works reasonably well for Smart Phones, PMP, and PHT.
 
+##### Drama
+- **Kissasian** keeps changing video URL obfuscation every few days.  Am able to decode daily, but will not be creating a new release every day it changes.
+- If and when _Drama_ videos start failing (when obfuscation changes), users can try the `dev` branch code.
+
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
   - Working to fix this.  Have new message.py but have yet to integrate with bookmarks fully
 
 ##### OpenLoad, Stream
-- OpenLoad and Stream links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
+- OpenLoad links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
+- Stream links updated, but un-tested.  Not sure if _Force Transcoding_ is required anymore.
 
 [Table of Contents](#table-of-contents)
 
