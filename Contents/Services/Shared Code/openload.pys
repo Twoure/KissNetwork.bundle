@@ -19,13 +19,6 @@ except:
     import execjs_110 as execjs
 
 
-def find_single_match(data, patern, index=0):
-    try:
-        matches = re.findall(patern, data, flags=re.DOTALL)
-        return matches[index]
-    except:
-        return ""
-
 def decode_openload(text):
     text_encode = re.findall(r'<script type="text/javascript">(ﾟωﾟ.*?)</script>', text, re.DOTALL)
 
