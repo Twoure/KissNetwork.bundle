@@ -6,14 +6,40 @@
 # http://blog.tvalacarta.info/plugin-xbmc/pelisalacarta/
 # Fix imported by DrZ3r0, credits to mortael, Fr33m1nd, anton40
 # ------------------------------------------------------------
-# 03/12/2016 Edited by Twoure for use with Plex Media Server
+# Edited by Twoure for Plex Media Server
+# Date: 06/14/2016
+# ------------------------------------------------------------
 
 import re
 
-def decode_openload(html):
-    aastring = re.search(r"<video(?:.|\s)*?<script\s[^>]*?>((?:.|\s)*?)</script", html,
-                         re.DOTALL | re.IGNORECASE).group(1)
+try:
+    import execjs
+    r = execjs.eval("{a:true,b:function (){}}")
+except:
+    import execjs_110 as execjs
 
+
+def find_single_match(data, patern, index=0):
+    try:
+        matches = re.findall(patern, data, flags=re.DOTALL)
+        return matches[index]
+    except:
+        return ""
+
+def decode_openload(text):
+    text_encode = re.findall(r'<script type="text/javascript">(ﾟωﾟ.*?)</script>', text, re.DOTALL)
+
+    wlk = find_single_match(text, r'(welikekodi_ya_rly = [^<]+)')
+    try:
+        index = execjs.eval(wlk)
+    except:
+        index = execjs.exec_("return " + wlk)
+
+    text_decode = get_url(text_encode[index])
+
+    return text_decode
+
+def get_url(aastring):
     aastring = aastring.replace(
         "(\xef\xbe\x9f\xd0\x94\xef\xbe\x9f)[\xef\xbe\x9f\xce\xb5\xef\xbe\x9f]+(o\xef\xbe\x9f\xef\xbd\xb0\xef\xbe\x9fo)+ ((c^_^o)-(c^_^o))+ (-~0)+ (\xef\xbe\x9f\xd0\x94\xef\xbe\x9f) ['c']+ (-~-~1)+",
         "")
