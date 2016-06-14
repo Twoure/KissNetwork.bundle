@@ -165,13 +165,13 @@ def PlayVideo(url, m, **kwargs):
         headers = None
         page_text = Headers.Request(req_url)
 
-    gtest = True if Regex(r'id\=(?:\"|\')(selectQuality)').search(page_text) else False
+    gtest = True if Regex(r'id\=[\"\'](selectQuality)').search(page_text) else False
     if (gtest == False) and (prefs['server'] == '0'):
         page_text = Headers.Request(req_url + '&s=openload')
 
-    onedrive = Regex(r'src\=\"(https?\:\/\/onedrive\.live\.com\/prev\?.+?)\"').search(page_text)
-    openload = Regex(r'src\=\"(https?\:\/\/openload.+?)\"').search(page_text)
-    streammoe = Regex(r'src\=\"(https?\:\/\/stream\.moe\/embed.+?)\"').search(page_text)
+    onedrive = Regex(r'src\=[\"\'](https?\:\/\/onedrive\.live\.com\/prev\?.+?)[\"\']').search(page_text)
+    openload = Regex(r'src\=[\"\'](https?\:\/\/openload.+?)[\"\']').search(page_text)
+    streammoe = Regex(r'src\=[\"\'](https?\:\/\/stream\.moe\/embed.+?)[\"\']').search(page_text)
     if onedrive:
         Log.Debug('* OneDrive URL       = %s' %onedrive.group(1))
         vurl = get_onedrive_url(onedrive.group(1))
@@ -374,7 +374,7 @@ def get_openload_url(openload_url):
     """
 
     try:
-        base = Regex(r'(https?:\/\/openload.+?)\/\w+\/(.*?)(?:\/|$)').search(openload_url)
+        base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)').search(openload_url)
         s = HTTP.Request(base.group(1) + '/embed/' + base.group(2), encoding=('utf-8')).content
         url = decode_openload(s)
         r = requests.head(url)
