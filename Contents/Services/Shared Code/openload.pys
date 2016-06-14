@@ -6,6 +6,9 @@
 # http://blog.tvalacarta.info/plugin-xbmc/pelisalacarta/
 # Fix imported by DrZ3r0, credits to mortael, Fr33m1nd, anton40
 # ------------------------------------------------------------
+# Original
+# https://github.com/Zanzibar82/plugin.video.streamondemand/blob/fca8e2a7cf0548233cb484e53c1694f17ac4ede3/servers/openload.py
+# ------------------------------------------------------------
 # Edited by Twoure for Plex Media Server
 # Date: 06/14/2016
 # ------------------------------------------------------------
