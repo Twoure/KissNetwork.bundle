@@ -29,13 +29,19 @@ def find_single_match(data, patern, index=0):
 def decode_openload(text):
     text_encode = re.findall(r'<script type="text/javascript">(ﾟωﾟ.*?)</script>', text, re.DOTALL)
 
-    wlk = find_single_match(text, r'(welikekodi_ya_rly = [^<]+)')
-    try:
-        index = execjs.eval(wlk)
-    except:
-        index = execjs.exec_("return " + wlk)
+    wlk = re.search(r'(welikekodi_ya_rly = [^<]+)', text, re.DOTALL)
+    ctsd = re.search(r'Click to start Download.*?<script[^>]+>(.*?)</script', text, re.DOTALL)
+    if wlk:
+        try:
+            index = execjs.eval(wlk.group(1))
+        except:
+            index = execjs.exec_("return " + wlk.group(1))
 
-    text_decode = get_url(text_encode[index])
+        text_decode = get_url(text_encode[index])
+    elif ctsd:
+        text_decode = get_url(ctsd.group(1))
+    else:
+        text_decode = False
 
     return text_decode
 
