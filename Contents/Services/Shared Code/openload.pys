@@ -10,36 +10,23 @@
 # https://github.com/Zanzibar82/plugin.video.streamondemand/blob/fca8e2a7cf0548233cb484e53c1694f17ac4ede3/servers/openload.py
 # ------------------------------------------------------------
 # Edited by Twoure for Plex Media Server
-# Date: 06/14/2016
+# Date: 06/15/2016
 # ------------------------------------------------------------
 
+
 import re
-
-try:
-    import execjs
-    r = execjs.eval("{a:true,b:function (){}}")
-except:
-    import execjs_110 as execjs
-
 
 def decode_openload(text):
     text_encode = re.findall(r'<script type="text/javascript">(ﾟωﾟ.*?)</script>', text, re.DOTALL)
 
-    wlk = re.search(r'(welikekodi_ya_rly = [^<]+)', text, re.DOTALL)
-    ctsd = re.search(r'Click to start Download.*?<script[^>]+>(.*?)</script', text, re.DOTALL)
-    if wlk:
+    urls = []
+    for t in text_encode:
         try:
-            index = execjs.eval(wlk.group(1))
+            urls.append(get_url(t))
         except:
-            index = execjs.exec_("return " + wlk.group(1))
+            pass
 
-        text_decode = get_url(text_encode[index])
-    elif ctsd:
-        text_decode = get_url(ctsd.group(1))
-    else:
-        text_decode = False
-
-    return text_decode
+    return urls
 
 def get_url(aastring):
     aastring = aastring.replace(

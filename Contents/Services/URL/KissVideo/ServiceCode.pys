@@ -364,7 +364,7 @@ def get_onedrive_url(onedrive_url):
     return vurl
 
 ####################################################################################################
-def get_openload_url(openload_url):
+def get_openload_url(ourl, count=0):
     """
     Get OpenLoad URLs
     Code returns stream link for OpenLoad videos
@@ -374,14 +374,33 @@ def get_openload_url(openload_url):
     """
 
     try:
-        base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)').search(openload_url)
-        s = HTTP.Request(base.group(1) + '/embed/' + base.group(2), encoding=('utf-8')).content
-        url = decode_openload(s)
-        r = requests.head(url)
-        url = r.headers['location']
+        base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)').search(ourl)
+        eurl = base.group(1) + '/embed/' + base.group(2)
+        s = HTTP.Request(eurl, encoding=('utf-8'), headers={'User-Agent': Common.USER_AGENT, 'Referer': eurl}).content
+
+        title = Regex(r'og\:title\"\s*?content\=\"([^\"]+)').search(s)
+        title = String.Quote(title.group(1), usePlus=True) if title else None
+        Log.Debug('* Openload video title = %s' %title)
+
+        url = False
+        urls = decode_openload(s)
+        if urls:
+            for u in urls:
+                rurl = get_url_redirect_v2(u)
+                if title == rurl.rsplit('/', 1)[1].split('?mime=')[0]:
+                    url = rurl
+
+        if not url:
+            if (count == 2):
+                Log.Error('* Openload Error: Tried 3 times to get Video URL, but Failed')
+                return False
+            else:
+                count += 1
+                Log.Warn('* Openload Warn: try %i faild to get Video URL, trying again' %count)
+                return get_openload_url(eurl, count=count)
     except Exception as e:
-        Log.Error('* OpenLoad Error: Something went wrong, cannot access %s' %openload_url)
-        Log.Error('* OpenLoad Error: %s' %str(e))
+        Log.Error('* Openload Error: Something went wrong, cannot access %s' %ourl)
+        Log.Error('* Openload Error: %s' %str(e))
         url = False
 
     return url
@@ -411,11 +430,14 @@ def get_streammoe_url(moe_url):
 def get_url_redirect_v2(input_url):
     """URL Redirect V2 using requests.head"""
 
-    r = requests.head(input_url)
+    r = requests.head(input_url, headers={'User-Agent': Common.USER_AGENT, 'Referer': input_url})
     if 'location' in r.headers.keys():
         return r.headers['location']
+    elif 'Location' in r.headers.keys():
+        return r.headers['Location']
     else:
         Log.Debug('* URL Redirect: No Redirect URL for \"%s\"' %input_url)
+        Log.Debug('* URL Redirect: Headers = %s' %r.headers)
         return input_url
 
 ####################################################################################################
