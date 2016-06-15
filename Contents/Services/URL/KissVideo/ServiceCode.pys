@@ -243,14 +243,16 @@ def get_googlevideo_url(page_text, url, m, headers):
     # reversed mp4 format dictionary, paired values with resolutin selection in MediaObjectsForURL()
     rfmt_dict = {'1080': '37', '720': '22', '480': '59', '360': '18'}
 
-    enc_test = Regex(r'(kissenc\.min\.js\?v\=(\d+))').search(page_text)
+    enc_test = Regex(r'\/Scripts\/(kissenc\.min\.j[^\'\"]+)').search(page_text)
+    if enc_test:
+        Log.Debug('* %s' %enc_test.group(1))
+
     for node in olist:
         if enc_test:
-            encv = int(enc_test.group(2))
             post_data = None
-            if encv == 5:
-                try:
-                    js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
+            try:
+                js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
+                if not js.group(2) == 'window.location.href':
                     ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
                     for s, ws, w in ra:
                         s = s.replace(ws, 'var krsktest = %s; var temp' %w)
@@ -264,8 +266,8 @@ def get_googlevideo_url(page_text, url, m, headers):
 
                         if jskt.lower() == 'krsk':
                             post_data = {jskt: jst}
-                except Exception as e:
-                    Log.Error('* get_googlevideo_url Error: %s' %str(e))
+            except Exception as e:
+                Log.Error('* get_googlevideo_url Error: %s' %str(e))
             vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)
         else:
             vurl_old = String.Base64Decode(node.get('value'))
@@ -374,12 +376,15 @@ def get_openload_url(ourl, count=0):
     """
 
     try:
-        base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)').search(ourl)
-        eurl = base.group(1) + '/embed/' + base.group(2)
+        base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)(\/.+)?').search(ourl)
+        eurl = base.group(1) + '/embed/' + base.group(2) + (base.group(3) if base.group(3) else '')
         s = HTTP.Request(eurl, encoding=('utf-8'), headers={'User-Agent': Common.USER_AGENT, 'Referer': eurl}).content
 
-        title = Regex(r'og\:title\"\s*?content\=\"([^\"]+)').search(s)
-        title = String.Quote(title.group(1), usePlus=True) if title else None
+        if base.group(3):
+            title = base.group(3)[1:]
+        else:
+            title = Regex(r'og\:title\"\s*?content\=\"([^\"]+)').search(s)
+            title = String.Quote(title.group(1), usePlus=True) if title else False
         Log.Debug('* Openload video title = %s' %title)
 
         url = False
@@ -387,7 +392,9 @@ def get_openload_url(ourl, count=0):
         if urls:
             for u in urls:
                 rurl = get_url_redirect_v2(u)
-                if title == rurl.rsplit('/', 1)[1].split('?mime=')[0]:
+                if title and title == rurl.rsplit('/', 1)[1].split('?mime=')[0]:
+                    url = rurl
+                elif 'Komp+1.mp4' != rurl.rsplit('/', 1)[1].split('?mime=')[0]:
                     url = rurl
 
         if not url:
@@ -397,7 +404,7 @@ def get_openload_url(ourl, count=0):
             else:
                 count += 1
                 Log.Warn('* Openload Warn: try %i faild to get Video URL, trying again' %count)
-                return get_openload_url(eurl, count=count)
+                return get_openload_url(ourl, count=count)
     except Exception as e:
         Log.Error('* Openload Error: Something went wrong, cannot access %s' %ourl)
         Log.Error('* Openload Error: %s' %str(e))
