@@ -1,11 +1,12 @@
 # ChangeLog
 
 ##### 1.2.2
-- _06/13/2016_
+- _06/15/2016_
   - Fixes:
     - `DevTools`: `CacheAllCovers` error
     - `DevTools`: bookmark tools, load bookmark error when loading fresh bookmarks
     - `CFTest`: input errors
+    - Openload: fixed for site changes
   - Updates:
     - `KissDecrypt.pys`: KissAsian updated to `v5` decryption _(they are changing it every day so don't expect this to work long)_
     - `rhtml.py`: added new HTTP 522 exception
