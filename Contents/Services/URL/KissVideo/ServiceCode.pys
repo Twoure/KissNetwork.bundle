@@ -263,8 +263,7 @@ def get_googlevideo_url(page_text, url, m, headers):
                         jskt = jsc.exec_('return krsktest')
                         jst = jsc.exec_('return temp')
 
-                        try: jskt = jskt[0]
-                        except: pass
+                        jskt = jskt if isinstance(jskt, basestring) else jskt[0]
 
                         if jskt.lower() == 'krsk':
                             post_data = {jskt: jst}
