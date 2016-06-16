@@ -102,15 +102,16 @@ def MediaObjectsForURL(url):
 
     Log.Debug('*' * 80)
     mo = []
-    fmt_list = [('1080p', 'm37'), ('720p', 'm22'), ('480p', 'm59'), ('360p', 'm18')]
+    fmt_list = [('1080p', 'm37', 3000), ('720p', 'm22', 1500), ('480p', 'm59', 1125), ('360p', 'm18', 750)]
     prefs = get_prefs()
     url = Common.CorrectURL(url)
 
     if prefs['force_transcode'] == 'true':
         Log.Debug('* Force Transcoding ON')
-        for fmt, m in fmt_list:
+        for fmt, m, b in fmt_list:
             mo.append(MediaObject(
                 parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
+                bitrate=b,
                 video_resolution=fmt[:-1],
                 audio_channels=2,
                 optimized_for_streaming=False
@@ -118,9 +119,10 @@ def MediaObjectsForURL(url):
     else:
         Log.Debug('* Force Trascoding OFF')
         # create media objects for each video quality
-        for fmt, m in fmt_list:
+        for fmt, m, b in fmt_list:
             mo.append(MediaObject(
                 parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
+                bitrate=b,
                 video_resolution=fmt[:-1],
                 container=Container.MP4,
                 video_codec=VideoCodec.H264,
