@@ -256,14 +256,28 @@ def get_googlevideo_url(page_text, url, m, headers):
                 js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
                 if not js.group(2) == 'window.location.href':
                     ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
+                    runtime = execjs.get()
                     for s, ws, w in ra:
                         s = s.replace(ws, 'var krsktest = %s; var temp' %w)
+                        if 'Node' in runtime.name:
+                            s = s.replace('\'', '\\\'')
+                            s = (
+                                """
+                                var myContext = {krsktest: "", temp: ""}
 
-                        jsc = execjs.compile(s)
-                        jskt = jsc.exec_('return krsktest')
-                        jst = jsc.exec_('return temp')
+                                require('vm').runInNewContext('%s', myContext);
+                                return [myContext.krsktest, myContext.temp];
+                                """ %s
+                                )
+                            jsc = runtime.exec_(s)
+                            jskt = (jsc[0] if isinstance(jsc[0], basestring) else jsc[0][0]) if len(jsc) is not None else 'na'
+                            jst = jsc[1] if len(jsc) is not None else 'na'
+                        else:
+                            jsc = runtime.compile(s)
+                            jskt = jsc.exec_('return krsktest')
+                            jst = jsc.exec_('return temp')
 
-                        jskt = jskt if isinstance(jskt, basestring) else jskt[0]
+                            jskt = jskt if isinstance(jskt, basestring) else jskt[0]
 
                         if jskt.lower() == 'krsk':
                             post_data = {jskt: jst}
