@@ -1,5 +1,12 @@
 # ChangeLog
 
+##### 1.2.3
+- _07/01/2016_
+  - `cloudflare-scrape`: updated to `v1.6.5`
+  - Added default bitrate info to Videos
+  - Improved Node.js uses with link decryption
+    - If Server using Node.js, then execute javascript in virtual machine (vm)
+
 ##### 1.2.2
 - _06/15/2016_
   - Fixes:
