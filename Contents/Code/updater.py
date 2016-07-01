@@ -79,6 +79,17 @@ class Updater:
             # String comparison by default
             return version
 
+    def set_dict_update_version(self, version):
+        if Dict['update_ch_version']:
+            if version == Dict['update_ch_verison']:
+                return
+            else:
+                Dict['update_ch_version'] = version
+        else:
+            Dict['update_ch_verison'] = version
+        Dict.Save()
+        return
+
     def IsUpdateAvailable(self):
         try:
             info = JSON.ObjectFromURL(
@@ -88,6 +99,7 @@ class Updater:
             )
             version = self.NormalizeVersion(info[KEY_DATA_VERSION])
             dist_url = info[KEY_DATA_ZIPBALL]
+            self.set_dict_update_verison(version)
 
         except:
             return False

@@ -85,8 +85,9 @@ def Start():
     Log.Debug('* Platform.ServerVersion = %s' %Platform.ServerVersion)
     Log.Debug('*' * 80)
 
-    # setup background auto cache of headers
+    # setup background auto cache of headers, and current channel version
     Dict['First Headers Cached'] = False
+    Dict['current_ch_version'] = get_channel_version()
 
     # setup test for cfscrape
     SetUpCFTest(CFTest_KEY)
@@ -324,20 +325,23 @@ def About():
         cache_string = 'N/A | Removing Files Still'
     else:
         cache_string = d
-    # Get Channel Version
-    plist = Plist.ObjectFromString(Core.storage.load(
-        Core.storage.abs_path(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))))
-    version = plist['CFBundleVersion']
     # show developer tools if enabled in prefs and current user is admin
     if Prefs['devtools'] and CheckAdmin():
         add_dev_tools(oc)
 
     oc.add(DirectoryObject(key=Callback(About),
-        title='Version %s' %version, summary='Current Channel Version'))
+        title='Version %s' %get_channel_version(), summary='Current Channel Version'))
     oc.add(DirectoryObject(key=Callback(About),
         title=cache_string, summary='Number of Images Cached | Total Images Cached Size'))
 
     return oc
+
+####################################################################################################
+def get_channel_version():
+    plist = Plist.ObjectFromString(
+        Core.storage.load(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))
+        )
+    return plist['CFBundleVersion'] if 'CFBundleVersion' in plist.keys() else 'Current'
 
 ####################################################################################################
 @route(PREFIX + '/validateprefs', start=bool, skip=bool)
