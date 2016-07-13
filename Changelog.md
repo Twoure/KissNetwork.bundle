@@ -1,5 +1,13 @@
 # ChangeLog
 
+##### 1.2.4
+- _07/13/2016_
+  - Updated decryption to use Plex Framework, removed unused code
+  - Updated code to better handle domain name changes
+  - Changed legacy bookmark update to match against `https` for kissanime
+    - will cause issues when/if kissanime changes back to `https`
+    - will look into better solution for next release
+
 ##### 1.2.3
 - _07/01/2016_
   - `cloudflare-scrape`: updated to `v1.6.5`
