@@ -38,10 +38,8 @@ import requests
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    if Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url):
-        type_title = Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url).group(1).title()
-    else:
-        type_title = 'Comic'
+    r = Regex(r'^https?\:\/\/(?:www\.)?kiss(\w+)\.\w+').search(url):
+    type_title = r.group(1).title() if r else 'Comic'
 
     return 'Drama' if type_title == 'Asian' else type_title
 
@@ -58,7 +56,7 @@ def get_domain_dict(fresh=False):
     return default_domain_dict
 
 ####################################################################################################
-def SetDomainURL(string):
+def SetDomainURL(string, fresh=False):
     """
     Get the domain url dynamically
     Sites like the Kiss Sites sometimes change thier domain names
@@ -67,7 +65,7 @@ def SetDomainURL(string):
 
     Log.Debug('* SetDomainURL: string = %s' %string)
 
-    default_domain_dict = get_domain_dict(False)
+    default_domain_dict = get_domain_dict(fresh)
     test = default_domain_dict[string]
 
     try:
@@ -116,16 +114,16 @@ def SaveDomainDict(content=dict):
     return
 
 ####################################################################################################
-def CreateDomainDict():
+def CreateDomainDict(fresh=False):
     """setup the domain dict"""
 
     setup_list = ['anime', 'drama', 'cartoon', 'manga', 'comic']
     Log.Debug('*' * 80)
     for i, item in enumerate(setup_list):
         if i == 0:
-            temp_dict = {item.title(): SetDomainURL(item)}
+            temp_dict = {item.title(): SetDomainURL(item, fresh)}
         else:
-            temp_dict.update({item.title(): SetDomainURL(item)})
+            temp_dict.update({item.title(): SetDomainURL(item, fresh)})
     return SaveDomainDict(temp_dict)
 
 ####################################################################################################
@@ -142,9 +140,9 @@ def LoadDomainDict():
         return LoadDomainDict()
 
 ####################################################################################################
-def UpdateDomain(kind):
+def UpdateDomain(kind, fresh=False):
     """Update only one domain"""
 
     d = LoadDomainDict()
-    d.update({kind: SetDomainURL(kind.lower())})
+    d.update({kind: SetDomainURL(kind.lower(), fresh)})
     return SaveDomainDict(d)

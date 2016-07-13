@@ -67,20 +67,14 @@ def DomainDict(kind):
 
 ####################################################################################################
 def CorrectURL(url):
-    if len(url.split('/')) > 3:
-        url = GetBaseURL(url) + '/' + url.split('/', 3)[3]
-    else:
-        url = GetBaseURL(url)
-    return url
+    return GetBaseURL(url) + '/' + url.split('/', 3)[3] if (len(url.split('/')) > 3) else GetBaseURL(url)
 
 ####################################################################################################
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    if Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url):
-        type_title = Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url).group(1).title()
-    else:
-        type_title = 'Comic'
+    r = Regex(r'^https?\:\/\/(?:www\.)?kiss(\w+)\.\w+').search(url):
+    type_title = r.group(1).title() if r else 'Comic'
 
     return 'Drama' if type_title == 'Asian' else type_title
 
@@ -89,7 +83,7 @@ def GetBaseURL(url):
     """ Get base url for headers """
 
     type_title = GetTypeTitle(url)
-    base_url = ('https://' if type_title == 'Anime' else 'http://') + url.split('/')[2]
+    base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
     if not (type_title, base_url) in BaseURLListTuple():
         for node in BaseURLListTuple():
             if node[0] == type_title:
@@ -104,14 +98,11 @@ def GetBaseURL(url):
 def CoverImageFileExist(image_file):
     """Check if resource file exist"""
 
-    if image_file:
-        return os.path.isfile(os.path.join(RESOURCES_PATH, image_file))
-    else:
-        return False
+    return os.path.isfile(os.path.join(RESOURCES_PATH, image_file)) if image_file else False
 
 ####################################################################################################
 def is_kiss_url(url):
-    return Regex(r'^https?\:\/\/(readcomiconline|kiss\w+)\.[^\/]+\/.+$').search(url)
+    return Regex(r'^https?\:\/\/(?:www\.)?(readcomiconline|kiss\w+)\.\w+\/.+$').search(url)
 
 ####################################################################################################
 def CorrectCoverImage(string):

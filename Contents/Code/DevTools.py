@@ -158,7 +158,7 @@ def DevToolsD(title=None, header=None, message=None):
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating %s Domain in Domain_Dict----------' %title)
 
-            Domain.UpdateDomain(title)
+            Domain.UpdateDomain(title, True)
 
             message = 'Updated %s Domain.' %title
             return DevTools(header=header, message=message, file_to_reset=None)
