@@ -186,7 +186,13 @@ def MainMenu():
     if len(b_prefs_names) == 1:
         b_prefs_name = b_prefs_names[0]
         p_data = [d for d in data if d['prefs_name'] == b_prefs_name][0]
-        KissMain(url=p_data['url'], title=p_data['title'], art=p_data['art'], ob=False, oc=oc)
+        if Prefs['simple']:
+            oc.add(DirectoryObject(
+                key=Callback(KissMain, url=p_data['url'], title=p_data['title'], art=p_data['art']),
+                title=p_data['title'], thumb=p_data['rthumb'], art=p_data['rart']
+                ))
+        else:
+            KissMain(url=p_data['url'], title=p_data['title'], art=p_data['art'], ob=False, oc=oc)
     else:
         for d in sorted(data, key=lambda k: k['title']):
             if Prefs[d['prefs_name']]:
@@ -223,6 +229,9 @@ def KissMain(url, title, art, ob=True, oc=None):
 
     if ob:
         oc = ObjectContainer(title2=title, art=R(art))
+    if Prefs['simple']:
+        return DirectoryList(page=1, pname='All', category='All', base_url=url, type_title=title, art=art)
+
     newest_c_title = 'New %s' %title
 
     oc.add(DirectoryObject(

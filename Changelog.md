@@ -1,5 +1,9 @@
 # ChangeLog
 
+##### 1.2.5
+- _07/xx/2016_
+  - Added `Simple UI` option to remove all sub list in favor of one list dictated by `Sort List by...` option
+
 ##### 1.2.4
 - _07/13/2016_
   - Updated decryption to use Plex Framework, removed unused code

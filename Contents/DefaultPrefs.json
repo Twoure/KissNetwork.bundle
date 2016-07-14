@@ -1,5 +1,11 @@
 [
   {
+    "id": "simple",
+    "label": "Simple UI",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "sort_opt",
     "label": "Sort List by...",
     "type": "enum",

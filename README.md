@@ -11,6 +11,7 @@ KissNetwork
 - [Install](#install)
 - [Operation](#operation)
   - [Preferences](#preferences)
+    - [Simple UI](#simple-ui)
     - [Sort List by...](#sort-list-by)
     - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
     - [Preferred Video Server](#preferred-video-server)
@@ -99,6 +100,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ## Operation
 
 ### Preferences
+
+##### Simple UI
+- Remove all sub list in favor of one list per section sorted by the [Sort List by...](#sort-list-by) option.
 
 ##### Sort List by...
 - Set list order for "All", "Alphabets", "Country", "Genres", "Movies", "Ongoing", and "Completed"
