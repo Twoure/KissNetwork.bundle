@@ -505,8 +505,10 @@ def BookmarksSub(type_title, art):
         #   by updating
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
-            if cover_url:
-                if Regex(r'^https\:\/\/(kissanime)\.[^\/]+\/.+$').search(cover_url):
+            if cover_url and Common.is_kiss_url(cover_url):
+                cover_type_title = Common.GetTypeTitle(cover_url)
+                cover_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(cover_url).group(1)
+                if not (cover_type_title, cover_base_url) in Common.BaseURLListTuple():
                     bm_info = item_info.copy()
                     bm_info.update({'type_title': type_title})
                     ftimer = float(Util.RandomInt(0,30)) + Util.Random()
