@@ -73,7 +73,7 @@ def CorrectURL(url):
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    r = Regex(r'^https?\:\/\/(?:www\.)?(?:kiss(\w+)|read(comic)online)\.\w+').search(url)
+    r = Regex(r'^https?\:\/\/(?:www\.)?(?:kiss|read)(comic|\w+)(?:online)?\.\w+').search(url)
     type_title = r.group(1).title() if r else None
 
     return 'Drama' if type_title == 'Asian' else type_title
