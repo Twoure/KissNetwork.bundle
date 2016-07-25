@@ -68,32 +68,28 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ## Channel Support
 
 ##### Plex Media Server:
-- JavaScript Runtime Required:
-  - Recomended Node.js or V8 (with or without the PyV8 module)
-  - Refer to [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape#readme) for valid JavaScript Engines
-  - For Ubuntu use: `sudo apt-get install nodejs` (installs nodejs)
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 1.0.0
+  - Ubuntu 14.04 LTS: PMS version 1.0.2
   - Windows 7: PMS version 0.9.16.6
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
   - OpenPHT (Ubuntu 14.04 LTS, v1.6.1)
-  - Android (4.4.2) (Plex Client App, v4.27.0.705)
+  - Android (4.4.2) (Plex Client App, v4.28.2.249)
   - Plex Media Player (2.6.9)
-  - Plex/Web (2.7.2)
+  - Plex/Web (2.7.6)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
 
 ## Install
 
+- This channel can be installed via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle) or manually follow the directions below.
 - [Download](https://github.com/Twoure/KissNetwork.bundle/releases) the latest release and install _KissNetwork_ by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
   - Unzip and rename the folder to **KissNetwork.bundle**
   - Copy **KissNetwork.bundle** into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
   - Restart PMS
-- Alternatively this channel can be installed via [WebTools.bundle](https://github.com/dagalufh/WebTools.bundle).
 
 [Table of Contents](#table-of-contents)
 
@@ -175,7 +171,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - [**Cover Cache Tools**](#cover-cache-tools)
 - [**Domain Tools**](#domain-tools)
 - [**Header Tools**](#header-tools)
-- **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test. It is testing for a valid JavaScript Runtime
+- **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test.
 - **Reset URL Cache:** Delete custom URL cache, separate from Plex Framework
 - **Restart KissNetwork Channel:** Will restart KissNetwork Channel in PMS, but will not refresh URL Service Code.
 
