@@ -106,6 +106,7 @@ def MediaObjectsForURL(url):
     prefs = get_prefs()
     url = Common.CorrectURL(url)
 
+    # create media objects for each video quality
     if prefs['force_transcode'] == 'true':
         Log.Debug('* Force Transcoding ON')
         for fmt, m, b in fmt_list:
@@ -118,7 +119,6 @@ def MediaObjectsForURL(url):
                 ))
     else:
         Log.Debug('* Force Trascoding OFF')
-        # create media objects for each video quality
         for fmt, m, b in fmt_list:
             mo.append(MediaObject(
                 parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
