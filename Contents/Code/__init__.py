@@ -127,7 +127,7 @@ def MainMenu():
     SetUpCFTest(CFTest_KEY)
     if not Dict['cfscrape_test']:
         return MC.message_container('Error',
-            'CloudFlare bypass fail. Please install a JavaScript Runtime like node.js or equivalent')
+            'CloudFlare bypass fail. Please report Error to Twoure with channel Log files.')
 
     admin = CheckAdmin()
 

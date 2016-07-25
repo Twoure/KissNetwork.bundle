@@ -10,13 +10,7 @@ import subprefs as SubPrefs
 from openload import decode_openload
 import kissdecrypt
 import requests
-
-try:
-    import execjs
-    execjs.eval("{a:true,b:function (){}}")
-except:
-    import execjs_110 as execjs
-    Log.Warn('* PyExecJS Warn: Error using execjs v1.4.0, loaded v1.1.0 instead')
+import js2py
 
 KissDecrypt = kissdecrypt.KissDecrypt()
 
@@ -256,31 +250,14 @@ def get_googlevideo_url(page_text, url, m, headers):
                 js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
                 if not js.group(2) == 'window.location.href':
                     ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
-                    runtime = execjs.get()
                     for s, ws, w in ra:
                         s = s.replace(ws, 'var krsktest = %s; var temp' %w)
-                        if 'Node' in runtime.name:
-                            s = s.replace('\'', '\\\'')
-                            s = (
-                                """
-                                var myContext = {krsktest: "", temp: ""}
-
-                                require('vm').runInNewContext('%s', myContext);
-                                return [myContext.krsktest, myContext.temp];
-                                """ %s
-                                )
-                            jsc = runtime.exec_(s)
-                            jskt = (jsc[0] if isinstance(jsc[0], basestring) else jsc[0][0]) if len(jsc) is not None else 'na'
-                            jst = jsc[1] if len(jsc) is not None else 'na'
-                        else:
-                            jsc = runtime.compile(s)
-                            jskt = jsc.exec_('return krsktest')
-                            jst = jsc.exec_('return temp')
-
-                            jskt = jskt if isinstance(jskt, basestring) else jskt[0]
-
+                        jsc = js2py.EvalJs()
+                        jsc.execute(s)
+                        jskt = jsc.krsktest
+                        jskt = jskt if isinstance(jskt, basestring) else jskt[0]
                         if jskt.lower() == 'krsk':
-                            post_data = {jskt: jst}
+                            post_data = {jskt: jsc.temp}
             except Exception as e:
                 Log.Error('* get_googlevideo_url Error: %s' %str(e))
             vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)

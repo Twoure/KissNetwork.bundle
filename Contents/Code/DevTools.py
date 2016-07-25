@@ -572,8 +572,8 @@ def SetUpCFTest(test):
             Dict.Save()
             Log.Error('*' * 80)
             Log.Error('----------%s Failed CFTest----------' %test)
-            Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
-            Log.Error('Once JavaScript Runtime installed, Restart channel')
+            #Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
+            #Log.Error('Once JavaScript Runtime installed, Restart channel')
             Log.Error(str(e))
             Log.Error('*' * 80)
     else:
