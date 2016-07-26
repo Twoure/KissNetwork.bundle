@@ -5,10 +5,9 @@ Domain = SharedCodeService.domain
 Common = SharedCodeService.common
 import requests
 import json
-from time import sleep
 import rhtml as RHTML
 
-PREFIX = '/video/kissnetwork'
+PREFIX = Common.PREFIX
 
 ####################################################################################################
 def add_dev_tools(oc):
@@ -490,13 +489,13 @@ def CacheAllCovers(category, qevent, page=1):
                 Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=thumb)
 
     if nextpg_node:
-        sleep(2)  # wait 2 sec before calling next page
+        Thread.sleep(2)  # wait 2 sec before calling next page
         Dict.Save()
         nextpg = int(nextpg_node.split('page=')[1])
         return CacheAllCovers(category=category, qevent=qevent, page=nextpg)
     else:
         Dict.Save()
-        sleep(5)  # wait 5 seconds before starting next Threaded instance of CacheAllCovers for next Category
+        Thread.sleep(5)  # wait 5 seconds before starting next Threaded instance of CacheAllCovers for next Category
         qevent.set()  # set Event object to True for 'for loop' in CacheCoverQ()
         Log.Info(
             '%s Finished caching covers. Set qevent to %s, so next category can start caching covers.'
@@ -505,7 +504,7 @@ def CacheAllCovers(category, qevent, page=1):
 
 ####################################################################################################
 @route(PREFIX + '/save-cover-image', count=int)
-def SaveCoverImage(image_url, count=0):
+def SaveCoverImage(image_url, count=0, page_url=None):
     """Save image to Cover Image Path and return the file name"""
 
     if Common.is_kiss_url(image_url):
@@ -516,7 +515,7 @@ def SaveCoverImage(image_url, count=0):
         image_file = image_url.split('/', 3)[3].replace('/', '_')
 
     path = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources', image_file)
-    Log.Debug('image file path = %s' %path)
+    Log.Debug('Image File Path = {}'.format(path))
 
     if not Core.storage.file_exists(path):
         if Common.is_kiss_url(content_url):
@@ -529,29 +528,48 @@ def SaveCoverImage(image_url, count=0):
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
 
-            Log.Debug('* saved image %s' %image_file)
+            Log.Debug('* Saved Image {}'.format(image_file))
             # create dict for cover files, so we can clear them later
             #   seperate from bookmark covers if need be
             if Dict['cover_files']:
                 Dict['cover_files'].update({image_file: image_file})
             else:
                 Dict['cover_files'] = {image_file: image_file}
-
-            #Dict.Save()
             return image_file
         elif r.status_code == 503 and count < 3:
             count += 1
             timer = float(Util.RandomInt(5,10)) + Util.Random()
-            Log.Warn(
-                '* %s error code. Polling site too fast. Waiting %f sec then try again, try up to 3 times. Try %i'
-                %(r.status_code, timer, count))
+            Log.Warn('* 503 Error Code.')
+            Log.Warn('* Polling site too fast. Waiting {} sec then try again, try up to 3 times. Try {}.'.format(timer, count))
             Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
+        elif (r.status_code == 403) and (count < 1):
+            Log.Warn('* 403 Error Code.')
+            Log.Warn('* Image Offline {}'.format(content_url))
+            if page_url:
+                Log.Warn('* Trying to Pull down fresh image from {}'.format(page_url))
+                html = RHTML.ElementFromURL(page_url)
+                try:
+                    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+                    if not 'http' in cover_url: cover_url = None
+                except:
+                    cover_url = None
+                if cover_url:
+                    count +=1
+                    timer = float(Util.RandomInt(5,10)) + Util.Random()
+                    Log.Warn('* Waiting %f sec before trying to Save new Image')
+                    Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=cover_url, count=count)
+                else:
+                    Log.Error('* No new cover image within {}'.format(page_url))
+                    return None
+            else:
+                Log.Error('* No Page URL input to parse for new Image')
+                return None
         else:
-            Log.Debug('* status code for image url = %s' %r.status_code)
-            Log.Error('* image url not found | %s' %content_url)
+            Log.Debug('* {} Error Code.'.format(r.status_code))
+            Log.Error('* Cannot Handle Image {}'.format(content_url))
             return None  #replace with "no image" icon later
     else:
-        Log.Debug('* file %s already exists' %image_file)
+        Log.Debug('* File Already Exists {}'.format(image_file))
         return image_file
 
 ####################################################################################################
@@ -572,8 +590,6 @@ def SetUpCFTest(test):
             Dict.Save()
             Log.Error('*' * 80)
             Log.Error('----------%s Failed CFTest----------' %test)
-            #Log.Error('You need to install a JavaScript Runtime like node.js or equivalent')
-            #Log.Error('Once JavaScript Runtime installed, Restart channel')
             Log.Error(str(e))
             Log.Error('*' * 80)
     else:
