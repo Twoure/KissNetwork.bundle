@@ -1,6 +1,4 @@
 {
-  "title": "KissNetwork",
-
   "updater.success": "Success",
   "updater.error": "Error",
   "updater.update_available": "Update available: %s",

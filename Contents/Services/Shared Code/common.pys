@@ -7,15 +7,18 @@ Shared common code.
 
 # import section(s) not included in Plex Plug-In Framwork
 import os
-import urllib2
 import domain as Domain
 
-# constants
+# path constants
 BUNDLE_PATH = Domain.BUNDLE_PATH
 RESOURCES_PATH = os.path.join(BUNDLE_PATH, 'Contents', 'Resources')
 SUPPORT_PATH = Domain.SUPPORT_PATH
-LIST_VIEW_CLIENTS = ['Android', 'iOS']
+
+# general constants
+PREFIX = '/video/kissnetwork'
+TITLE = 'KissNetwork'
 USER_AGENT = Domain.USER_AGENT
+LIST_VIEW_CLIENTS = ['Android', 'iOS']
 
 ####################################################################################################
 def TypeTitleList():
@@ -91,6 +94,7 @@ def GetBaseURL(url):
                 break
 
         Log.Warn('* Old %s URL parsed from page! URL Domain changed to %s' %(type_title, base_url))
+        Log.Warn('* {}'.format(url))
 
     return base_url
 
@@ -102,7 +106,7 @@ def CoverImageFileExist(image_file):
 
 ####################################################################################################
 def is_kiss_url(url):
-    return Regex(r'^https?\:\/\/(?:www\.)?(readcomiconline|kiss\w+)\.\w+\/.+$').search(url)
+    return bool(Regex(r'^https?\:\/\/(?:www\.)?(readcomiconline|kiss\w+)\.\w+\/.+$').search(url))
 
 ####################################################################################################
 def CorrectCoverImage(string):
@@ -114,7 +118,7 @@ def CorrectCoverImage(string):
         elif 'cdn.myanimelist.net' in string:
             string = 'http://' + string.split('/', 2)[2]
 
-        name, ext = os.path.splitext(string)
+        name, ext = String.SplitExtension(string)
         ext_l = ext.lower()
 
         if (ext_l == '.jpg') or (ext_l == '.jpeg') or (ext_l == '.png') or (ext_l == '.gif'):
@@ -144,10 +148,10 @@ def StringCode(string, code):
 
     if string:
         if code == 'encode':
-            string_code = urllib2.quote(string.encode('utf8'))
+            string_code = String.Quote(string.encode('utf-8'))
         elif code == 'decode':
             # Â artifact in Windows OS, don't know why, think it has to do with the Dict protocall
-            string_code = urllib2.unquote(string).decode('utf8').replace('Â', '')
+            string_code = String.Unquote(string).decode('utf-8').replace('Â', '')
     else:
         string_code = None
 
