@@ -21,8 +21,8 @@ Common = SharedCodeService.common
 Metadata = SharedCodeService.metadata
 
 # set global variables
-PREFIX = '/video/kissnetwork'
-TITLE = L('title')
+PREFIX = Common.PREFIX
+TITLE = Common.TITLE
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 TIMEOUT = Datetime.Delta(hours=1)
@@ -82,6 +82,7 @@ def Start():
     Log.Debug('*' * 80)
     Log.Debug('* Platform.OS            = %s' %Platform.OS)
     Log.Debug('* Platform.OSVersion     = %s' %Platform.OSVersion)
+    Log.Debug('* Platform.CPU           = %s' %Platform.CPU)
     Log.Debug('* Platform.ServerVersion = %s' %Platform.ServerVersion)
     Log.Debug('*' * 80)
 
@@ -460,7 +461,7 @@ def BookmarksSub(type_title, art):
         else:
             summary2 = None
 
-        # setup cover depending of Prefs
+        # setup cover depending on Prefs
         cover = Common.CorrectCoverImage(bookmark['cover_file'])
         cover_file = cover
         if bookmark['cover_url']:
@@ -505,14 +506,23 @@ def BookmarksSub(type_title, art):
         #   by updating
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
-            if cover_url and Common.is_kiss_url(cover_url):
-                cover_type_title = Common.GetTypeTitle(cover_url)
-                cover_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(cover_url).group(1)
-                if not (cover_type_title, cover_base_url) in Common.BaseURLListTuple():
-                    bm_info = item_info.copy()
-                    bm_info.update({'type_title': type_title})
-                    ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                    Thread.CreateTimer(interval=ftimer, f=UpdateLegacyBookmark, bm_info=bm_info)
+            update = False
+            if cover_url and Common.is_kiss_url(bookmark['cover_url']):
+                cover_type_title = Common.GetTypeTitle(bookmark['cover_url'])
+                cover_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(bookmark['cover_url']).group(1)
+                if (cover_type_title, cover_base_url) not in Common.BaseURLListTuple():
+                    Log.Debug('* Bookmark Cover URL Domain changed. Updating Bookmark Metadata.')
+                    update = True
+            else:
+                page_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(bookmark['page_url']).group(1)
+                if (type_title, page_base_url) not in Common.BaseURLListTuple():
+                    Log.Debug('* Bookmark Page URL Domain changed. Updating Bookmark Metadata.')
+                    update = True
+            if update:
+                bm_info = item_info.copy()
+                bm_info.update({'type_title': type_title})
+                ftimer = float(Util.RandomInt(0,30)) + Util.Random()
+                Thread.CreateTimer(interval=ftimer, f=UpdateLegacyBookmark, bm_info=bm_info)
         else:
             bm_info = item_info.copy()
             bm_info.update({'type_title': type_title})
@@ -1825,15 +1835,10 @@ def UpdateLegacyBookmark(bm_info=dict):
 
     html = RHTML.ElementFromURL(page_url)
 
-    if bm_info['cover_url'] and base_url in bm_info['cover_url']:
+    if bm_info['cover_url'] and (Common.is_kiss_url(bm_info['cover_url']) == False):
+        cover_url = bm_info['cover_url']
+    elif bm_info['cover_url'] and (base_url in bm_info['cover_url']):
         cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
-    elif base_url in bm_info['cover_url']:
-        try:
-            cover_url = base_url + '/' + Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href').split('/', 3)[3])
-            if not 'http' in cover_url:
-                cover_url = None
-        except:
-            cover_url = None
     else:
         try:
             cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
@@ -1842,11 +1847,12 @@ def UpdateLegacyBookmark(bm_info=dict):
         except:
             cover_url = None
 
-    genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
-    if genres:
-        genres = ' '.join([g.replace(' ', '_') for g in genres])
-    else:
-        genres = ''
+    if 'genres' not in bm_info.keys():
+        genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
+        if genres:
+            genres = ' '.join([g.replace(' ', '_') for g in genres])
+        else:
+            genres = ''
 
     new_bookmark = {
         type_title: bm_info['item_sys_name'], 'item_title': item_title,
