@@ -94,22 +94,12 @@ def GetHeadersForURL(url, update=False):
     If cookies have expired then get new ones.
     """
 
-    #Log.Debug('* URL to get headers = %s' %url)
-
-    # get base url for headers
     base_url = Common.GetBaseURL(url)
-
-    # get title for headers
     type_title = Common.GetTypeTitle(url)
-
-    # get current datetime
     current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
-
-    # load current header dict
     header_data = LoadHeaderDict()
 
     if len(header_data) > 1:
-        # Update Header Dictionary
         if type_title in header_data.keys():
             if 'expire' in header_data[type_title].keys():
                 expire = int(header_data[type_title]['expire'])
@@ -127,7 +117,6 @@ def GetHeadersForURL(url, update=False):
             Log.Debug('* Updated %s Header to >>' %type_title)
             Log.Debug('* %s' %header_data[type_title])
 
-            # update header dict
             SaveHeaderDict(header_data)
             Log.Debug('* New Cookies saved for %s Header' %base_url)
         else:
