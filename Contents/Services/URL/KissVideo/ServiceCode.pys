@@ -292,10 +292,10 @@ def get_googlevideo_url(page_text, url, m, headers):
             vurl = item
             nm = rfmt_dict[mm]
             if str(nm) == m[1:]:
-                Log.Debug('* Selecting %sp stream' %mm)
+                #Log.Debug('* Selecting %sp stream' %mm)
                 break
             elif int(mm) > int(fmt_dict[m[1:]]):
-                Log.Debug('* Selecting %sp stream' %mm)
+                #Log.Debug('* Selecting %sp stream' %mm)
                 break
         Log.Debug('* Selecting %sp stream' %mm)
 
