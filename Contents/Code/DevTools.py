@@ -1,13 +1,5 @@
 import shutil
-from io import open
-Headers = SharedCodeService.headers
-Domain = SharedCodeService.domain
-Common = SharedCodeService.common
-import requests
 import json
-import rhtml as RHTML
-
-PREFIX = Common.PREFIX
 
 ####################################################################################################
 def add_dev_tools(oc):
@@ -35,7 +27,7 @@ def ResetCustomDict(file_to_reset):
     if file_to_reset == 'Domain_Dict':
         Domain.CreateDomainDict()
     elif file_to_reset == 'Header_Dict':
-        Headers.CreateHeadersDict()
+        KH.create_dict()
 
     Log('\n----------Reset %s----------\n----------New values for %s written to:\n%s' %(file_to_reset, file_to_reset, file_path))
 
@@ -117,7 +109,7 @@ def DevToolsH(title=None, header=None, message=None):
 
             for (h_name, h_url) in Common.BaseURLListTuple():
                 if h_name == title:
-                    Headers.GetHeadersForURL(h_url, update=True)
+                    KH.get_headers_for_url(h_url, update=True)
                     break
 
             message = 'Updated %s Headers.' %title
@@ -519,7 +511,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
 
     if not Core.storage.file_exists(path):
         if Common.is_kiss_url(content_url):
-            r = requests.get(content_url, headers=Headers.GetHeadersForURL(content_url), stream=True)
+            r = requests.get(content_url, headers=KH.get_headers_for_url(content_url), stream=True)
         else:
             r = requests.get(content_url, stream=True)
 

@@ -3,29 +3,33 @@
 #                                   KissNetwork Plex Channel                                       #
 #                                                                                                  #
 ####################################################################################################
+# import Shared Service Code
+Headers = SharedCodeService.kissheaders
+Domain = SharedCodeService.domain
+Common = SharedCodeService.common
+KH = Headers.KissHeaders(True)
+Metadata = SharedCodeService.metadata
+
 # import section(s) not included in Plex Plug-In Framework
 import messages
 import requests
-import rhtml as RHTML
+from slugify import slugify
 from io import open
+
+TIMEOUT = Datetime.Delta(hours=1)
+import rhtml as RHTML
+
 from updater import Updater
 from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
-from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
-from slugify import slugify
 
-# import Shared Service Code
-Headers = SharedCodeService.headers
-Domain = SharedCodeService.domain
-Common = SharedCodeService.common
-Metadata = SharedCodeService.metadata
+PREFIX = Common.PREFIX
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 
 # set global variables
-PREFIX = Common.PREFIX
 TITLE = Common.TITLE
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
-TIMEOUT = Datetime.Delta(hours=1)
 CFTest_KEY = 'Manga'
 
 # KissAnime
@@ -86,30 +90,14 @@ def Start():
     Log.Debug('* Platform.ServerVersion = %s' %Platform.ServerVersion)
     Log.Debug('*' * 80)
 
-    # setup background auto cache of headers, and current channel version
-    Dict['First Headers Cached'] = False
+    # setup current channel version
     Dict['current_ch_version'] = get_channel_version()
 
     # setup test for cfscrape
     SetUpCFTest(CFTest_KEY)
 
-    if Dict['cfscrape_test']:
-        if Dict['Headers Auto Cached']:
-            if not Dict['Headers Auto Cached']:
-                Log.Debug('* Caching Headers')
-                Thread.CreateTimer(5, BackgroundAutoCache)
-            else:
-                Log.Debug('* Cookies already cached')
-                Log.Debug('* Checking Each URL Cache Time')
-                Thread.CreateTimer(5, BackgroundAutoCache)
-        else:
-            Dict['Headers Auto Cached'] = False
-            Dict.Save()
-            Log.Debug('* Caching Headers ')
-            Thread.CreateTimer(5, BackgroundAutoCache)
-        Log.Debug('*' * 80)
-    else:
-        pass
+    # check prefs
+    ValidatePrefs(start=True, skip=False)
 
     # Clear Old Cached URLs
     Thread.Create(ClearCache, timeout=TIMEOUT)
@@ -995,7 +983,7 @@ def ItemPage(item_info):
         jdata = JSON.ObjectFromURL(
             base_url + '/GetRelatedLinks', method='POST', cacheTime=CACHE_1HOUR,
             values={'keyword': page_url.split('/')[-1].replace('-', '+')},
-            headers=Headers.GetHeadersForURL(base_url)
+            headers=KH.get_headers_for_url(base_url)
             )
         for jd in jdata:
             rel_title = jd['Name']
@@ -1911,51 +1899,6 @@ def GetDirSize(start_path='.'):
         return d
     except:
         return 'Error'
-
-####################################################################################################
-@route(PREFIX + '/auto-cache')
-def BackgroundAutoCache():
-    """Auto Cache Headers"""
-
-    Logger('*' * 80)
-    # setup urls for setting headers
-    if not Dict['First Headers Cached']:
-        Logger('* Running Background Auto-Cache', force=True)
-
-        if Core.storage.file_exists(Core.storage.join_path(Core.storage.data_path, 'Header_Dict')):
-            Logger('* Header Dictionary already found, writing new Headers to old Dictionary', force=True)
-
-            # get headers for each url
-            for (t, u) in Common.BaseURLListTuple():
-                prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
-                if Prefs[prefs_name]:
-                    Headers.GetHeadersForURL(u)
-
-        else:
-            # Header Dictionary not yet setup, so create it and fill in the data
-            Headers.CreateHeadersDict()
-
-        # check to make sure each section/url has cookies now
-        Logger('* All cookies')
-        Logger('* %s' %Headers.LoadHeaderDict())
-
-        # Setup the Dict and save
-        Dict['First Headers Cached'] = True
-        Dict['Headers Auto Cached'] = True
-        Dict.Save()
-    else:
-        for (t, u) in Common.BaseURLListTuple():
-            prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
-            if Prefs[prefs_name]:
-                Logger('* Checking %s headers' %u, kind='Info', force=True)
-                Headers.GetHeadersForURL(u)
-
-        Logger('* Completed Header Cache Check', force=True)
-        Logger('* Headers will be cached independently when needed from now on', force=True)
-        pass
-    Logger('*' * 80)
-
-    return ValidatePrefs(start=True, skip=False)
 
 ####################################################################################################
 def GetThumb(cover_url, cover_file):

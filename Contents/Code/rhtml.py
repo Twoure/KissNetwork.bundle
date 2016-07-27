@@ -1,11 +1,3 @@
-import requests
-from slugify import slugify
-Common = SharedCodeService.common
-Headers = SharedCodeService.headers
-Domain = SharedCodeService.domain
-
-TIMEOUT = Datetime.Delta(hours=1)
-
 ####################################################################################################
 def ElementFromURL(url):
     """setup requests html"""
@@ -40,7 +32,7 @@ def get_element_from_url(url, name, count=0):
     """error handling for URL requests"""
 
     try:
-        page = requests.get(url, headers=Headers.GetHeadersForURL(url))
+        page = requests.get(url, headers=KH.get_headers_for_url(url))
         if (int(page.status_code) == 503) or (len(page.history) > 0):
             if count <= 1:
                 count += 1
@@ -49,7 +41,7 @@ def get_element_from_url(url, name, count=0):
                     req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
-                        page = requests.get(page.url, headers=Headers.GetHeadersForURL(req_base_url))
+                        page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
                         Data.Save(name, page.text)
                         html = HTML.ElementFromString(page.text)
                         return html
@@ -60,7 +52,7 @@ def get_element_from_url(url, name, count=0):
                         url = Common.CorrectURL(url)
                 else:
                     Log.Warn('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
-                    Headers.GetHeadersForURL(url, update=True)
+                    KH.get_headers_for_url(url, update=True)
                 return get_element_from_url(url, name, count)
             else:
                 Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')

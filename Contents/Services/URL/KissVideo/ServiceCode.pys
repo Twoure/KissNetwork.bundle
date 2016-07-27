@@ -3,7 +3,7 @@
 """Kiss(anime, cartoon, and drama) Service code"""
 
 # import Shared Service Code
-import headers as Headers
+import kissheaders as Headers
 import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
@@ -13,6 +13,7 @@ import requests
 import js2py
 
 KissDecrypt = kissdecrypt.KissDecrypt()
+KH = Headers.KissHeaders()
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -153,7 +154,7 @@ def PlayVideo(url, m, **kwargs):
 
     if not 'Anime' in Common.GetTypeTitle(url):
         r = Headers.Request(req_url, raw=True)
-        headers = Headers.GetHeadersForURL(url)
+        headers = KH.get_headers_for_url(url)
         dc = headers['cookie']
         headers.update({'cookie': '; '.join([dc, 'k_token=%s' %str(r.cookies['k_token'])])})
         page_text = r.text
@@ -247,8 +248,8 @@ def get_googlevideo_url(page_text, url, m, headers):
         if enc_test:
             post_data = None
             try:
-                js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window[^\=]+).*?)\<\/script\>').search(page_text)
-                if not js.group(2) == 'window.location.href':
+                js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window\[[^\=]+).*?)\<\/script\>').search(page_text)
+                if js and (js.group(2) != 'window.location.href'):
                     ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
                     for s, ws, w in ra:
                         s = s.replace(ws, 'var krsktest = %s; var temp' %w)
@@ -291,10 +292,10 @@ def get_googlevideo_url(page_text, url, m, headers):
             vurl = item
             nm = rfmt_dict[mm]
             if str(nm) == m[1:]:
-                #Log.Debug('* Selecting %sp stream' %mm)
+                Log.Debug('* Selecting %sp stream' %mm)
                 break
             elif int(mm) > int(fmt_dict[m[1:]]):
-                #Log.Debug('* Selecting %sp stream' %mm)
+                Log.Debug('* Selecting %sp stream' %mm)
                 break
         Log.Debug('* Selecting %sp stream' %mm)
 

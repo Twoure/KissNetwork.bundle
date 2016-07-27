@@ -1,0 +1,242 @@
+#!/usr/bin/env python
+
+"""
+KissNetwork shared code.
+Manipulate Headers for Kiss domains.
+"""
+
+# import section(s) not included in Plex Plug-In Framwork
+import sys
+import os
+from io import open
+import json
+import domain as Domain
+import common as Common
+
+# Import Shared Library Modules
+try:
+    import cfscrape
+except ImportError, e:
+    cfscrape = None
+    Log.Critical('* cfscrape import ERROR: {}'.format(str(e)))
+import requests
+
+class KissHeaders(object):
+    def __init__(self, init_check=False):
+        self.user_agent = Common.USER_AGENT
+        self.header_file = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
+        self.header_data = dict()
+        if init_check:
+            self.check_all_headers()
+
+    def save_dict(self):
+        if not self.header_data:
+            Log.Error('* No header content to Save')
+            return False
+
+        with open(self.header_file, 'wb') as f:
+            json.dump(self.header_data, f, indent=4, sort_keys=True, separators=(',', ': '))
+
+        if os.path.isfile(self.header_file) and os.stat(self.header_file).st_size != 0:
+            Log.Debug('* Header file Saved')
+            return True
+        Log.Error('* Header file NOT Saved')
+        return False
+
+    def load_dict(self):
+        # clear old dict first
+        self.header_data.clear()
+
+        # check and load new dict
+        if os.path.isfile(self.header_file) and os.stat(self.header_file).st_size != 0:
+            with open(self.header_file) as f:
+                data = json.load(f)
+            if data:
+                self.header_data.update(data)
+            return bool(self.header_data)
+
+        # file does not exist or is empty, create new file and fill
+        if not self.create_dict():
+            Log.Error('* cannot create new header dict')
+            return False
+        if not self.load_dict():
+            Log.Error('* tried re-save header dict but failed.')
+            return False
+        return bool(self.header_data)
+
+    def set_header(self, url):
+        base_url = Common.GetBaseURL(url)
+        type_title = Common.GetTypeTitle(url)
+        try:
+            try:
+                cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=self.user_agent)
+                r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
+            except Exception as e:
+                Log.Error('* set_header cfscrape.get_cookie_string Error: {}'.format(str(e)))
+                cookie = 'na'
+                user_agent = self.user_agent
+                r_cf_clearance = None
+
+            if r_cf_clearance:
+                date = int(r_cf_clearance.group(1))
+                expire = date + int(r_cf_clearance.group(2))
+            else:
+                expire = Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364))
+                Log.Warn('* set_header Error: Cannot calculate expire time for {}.'.format(base_url))
+
+            return {
+                type_title: {
+                    'cookie': cookie, 'user-agent': user_agent, 'referer': base_url,
+                    'expire': '%i' %expire
+                    }
+                }
+        except Exception as e:
+            Log.Error('* set_header Error: {}'.format(str(e)))
+            return {}
+
+    def create_dict(self):
+        Log.Debug('* Creating New Header Dict')
+        for (type_title, base_url) in Common.BaseURLListTuple():
+            self.header_data.update(self.set_header(base_url))
+        if not self.save_dict():
+            Log.Error('* failed to save new header dict')
+            return False
+        return True
+
+    def get_headers_for_url(self, url, update=False):
+        type_title = Common.GetTypeTitle(url)
+        if not self.header_data:
+            self.load_dict()
+            if not self.header_data:
+                Log.Error('* Cannot load {} header, because header file does not exist'.format(type_title))
+                return {}
+
+        base_url = Common.GetBaseURL(url)
+        current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
+
+        if len(self.header_data) > 1:
+            if type_title in self.header_data.keys():
+                if 'expire' in self.header_data[type_title].keys():
+                    expire = int(self.header_data[type_title]['expire'])
+                    update = True if update else (True if current_timestamp >= expire else False)
+                else:
+                    update = True
+            else:
+                update = True
+
+            if update:
+                Log.Debug('* Time to update {} cookies'.format(type_title))
+
+                self.header_data.update(self.set_header(base_url))
+
+                Log.Debug('* Updated {} Header to >>'.format(type_title))
+                Log.Debug('* {}'.format(self.header_data[type_title]))
+
+                self.save_dict()
+                Log.Debug('* New Cookies saved for {} Header'.format(base_url))
+            else:
+                if 'expire' in self.header_data[type_title].keys():
+                    current_datetime = Datetime.FromTimestamp(int(current_timestamp))
+                    expire_datetime = Datetime.FromTimestamp(int(expire))
+                    deltatime = str(expire_datetime - current_datetime)
+                    Log.Debug('* Time left until {} cookies need to be updated = {}'.format(type_title, deltatime))
+                else:
+                    Log.Warn('* No Expire time within {} cookies'.format(type_title))
+        else:
+            self.create_dict()
+
+        # setup headers to return, do not want date in header field
+        return {
+            'cookie': self.header_data[type_title]['cookie'],
+            'user-agent': self.header_data[type_title]['user-agent'],
+            'referer': self.header_data[type_title]['referer']
+            }
+
+    def check_all_headers(self):
+        if not self.header_data:
+            self.load_dict()
+            if not self.header_data:
+                Log.Error('* Cannot check all headers, because header file does not exist')
+                return False
+
+        updated = False
+        current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
+        for (type_title, base_url) in Common.BaseURLListTuple():
+            if len(self.header_data) > 1:
+                expire = int(self.header_data[type_title]['expire'])
+                update = True if current_timestamp >= expire else False
+                if update:
+                    updated = True
+                    Log.Debug('* Time to update {} cookies'.format(type_title))
+                    self.header_data.update(self.set_header(base_url))
+                else:
+                    if 'expire' in self.header_data[type_title].keys():
+                        current_datetime = Datetime.FromTimestamp(int(current_timestamp))
+                        expire_datetime = Datetime.FromTimestamp(int(expire))
+                        deltatime = str(expire_datetime - current_datetime)
+                        Log.Debug('* Time left until {} cookies need to be updated = {}'.format(type_title, deltatime))
+                    else:
+                        Log.Warn('* No Expire time within {} cookies'.format(type_title))
+        if updated:
+            if not self.save_dict():
+                Log.Error('* Failed to save new header data to file')
+                return False
+        return True
+
+KissH = KissHeaders()
+####################################################################################################
+def ElementFromURL(url, count=0):
+    """setup requests html"""
+
+    page = requests.get(url, headers=KissH.get_headers_for_url(url))
+    if (int(page.status_code) == 503) or (len(page.history) > 0):
+        if count <= 1:
+            count += 1
+            if len(page.history) > 0:
+                type_title = Common.GetTypeTitle(url)
+                req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
+                base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
+                if req_base_url == base_url:
+                    page = requests.get(page.url, headers=KissH.get_headers_for_url(req_base_url))
+                    html = HTML.ElementFromString(page.text)
+                    return html
+                else:
+                    Log.Warn('* ElementFromURL Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
+                    Log.Warn('* ElementFromURL Error: page history %s | %s' %(url, page.history))
+                    Domain.UpdateDomain(type_title, True)
+                    url = Common.CorrectURL(url)
+            else:
+                Log.Warn('* ElementFromURL Error: HTTP 503 Site Error. Refreshing site cookies')
+                KissH.get_headers_for_url(url, update=True)
+            return ElementFromURL(url, count)
+        else:
+            Log.Error('* ElementFromURL Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
+            html = HTML.Element('head', 'Error')
+    elif (int(page.status_code) == 522):
+        Log.Error('* ElementFromURL Error: HTTP 522 Site error, site is currently offline')
+        html = HTML.Element('head', 'Error')
+    else:
+        html = HTML.ElementFromString(page.text)
+
+    return html
+
+####################################################################################################
+def Request(url, headers=None, raw=False):
+    """setup requests text page"""
+
+    if headers:
+        r = requests.get(url, headers=headers)
+    else:
+        r = requests.get(url, headers=KissH.get_headers_for_url(url))
+
+    if not raw:
+        r = r.text
+
+    return r
+
+####################################################################################################
+def CFTest(kind):
+    """test cfscrape"""
+    cookie, ua = cfscrape.get_cookie_string(url=Common.GetBaseURL(Common.DomainDict(kind)), user_agent=Common.USER_AGENT)
+    return str(cookie)
+

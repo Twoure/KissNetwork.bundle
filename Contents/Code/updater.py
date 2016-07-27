@@ -43,8 +43,6 @@ KEY_DATA_ZIPBALL = 'zipball_url'
 
 CHECK_INTERVAL = CACHE_1HOUR * 12
 
-Common = SharedCodeService.common
-
 
 class Updater:
     info = None
