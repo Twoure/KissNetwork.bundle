@@ -31,7 +31,7 @@ def MetadataObjectForURL(url):
     video_id = int(url.split('=')[-1])
     show_url = url.rsplit('/', 1)[0]
 
-    html = Headers.ElementFromURL(show_url)
+    html = ElementFromURL(show_url)
     Log.Debug('*' * 80)
 
     genres, genres_list = Metadata.GetGenres(html)
@@ -153,18 +153,18 @@ def PlayVideo(url, m, **kwargs):
         req_url = url
 
     if not 'Anime' in Common.GetTypeTitle(url):
-        r = Headers.Request(req_url, raw=True)
+        r = NRequest(req_url, raw=True)
         headers = KH.get_headers_for_url(url)
         dc = headers['cookie']
         headers.update({'cookie': '; '.join([dc, 'k_token=%s' %str(r.cookies['k_token'])])})
         page_text = r.text
     else:
         headers = None
-        page_text = Headers.Request(req_url)
+        page_text = NRequest(req_url)
 
     gtest = True if Regex(r'id\=[\"\'](selectQuality)').search(page_text) else False
     if (gtest == False) and (prefs['server'] == '0'):
-        page_text = Headers.Request(req_url + '&s=openload')
+        page_text = NRequest(req_url + '&s=openload')
 
     onedrive = Regex(r'src\=[\"\'](https?\:\/\/onedrive\.live\.com\/prev\?.+?)[\"\']').search(page_text)
     openload = Regex(r'src\=[\"\'](https?\:\/\/openload.+?)[\"\']').search(page_text)
@@ -458,3 +458,53 @@ def get_prefs():
         prefs.update({'server': '0'})
 
     return prefs
+
+####################################################################################################
+def ElementFromURL(url, count=0):
+    """setup requests html"""
+
+    page = requests.get(url, headers=KH.get_headers_for_url(url))
+    if (int(page.status_code) == 503) or (len(page.history) > 0):
+        if count <= 1:
+            count += 1
+            if len(page.history) > 0:
+                type_title = Common.GetTypeTitle(url)
+                req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
+                base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
+                if req_base_url == base_url:
+                    page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
+                    html = HTML.ElementFromString(page.text)
+                    return html
+                else:
+                    Log.Warn('* ElementFromURL Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
+                    Log.Warn('* ElementFromURL Error: page history %s | %s' %(url, page.history))
+                    Domain.UpdateDomain(type_title, True)
+                    url = Common.CorrectURL(url)
+            else:
+                Log.Warn('* ElementFromURL Error: HTTP 503 Site Error. Refreshing site cookies')
+                KH.get_headers_for_url(url, update=True)
+            return ElementFromURL(url, count)
+        else:
+            Log.Error('* ElementFromURL Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
+            html = HTML.Element('head', 'Error')
+    elif (int(page.status_code) == 522):
+        Log.Error('* ElementFromURL Error: HTTP 522 Site error, site is currently offline')
+        html = HTML.Element('head', 'Error')
+    else:
+        html = HTML.ElementFromString(page.text)
+
+    return html
+
+####################################################################################################
+def NRequest(url, headers=None, raw=False):
+    """setup requests text page"""
+
+    if headers:
+        r = requests.get(url, headers=headers)
+    else:
+        r = requests.get(url, headers=KH.get_headers_for_url(url))
+
+    if not raw:
+        r = r.text
+
+    return r
