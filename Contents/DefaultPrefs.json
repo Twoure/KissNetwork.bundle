@@ -50,14 +50,8 @@
     "default": "True"
   },
   {
-    "id": "cache_covers",
-    "label": "Cache All Covers Locally",
-    "type": "bool",
-    "default": "False"
-  },
-  {
-    "id": "cache_bookmark_covers",
-    "label": "Cache Bookmark Covers Locally",
+    "id": "hide_clear_bookmarks",
+    "label": "Hide \"Clear Bookmarks\"",
     "type": "bool",
     "default": "False"
   },
