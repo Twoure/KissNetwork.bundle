@@ -2,27 +2,26 @@
 def ElementFromURL(url):
     """setup requests html"""
 
-    cachetime = Datetime.Now()
-    name = slugify(url) + '__cachetime__%i' %Datetime.TimestampFromDatetime(cachetime)
-
     match = False
-    path = Core.storage.join_path(Core.storage.data_path, 'DataItems')
-    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
+    name = Hash.MD5(url)
+    path = Core.storage.data_item_path('DataHTTP')
+    Core.storage.ensure_dirs(path)
+    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(f)]
+
     for filename in files:
-        item = filename.split('__cachetime__')
-        if slugify(url) == item[0]:
+        if filename == name:
             match = True
-            if (Datetime.FromTimestamp(int(item[1])) + TIMEOUT) <= cachetime:
-                Log.Debug('* Re-Caching URL')
+            if (Datetime.FromTimestamp(Core.storage.last_modified(Core.storage.join_path(path, filename))) + TIMEOUT) <= Datetime.Now():
+                Log.Debug('* Re-Caching \'{}\' to DataHTTP'.format(url))
                 html = get_element_from_url(url, name)
                 break
             else:
-                Log.Debug('* Reading URL from Cache')
-                html = HTML.ElementFromString(Data.Load(filename))
+                Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
+                html = HTML.ElementFromString(Data.Load(Core.storage.join_path('DataHTTP', filename)))
                 break
 
     if not match:
-        Log.Debug('* Caching URL')
+        Log.Debug('* Caching \'{}\' to DataHTTP'.format(url))
         html = get_element_from_url(url, name)
 
     return html
@@ -42,12 +41,12 @@ def get_element_from_url(url, name, count=0):
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
-                        Data.Save(name, page.text)
+                        Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
                         html = HTML.ElementFromString(page.text)
                         return html
                     else:
-                        Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
-                        Log.Warn('* get_element_from_url Error: page history %s | %s' %(url, page.history))
+                        Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
+                        Log.Warn('* get_element_from_url Error: page history {} | {}'.format(url, page.history))
                         Domain.UpdateDomain(type_title, True)
                         url = Common.CorrectURL(url)
                 else:
@@ -56,7 +55,7 @@ def get_element_from_url(url, name, count=0):
                 return get_element_from_url(url, name, count)
             else:
                 Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
-                if Data.Exists(name):
+                if Data.Exists(Core.storage.join_path('DataHTTP', name)):
                     Log.Warn('* Using old cached page')
                     html = HTML.ElementFromString(page.text)
                 else:
@@ -65,11 +64,11 @@ def get_element_from_url(url, name, count=0):
             Log.Error('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
             html = HTML.Element('head', 'Error')
         else:
-            Data.Save(name, page.text)
+            Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
             html = HTML.ElementFromString(page.text)
     except Exception as e:
-        Log.Error('* get_element_from_url Error: Cannot load %s' %url)
-        Log.Error('* get_element_from_url Error: %s' %str(e))
+        Log.Error('* get_element_from_url Error: Cannot load {}'.format(url))
+        Log.Error('* get_element_from_url Error: {}'.format(e))
         html = HTML.Element('head', 'Error')
 
     return html
