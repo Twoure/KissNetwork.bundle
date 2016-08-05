@@ -11,6 +11,7 @@ class DataItem(object):
             os.getcwd().lstrip('\\\?').split('Plug-in Support')[0],
             'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork'
             )
+        self.last_modified = os.path.getmtime
 
     def list_dir(self, path):
         return os.listdir(path)
@@ -44,7 +45,7 @@ class DataItem(object):
         return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)
 
     def CoverExists(self, itemname):
-        if itemname and self.Exists(self.dataCovers(itemname)):
+        if itemname and self.Exists(self.Covers(itemname)):
             return True
         Log.Warn('* {} does not exist.'.format(itemname))
         return False
@@ -87,7 +88,7 @@ class DataItem(object):
                 os.remove(tempfile)
             raise
 
-    def data_object(itemname):
+    def data_object(self, itemname):
         img_data = self.Load(itemname)
         if not img_data:
             Log.Error('* Cannot find {}'.format(itemname))

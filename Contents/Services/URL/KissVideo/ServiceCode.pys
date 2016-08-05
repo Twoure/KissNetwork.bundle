@@ -8,14 +8,13 @@ import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
 from openload import OpenloadStreamFromURL
+from kissdecrypt import KissDecrypt
+from data import Data
 from io import open
-import kissdecrypt
 import requests
 import shutil
 import js2py
-import os
 
-KissDecrypt = kissdecrypt.KissDecrypt()
 KH = Headers.KissHeaders()
 
 ########################################################################################
@@ -451,7 +450,7 @@ def get_element_from_url(url, name, count=0, resp=False):
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
-                        Common.DataSave(Common.dataHTTP(name), page.text, resp)
+                        Data.Save(Data.HTTP(name), page.text, resp)
                         html = page if resp else HTML.ElementFromString(page.text)
                         return html
                     else:
@@ -465,7 +464,7 @@ def get_element_from_url(url, name, count=0, resp=False):
                 return get_element_from_url(url, name, count, resp)
             else:
                 Log.Error('* ServiceCode, get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
-                if Common.DataExists(Common.dataHTTP(name)):
+                if Data.Exists(Data.HTTP(name)):
                     Log.Warn('* Using old cached page')
                     html = page if resp else HTML.ElementFromString(page.text)
                 else:
@@ -474,7 +473,7 @@ def get_element_from_url(url, name, count=0, resp=False):
             Log.Error('* ServiceCode, get_element_from_url Error: HTTP 522 Site error, site is currently offline')
             html = False if resp else HTML.Element('head', 'Error')
         else:
-            Common.DataSave(Common.dataHTTP(name), page.text, resp)
+            Data.Save(Data.HTTP(name), page.text, resp)
             html = page if resp else HTML.ElementFromString(page.text)
     except Exception, e:
         Log.Error('* ServiceCode, get_element_from_url Error: Cannot load {}'.format(url))
@@ -489,20 +488,20 @@ def ElementFromURL(url):
 
     match = False
     name = Hash.MD5(url)
-    path = Common.data_item_path('DataHTTP')
-    Common.ensure_dirs(path)
-    files = [f for f in os.listdir(path) if Common.file_exists(os.path.join(path, f))]
+    path = Data.data_item_path('DataHTTP')
+    Data.ensure_dirs(path)
+    files = [f for f in Data.list_dir(path) if Data.file_exists(Data.join_path(path, f))]
 
     for filename in files:
         if filename == name:
             match = True
-            if (Datetime.FromTimestamp(os.path.getmtime(os.path.join(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
+            if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
                 Log.Debug('* Re-Caching \'{}\' to DataHTTP'.format(url))
                 html = get_element_from_url(url, name)
                 break
             else:
                 Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
-                html = HTML.ElementFromString(Common.DataLoad(Common.dataHTTP(filename)))
+                html = HTML.ElementFromString(Data.Load(Data.HTTP(filename)))
                 break
 
     if not match:
@@ -517,27 +516,27 @@ def NRequest(url, raw=False):
 
     match = False
     name = Hash.MD5(('resp_' if raw else '')+url)
-    path = Common.data_item_path('DataHTTP')
-    Common.ensure_dirs(path)
-    files = [f for f in os.listdir(path) if Common.file_exists(os.path.join(path, f))]
+    path = Data.data_item_path('DataHTTP')
+    Data.ensure_dirs(path)
+    files = [f for f in Data.list_dir(path) if Data.file_exists(Data.join_path(path, f))]
 
     for filename in files:
         if filename == name:
             match = True
-            if (Datetime.FromTimestamp(os.path.getmtime(os.path.join(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
+            if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
                 Log.Debug('* Fetching fresh data for \'{}\''.format(url))
                 r = get_element_from_url(url, name, resp=raw)
                 break
             else:
                 Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
-                r = Common.DataLoad(Common.dataHTTP(filename), raw)
+                r = Data.Load(Data.HTTP(filename), raw)
                 break
 
     if not match:
-        Log.Debug('* URL Not Cached, Fetching fresh data from \'{}\''.format(url))
+        Log.Debug('* URL Not in Cache, Fetching fresh data from \'{}\''.format(url))
         r = requests.get(url, headers=KH.get_headers_for_url(url))
         r = r if raw else r.text
-        Common.DataSave(Common.dataHTTP(name), r, raw)
+        Data.Save(Data.HTTP(name), r, raw)
 
     return r
 
@@ -550,15 +549,15 @@ def get_thumb(url):
     if Common.is_kiss_url(cover_url):
         cover_file = cover_url.rsplit('/')[-1]
         type_title = Common.GetTypeTitle(url)
-        if Common.DataCoverExists(os.path.join(type_title, cover_file)):
-            return Common.data_object(Common.dataCovers(os.path.join(type_title, cover_file)))
+        if Data.CoverExists(Data.join_path(type_title, cover_file)):
+            return Data.data_object(Data.Covers(Data.join_path(type_title, cover_file)))
 
-        type_dir = Common.data_item_path(Common.dataCovers(type_title))
-        Common.ensure_dirs(type_dir)
-        path = os.path.join(type_dir, cover_file)
+        type_dir = Data.data_item_path(Data.Covers(type_title))
+        Data.ensure_dirs(type_dir)
+        path = Data.join_path(type_dir, cover_file)
         Log('* file save path \'{}\''.format(path))
 
-        if not Common.file_exists(path):
+        if not Data.file_exists(path):
             r = requests.get(cover_url, headers=KH.get_headers_for_url(cover_url), stream=True)
             if r.status_code == 200:
                 with open(path, 'wb') as f:
@@ -570,8 +569,8 @@ def get_thumb(url):
         else:
             Log.Warn('* Cover file already exists, Skipped file save.')
 
-        if Common.DataCoverExists(os.path.join(type_title, cover_file)):
-            return Common.data_object(Common.dataCovers(os.path.join(type_title, cover_file)))
+        if Data.CoverExists(Data.join_path(type_title, cover_file)):
+            return Data.data_object(Data.Covers(Data.join_path(type_title, cover_file)))
 
         Log.Error('* Issues loading \'{}\''.format(path))
     elif 'http' in cover_url:

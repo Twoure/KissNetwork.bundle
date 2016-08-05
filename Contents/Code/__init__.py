@@ -8,6 +8,7 @@ Headers = SharedCodeService.kissheaders
 Domain = SharedCodeService.domain
 Common = SharedCodeService.common
 Metadata = SharedCodeService.metadata
+KData = SharedCodeService.data.Data
 
 KH = Headers.KissHeaders()
 
@@ -223,14 +224,6 @@ def MainMenu():
             ))
 
     return oc
-
-####################################################################################################
-@route(PREFIX + '/load_datacovers')
-def LoadCoverFromDataCovers(filename):
-    #return DataObject(Core.storage.load_data_item('DataCovers/Manga/2930772i-the-female-robot-l0.jpg'), 'image/jpg')
-    #return Common.load_data_cover_file('Manga/2930772i-the-female-robot-l0.jpg')
-    #return Common.load_data_cover_file(filename)
-    return Common.data_object(Common.data_cover_file(filename))
 
 ####################################################################################################
 @route(PREFIX + '/kissmain', ob=bool)
@@ -1747,19 +1740,19 @@ def GetThumb(cover_url, cover_file):
         if cover_file:
             type_title = Common.GetTypeTitle(cover_url)
             Logger('* cover file name   = {}'.format(cover_file))
-            if Common.DataCoverExists(Core.storage.join_path(type_title, cover_file)):
+            if KData.CoverExists(Core.storage.join_path(type_title, cover_file)):
                 Log.Debug('* Loading cover from DataCovers folder')
-                cover = Common.data_object(Common.dataCovers(Core.storage.join_path(type_title, cover_file)))
+                cover = KData.data_object(KData.Covers(Core.storage.join_path(type_title, cover_file)))
             else:
                 Logger('* Cover not yet saved, saving {} now'.format(cover_file))
                 try:
                     tt, f = SaveCoverImage(cover_url)
-                    cover = Common.data_object(Common.dataCovers(Core.storage.join_path(tt, f)))
+                    cover = KData.data_object(KData.Covers(Core.storage.join_path(tt, f)))
                 except Exception, e:
                     Log.Error(u'* {}'.format(e))
                     cover = None
     elif 'http' in cover_url:
-        Log.Debug('* Thumb is NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
+        Log.Debug('* Thumb NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
         cover = Redirect(Common.CorrectCoverImage(cover_url))
 
     if not cover:

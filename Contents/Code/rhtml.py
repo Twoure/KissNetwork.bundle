@@ -6,7 +6,7 @@ def ElementFromURL(url):
     name = Hash.MD5(url)
     path = Core.storage.data_item_path('DataHTTP')
     Core.storage.ensure_dirs(path)
-    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(f)]
+    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
 
     for filename in files:
         if filename == name:
