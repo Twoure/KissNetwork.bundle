@@ -69,7 +69,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Plex Media Server:
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 1.0.2
+  - Ubuntu 14.04 LTS: PMS version 1.0.3
   - Windows 7: PMS version 0.9.16.6
 
 ##### Plex Clients:
@@ -77,7 +77,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
   - OpenPHT (Ubuntu 14.04 LTS, v1.6.1)
   - Android (4.4.2) (Plex Client App, v4.28.2.249)
-  - Plex Media Player (2.6.9)
+  - Plex Media Player (1.1.3)
   - Plex/Web (2.7.6)
   - Chromecast (Videos & Pictures)
 
