@@ -7,27 +7,34 @@
 Headers = SharedCodeService.kissheaders
 Domain = SharedCodeService.domain
 Common = SharedCodeService.common
-KH = Headers.KissHeaders(True)
 Metadata = SharedCodeService.metadata
+
+KH = Headers.KissHeaders()
+
+if not Dict['init_run']:
+    Dict['init_run'] = Datetime.Now()
+
+if Dict['init_run'] <= Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path)):
+    Dict['init_run'] = Datetime.Now()
+    Thread.Create(KH.init_headers, init=True)
+
+# set global variables needed for imported packages
+TITLE = Common.TITLE
+PREFIX = Common.PREFIX
+TIMEOUT = Common.TIMEOUT
 
 # import section(s) not included in Plex Plug-In Framework
 import messages
 import requests
-from slugify import slugify
 from io import open
-
-TIMEOUT = Datetime.Delta(hours=1)
 import rhtml as RHTML
-
 from updater import Updater
 from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache, ClearOldCache
 
-PREFIX = Common.PREFIX
-from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 
-# set global variables
-TITLE = Common.TITLE
+# more global variables
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 CFTest_KEY = 'Manga'
@@ -84,23 +91,31 @@ def Start():
     HTTP.Headers['User-Agent'] = Common.USER_AGENT
 
     Log.Debug('*' * 80)
-    Log.Debug('* Platform.OS            = %s' %Platform.OS)
-    Log.Debug('* Platform.OSVersion     = %s' %Platform.OSVersion)
-    Log.Debug('* Platform.CPU           = %s' %Platform.CPU)
-    Log.Debug('* Platform.ServerVersion = %s' %Platform.ServerVersion)
+    Log.Debug('* Platform.OS            = {}'.format(Platform.OS))
+    Log.Debug('* Platform.OSVersion     = {}'.format(Platform.OSVersion))
+    Log.Debug('* Platform.CPU           = {}'.format(Platform.CPU))
+    Log.Debug('* Platform.ServerVersion = {}'.format(Platform.ServerVersion))
     Log.Debug('*' * 80)
 
-    # setup current channel version
-    Dict['current_ch_version'] = get_channel_version()
 
     # setup test for cfscrape
     SetUpCFTest(CFTest_KEY)
 
     # check prefs
-    ValidatePrefs(start=True, skip=False)
+    ValidatePrefs()
 
-    # Clear Old Cached URLs
-    Thread.Create(ClearCache, timeout=TIMEOUT)
+    # Clear Old Cached URLs & Cover Thumbs
+    Thread.Create(ClearCache, itemname='DataHTTP', timeout=TIMEOUT)
+    Thread.Create(ClearCache, itemname='DataCovers', timeout=Datetime.Delta(weeks=4))
+
+    # remove/clear old style of caching prior to v1.2.5
+    if Dict['current_ch_version']:
+        if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 5):
+            Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
+            Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.storage.data_path, 'DataItems'))
+
+    # setup current channel version
+    Dict['current_ch_version'] = get_channel_version()
 
 ####################################################################################################
 @handler(PREFIX, TITLE, MAIN_ICON, MAIN_ART)
@@ -108,15 +123,17 @@ def MainMenu():
     """Create the Main Menu"""
 
     Log.Debug('*' * 80)
-    Log.Debug('* Client.Product         = %s' %Client.Product)
-    Log.Debug('* Client.Platform        = %s' %Client.Platform)
-    Log.Debug('* Client.Version         = %s' %Client.Version)
+    Log.Debug('* Client.Product         = {}'.format(Client.Product))
+    Log.Debug('* Client.Platform        = {}'.format(Client.Platform))
+    Log.Debug('* Client.Version         = {}'.format(Client.Version))
 
     # if cfscrape failed then stop the channel, and return error message.
     SetUpCFTest(CFTest_KEY)
     if not Dict['cfscrape_test']:
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please report Error to Twoure with channel Log files.')
+    if not KH.init_headers():
+        return MC.message_container('Warning', 'Please wait while channel caches headers.  Exit channel and try again later.')
 
     admin = CheckAdmin()
 
@@ -124,20 +141,17 @@ def MainMenu():
 
     cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
 
-    for i, (t, u) in enumerate(Common.BaseURLListTuple()):
-        thumb = 'icon-%s.png' %t.lower()
+    data = list()
+    for t, u in Common.BaseURLListTuple():
+        thumb = 'icon-{}.png'.format(t.lower())
         rthumb = None if cp_match else R(thumb)
-        art = 'art-%s.jpg' %t.lower()
+        art = 'art-{}.jpg'.format(t.lower())
         rart = R(art)
-        prefs_name = 'kissasian' if t == 'Drama' else 'kiss%s' %t.lower()
-        new_data = {
+        prefs_name = 'kissasian' if t == 'Drama' else 'kiss{}'.format(t.lower())
+        data.append({
             'prefs_name': prefs_name, 'title': t, 'art': art,
             'rart': rart, 'thumb': thumb, 'rthumb': rthumb, 'url': u
-            }
-        if i == 0:
-            data = [new_data]
-        else:
-            data.append(new_data)
+            })
 
     # set thumbs based on client
     if cp_match:
@@ -156,8 +170,6 @@ def MainMenu():
         if Dict['Bookmark_Deleted']['bool']:
             Dict['Bookmark_Deleted'].update({'bool': False, 'type_title': None})
             Dict.Save()
-        else:
-            pass
     else:
         Dict['Bookmark_Deleted'] = {'bool': False, 'type_title': None}
         Dict.Save()
@@ -200,6 +212,7 @@ def MainMenu():
     elif admin:
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
+    #oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=Callback(test_cover, filename=u'Anime/923209143618l.jpg')))
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
 
     if Client.Product in DumbKeyboard.clients:
@@ -212,6 +225,14 @@ def MainMenu():
     return oc
 
 ####################################################################################################
+@route(PREFIX + '/load_datacovers')
+def LoadCoverFromDataCovers(filename):
+    #return DataObject(Core.storage.load_data_item('DataCovers/Manga/2930772i-the-female-robot-l0.jpg'), 'image/jpg')
+    #return Common.load_data_cover_file('Manga/2930772i-the-female-robot-l0.jpg')
+    #return Common.load_data_cover_file(filename)
+    return Common.data_object(Common.data_cover_file(filename))
+
+####################################################################################################
 @route(PREFIX + '/kissmain', ob=bool)
 def KissMain(url, title, art, ob=True, oc=None):
     """Create All Kiss Site Menu"""
@@ -221,7 +242,7 @@ def KissMain(url, title, art, ob=True, oc=None):
     if Prefs['simple']:
         return DirectoryList(page=1, pname='All', category='All', base_url=url, type_title=title, art=art)
 
-    newest_c_title = 'New %s' %title
+    newest_c_title = 'New {}'.format(title)
 
     oc.add(DirectoryObject(
         key=Callback(DirectoryList,
@@ -286,7 +307,7 @@ def StatusList(type_title, url, art):
     for s in s_list:
         oc.add(DirectoryObject(
             key=Callback(DirectoryList,
-                page=1, pname='/Status/%s' %s, category=s, base_url=url, type_title=type_title, art=art),
+                page=1, pname='/Status/{}'.format(s), category=s, base_url=url, type_title=type_title, art=art),
             title=s))
 
     return oc
@@ -318,7 +339,7 @@ def About():
     oc = ObjectContainer(title2='About / Help')
 
     # Get Resources Directory Size
-    d = GetDirSize(Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
+    d = GetDirSize(Core.storage.data_item_path('DataCovers'))
     if d == 'Error':
         cache_string = 'N/A | Removing Files Still'
     else:
@@ -328,7 +349,7 @@ def About():
         add_dev_tools(oc)
 
     oc.add(DirectoryObject(key=Callback(About),
-        title='Version %s' %get_channel_version(), summary='Current Channel Version'))
+        title='Version {}'.format(get_channel_version()), summary='Current Channel Version'))
     oc.add(DirectoryObject(key=Callback(About),
         title=cache_string, summary='Number of Images Cached | Total Images Cached Size'))
 
@@ -336,14 +357,12 @@ def About():
 
 ####################################################################################################
 def get_channel_version():
-    plist = Plist.ObjectFromString(
-        Core.storage.load(Core.storage.join_path(Core.bundle_path, 'Contents', 'Info.plist'))
-        )
+    plist = Plist.ObjectFromString(Core.storage.load(Core.plist_path))
     return plist['CFBundleVersion'] if 'CFBundleVersion' in plist.keys() else 'Current'
 
 ####################################################################################################
-@route(PREFIX + '/validateprefs', start=bool, skip=bool)
-def ValidatePrefs(start=False, skip=False):
+@route(PREFIX + '/validateprefs')
+def ValidatePrefs():
     """Set the sorting options for displaying all lists"""
 
     # load prefs into dict for use later
@@ -356,12 +375,10 @@ def ValidatePrefs(start=False, skip=False):
     elif Prefs['sort_opt'] == 'Newest':
         Dict['s_opt'] = '/Newest'
 
-    Logger('Dict[\'s_opt\'] = %s' %Dict['s_opt'], kind='Info', force=True)
+    Logger('Dict[\'s_opt\'] = {}'.format(Dict['s_opt']), kind='Info', force=True)
 
     # Update the Dict to latest prefs
     Dict.Save()
-
-    Thread.Create(CacheCovers, start=start, skip=skip)
 
 ####################################################################################################
 @route(PREFIX + '/bookmarks', status=dict)
@@ -370,7 +387,7 @@ def BookmarksMain(title, status):
 
     if (status['bool']) and (Client.Platform not in ['Plex Home Theater', 'OpenPHT']):
         oc = ObjectContainer(title2=title, header="My Bookmarks",
-            message='%s bookmarks have been cleared.' % status['type_title'], no_cache=True)
+            message='{} bookmarks have been cleared.'.format(status['type_title']), no_cache=True)
     else:
         oc = ObjectContainer(title2=title, no_cache=True)
 
@@ -383,35 +400,31 @@ def BookmarksMain(title, status):
     else:
         key_list = sorted(Dict['Bookmarks'].keys())
         # return bookmark list directly if only one kiss site selected in prefs
-        bm_prefs_names = [('kissasian' if m == 'Drama' else 'kiss%s' %m.lower()) for m in key_list]
+        bm_prefs_names = [('kissasian' if m == 'Drama' else 'kiss{}'.format(m.lower())) for m in key_list]
         bool_prefs_names = [p for p in bm_prefs_names if Prefs[p]]
         if len(bool_prefs_names) == 1:
             b_prefs_name = bool_prefs_names[0].split('kiss')[1].title()
             b_prefs_name = 'Drama' if b_prefs_name == 'Asian' else b_prefs_name
             if b_prefs_name in key_list:
-                art = 'art-%s.jpg' %b_prefs_name.lower()
+                art = 'art-{}.jpg'.format(b_prefs_name.lower())
                 return BookmarksSub(b_prefs_name, art)
         # list categories in bookmarks dictionary that are selected in prefs
         for key in key_list:
-            prefs_name = 'kissasian' if key == 'Drama' else 'kiss%s' %key.lower()
-            art = 'art-%s.jpg' %key.lower()
-            thumb = 'icon-%s.png' %key.lower()
+            prefs_name = 'kissasian' if key == 'Drama' else 'kiss{}'.format(key.lower())
+            art = 'art-{}.jpg'.format(key.lower())
+            thumb = 'icon-{}.png'.format(key.lower())
 
             # if site in Prefs then add its bookmark section
             if Prefs[prefs_name]:
                 # Create sub Categories for Anime, Cartoon, Drama, and Manga
                 oc.add(DirectoryObject(
                     key=Callback(BookmarksSub, type_title=key, art=art),
-                    title=key, thumb=R(thumb), summary='Display %s Bookmarks' % key, art=R(art)))
-        # set hide bm clear key if not created yet
-        if not Dict['hide_bm_clear']:
-            Dict['hide_bm_clear'] = 'unhide'
-            Dict.Save()
+                    title=key, thumb=R(thumb), summary='Display {} Bookmarks'.format(key), art=R(art)))
 
         # test if no sites are picked in the Prefs
         if len(oc) > 0:
             # hide/unhide clear bookmarks option, from DevTools
-            if Dict['hide_bm_clear'] == 'unhide':
+            if not Prefs['hide_clear_bookmarks']:
                 # add a way to clear the entire bookmarks list, i.e. start fresh
                 oc.add(DirectoryObject(
                     key=Callback(ClearBookmarks, type_title='All'),
@@ -432,52 +445,24 @@ def BookmarksSub(type_title, art):
 
     if not type_title in Dict['Bookmarks'].keys():
         return MC.message_container('Error',
-            '%s Bookmarks list is dirty. Use About/Help > Dev Tools > Bookmark Tools > Reset %s Bookmarks' %(type_title, type_title))
+            '{} Bookmarks list is dirty. Use About/Help > Dev Tools > Bookmark Tools > Reset {} Bookmarks'.format(type_title, type_title))
 
-    oc = ObjectContainer(title2='My Bookmarks | %s' % type_title, art=R(art))
-    Logger('category %s' %type_title)
+    oc = ObjectContainer(title2='My Bookmarks | {}'.format(type_title), art=R(art))
+    Logger('category '.format(type_title))
 
     # Fill in DirectoryObject information from the bookmark list
     # create empty list for testing covers
-    cover_list_bool = []
     for bookmark in sorted(Dict['Bookmarks'][type_title], key=lambda k: k[type_title]):
         item_title = bookmark['item_title']
         summary = bookmark['summary']
+        summary2 = Common.StringCode(string=summary, code='decode') if summary else None
 
-        if summary:
-            summary2 = Common.StringCode(string=summary, code='decode')
-        else:
-            summary2 = None
+        cover_file = Common.CorrectCoverImage(bookmark['cover_file']) if bookmark['cover_file'] else None
+        cover_url = Common.CorrectCoverImage(bookmark['cover_url']) if bookmark['cover_url'] else None
 
-        # setup cover depending on Prefs
-        cover = Common.CorrectCoverImage(bookmark['cover_file'])
-        cover_file = cover
-        if bookmark['cover_url']:
-            cover_url = Common.CorrectCoverImage(bookmark['cover_url'])
-        else:
-            cover_url = None
-        # if any Prefs set to cache then try and get the thumb
-        if Prefs['cache_bookmark_covers'] or Prefs['cache_covers']:
-            # check if the thumb is already cached
-            if Common.CoverImageFileExist(cover):
-                cover = R(cover)
-                cover_list_bool.append(True)
-            # thumb not cached, set thumb to caching cover and save thumb in background
-            elif cover_url:
-                cover_list_bool.append(False)
-                cover = R(CACHE_COVER_ICON)
-                if len(Dict['Bookmarks'][type_title]) <= 50:
-                    Thread.Create(SaveCoverImage, image_url=cover_url)
-                else:
-                    ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                    Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=cover_url)
-            # No cover url found, Will create thumb for this later
-            else:
-                cover = None
-        # no Prefs to cache thumb, set thumb to None
-        else:
-            cover_list_bool.append(False)
-            cover = None
+        cover = None
+        if cover_file and cover_url:
+            cover = Callback(GetThumb, cover_url=cover_url, cover_file=cover_file)
 
         item_info = {
             'item_sys_name': bookmark[type_title],
@@ -495,8 +480,8 @@ def BookmarksSub(type_title, art):
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
             update = False
-            if cover_url and Common.is_kiss_url(bookmark['cover_url']):
-                cover_type_title = Common.GetTypeTitle(bookmark['cover_url'])
+            if cover_url and Common.is_kiss_url(cover_url):
+                cover_type_title = Common.GetTypeTitle(cover_url)
                 cover_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(bookmark['cover_url']).group(1)
                 if (cover_type_title, cover_base_url) not in Common.BaseURLListTuple():
                     Log.Debug('* Bookmark Cover URL Domain changed. Updating Bookmark Metadata.')
@@ -530,21 +515,13 @@ def BookmarksSub(type_title, art):
             title=Common.StringCode(string=item_title, code='decode'),
             summary=summary2, thumb=cover, art=cover))
 
-    if Dict['hide_bm_clear'] == 'unhide':
-        # setup icons depending on platform and Prefs caching
-        if Client.Platform in Common.LIST_VIEW_CLIENTS and not True in cover_list_bool:
-            # client in list and no thumbs set for bookmarks, set bookmark clear icon to None
-            bm_clr_icon = None
-        else:
-            # client not in list and thumbs found, set bookmark clear icon
-            bm_clr_icon = R(BOOKMARK_CLEAR_ICON)
-
+    if not Prefs['hide_clear_bookmarks']:
         # add a way to clear this bookmark section and start fresh
         oc.add(DirectoryObject(
             key=Callback(ClearBookmarks, type_title=type_title),
-            title='Clear All \"%s\" Bookmarks' % type_title,
-            thumb=bm_clr_icon,
-            summary='CAUTION! This will clear your entire \"%s\" bookmark section!' % type_title))
+            title='Clear All \"{}\" Bookmarks'.format(type_title),
+            thumb=R(BOOKMARK_CLEAR_ICON),
+            summary='CAUTION! This will clear your entire \"{}\" bookmark section!'.format(type_title)))
 
     return oc
 
@@ -553,18 +530,14 @@ def BookmarksSub(type_title, art):
 def AlphabetList(url, title, art):
     """Create ABC Directory for each kiss site"""
 
-    oc = ObjectContainer(title2='%s By #, A-Z' % title, art=R(art))
-
-    # Create a list of Directories from (#, A to Z)
-    for pname in ['#'] + map(chr, range(ord('A'), ord('Z')+1)):
+    oc = ObjectContainer(title2='{} By #, A-Z'.format(title), art=R(art))
+    for pname in list('#'+String.UPPERCASE):
         oc.add(DirectoryObject(
             key=Callback(DirectoryList,
                 page=1, pname=pname.lower() if not pname == '#' else '0',
                 category=pname, base_url=url, type_title=title, art=art),
             title=pname))
-
     Logger('Built #, A-Z... Directories')
-
     return oc
 
 ####################################################################################################
@@ -572,12 +545,10 @@ def AlphabetList(url, title, art):
 def GenreList(url, title, art):
     """Create Genre Directory for each kiss site"""
 
-    genre_url = url + '/%sList' % title  # setup url for finding current Genre list
-
-    # formate url response into html for xpath
+    genre_url = url + '/{}List'.format(title)
     html = RHTML.ElementFromURL(genre_url)
 
-    oc = ObjectContainer(title2='%s By Genres' % title, art=R(art))
+    oc = ObjectContainer(title2='{} By Genres'.format(title), art=R(art))
 
     # Generate Valid Genres based on Prefs['adult']
     for genre in html.xpath('//div[@class="barContent"]//a'):
@@ -589,7 +560,7 @@ def GenreList(url, title, art):
                 else:
                     pass
             # name used for title2
-            category = html.xpath('//div[@class="barContent"]//a[@href="%s"]/text()' %genre_href)[0].replace('\n', '').strip()
+            category = html.xpath('//div[@class="barContent"]//a[@href="{}"]/text()'.format(genre_href))[0].replace('\n', '').strip()
 
             oc.add(DirectoryObject(
                 key=Callback(DirectoryList,
@@ -634,40 +605,40 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     # Define url based on genre, abc, or search
     if "Search" in pname:
         item_url = base_url
-        Logger('Searching for \"%s\"' % category)
+        Logger('Searching for \"{}\"'.format(category))
         pass
     # New & Hot list is only on Anime site, but made it uniform just in case
     elif pname == '/NewAndHot':
-        item_url = base_url + '/%sList%s' % (type_title, pname)
+        item_url = base_url + '/{}List{}'.format(type_title, pname)
     # list from the front page, not effected by Prefs
     elif pname == '/LatestUpdate' or pname == '/Newest' or pname == '/MostPopular':
-        item_url = base_url + '/%sList%s?page=%s' % (type_title, pname, page)
+        item_url = base_url + '/{}List{}?page={}'.format(type_title, pname, page)
     # Sort order 'A-Z'
     elif Dict['s_opt'] == None:
         if ('Genre' in pname or 'Country' in pname
             or 'Ongoing' in pname or 'Completed' in pname):
             # Genre, Country, Ongoing, or Completed Specific
-            item_url = base_url + '%s?page=%s' % (pname, page)
+            item_url = base_url + '{}?page={}'.format(pname, page)
         elif "All" in pname:
             # All list
-            item_url = base_url + '/%sList?page=%s' % (type_title, page)
+            item_url = base_url + '/{}List?page={}'.format(type_title, page)
         else:
             # No Genre, Country, Ongoing, or Completed
-            item_url = base_url + '/%sList?c=%s&page=%s' % (type_title, pname, page)
+            item_url = base_url + '/{}List?c={}&page={}'.format(type_title, pname, page)
     # Sort order for all options except 'A-Z'
     elif ('Genre' in pname or 'Country' in pname
         or 'Ongoing' in pname or 'Completed' in pname):
         # Specific with Prefs
-        item_url = base_url + '%s%s?page=%s' % (pname, Dict['s_opt'], page)
+        item_url = base_url + '{}{}?page={}'.format(pname, Dict['s_opt'], page)
     elif "All" in pname:
-        Logger('dict s_opt = %s' %Dict['s_opt'])
-        item_url = base_url + '/%sList%s?page=%s' % (type_title, Dict['s_opt'], page)
+        Logger('dict s_opt = {}'.format(Dict['s_opt']))
+        item_url = base_url + '/{}List{}?page={}'.format(type_title, Dict['s_opt'], page)
     else:
         # No Genre with Prefs
-        item_url = base_url + '/%sList%s?c=%s&page=%s' % (type_title, Dict['s_opt'], pname, page)
+        item_url = base_url + '/{}List{}?c={}&page={}'.format(type_title, Dict['s_opt'], pname, page)
 
-    Logger('Sorting Option = %s' % Dict['s_opt'])  # Log Pref being used
-    Logger('Category= %s | URL= %s' % (pname, item_url))
+    Logger('Sorting Option = {}'.format(Dict['s_opt']))  # Log Pref being used
+    Logger('Category= {} | URL= {}'.format(pname, item_url))
 
     html = RHTML.ElementFromURL(item_url)
 
@@ -679,7 +650,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         # The Search result page returnes a long list with no 'next page' option
         # set url back to base url
         base_url = Common.GetBaseURL(item_url)
-        Logger("Searching for %s" % category)  # check to make sure its searching
+        Logger("Searching for {}".format(category))  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
         for node in html.xpath('///div[@class="pagination pagination-left"]//li/a'):
@@ -692,13 +663,13 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     if not "Last" in pages:
         total_pages = pages.split('page=')[1]
         # set title2 ie main_title
-        main_title = '%s | %s | Page %s of %s' % (type_title, str(category), str(page), str(total_pages))
+        main_title = '{} | {} | Page {} of {}'.format(type_title, category, page, total_pages)
     elif "Search" in pname:
         # set title2 for search page
-        main_title = 'Search for: %s in %s' % (str(category), type_title)
+        main_title = 'Search for: {} in {}'.format(category, type_title)
     else:
         # set title2 for last page
-        main_title = '%s | %s | Page %s, Last Page' % (type_title, str(category), str(page))
+        main_title = '{} | {} | Page {}, Last Page'.format(type_title, category, page)
 
     oc = ObjectContainer(title2=main_title, art=R(art))
 
@@ -713,10 +684,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         drama_test = False
     listing_count = len(listing)
     allowed_count = 200
-    Logger('%i items in Directory List.' %listing_count, kind='Info')
+    Logger('{} items in Directory List.'.format(listing_count), kind='Info')
     if listing_count > allowed_count and 'Search' in pname:
         return MC.message_container('Error',
-            '%i found.  Directory can only list up to %i items.  Please narrow your Search Criteria.' %(listing_count, allowed_count))
+            '{} found.  Directory can only list up to {} items.  Please narrow your Search Criteria.'.format(listing_count, allowed_count))
 
     for item in listing:
         if not drama_test:
@@ -730,9 +701,9 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             else:
                 thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
             if not 'http' in thumb:
-                Log.Debug('thumb missing valid url. | %s' %thumb)
-                Log.Debug('thumb xpath = %s' %title_html.xpath('//img/@src'))
-                Log.Debug('item name | %s | %s' %(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
+                Log.Debug('thumb missing valid url. | {}'.format(thumb))
+                Log.Debug('thumb xpath = {}'.format(title_html.xpath('//img/@src')))
+                Log.Debug('item name | {} | {}'.format(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
                 thumb = None
                 cover_file = None
             else:
@@ -755,10 +726,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         item_sys_name = Common.StringCode(string=item_url_base.rsplit('/')[-1].strip(), code='encode')
         item_url_final = base_url + Common.StringCode(string=item_url_base, code='encode')
         Logger('*' * 80)
-        Logger('* item_url_base     = %s' %item_url_base)
-        Logger('* item_sys_name     = %s' %item_sys_name)
-        Logger('* item_url_final    = %s' %item_url_final)
-        Logger('* thumb             = %s' %thumb)
+        Logger('* item_url_base     = {}'.format(item_url_base))
+        Logger('* item_sys_name     = {}'.format(item_sys_name))
+        Logger('* item_url_final    = {}'.format(item_url_final))
+        Logger('* thumb             = {}'.format(thumb))
 
         if not drama_test:
             item_title = a_node.text.strip()
@@ -778,11 +749,11 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                     latest = drama_title_html.xpath('./p')[1].text_content().split(' ')[1]
             latest = latest.replace('Read Online', '').replace('Watch Online', '').lstrip('_').strip()
             if 'Completed' in latest:
-                title2 = '%s | %s Completed' %(item_title, type_title)
+                title2 = u'{} | {} Completed'.format(item_title, type_title)
             elif 'Not yet aired' in latest:
-                title2 = '%s | Not Yet Aired' %item_title
+                title2 = u'{} | Not Yet Aired'.format(item_title)
             else:
-                title2 = '%s | Latest %s' %(item_title, latest)
+                title2 = u'{} | Latest {}'.format(item_title, latest)
 
         item_info = {
             'item_sys_name': item_sys_name,
@@ -797,7 +768,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             }
 
         # if thumb is hosted on kiss site then cache locally if Prefs Cache all covers
-        cover = GetThumb(cover_url=thumb, cover_file=cover_file)
+        cover = Callback(GetThumb, cover_url=thumb, cover_file=cover_file)
 
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
@@ -805,8 +776,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
     if nextpg_node:  # if not 'None' then find the next page and create a button
         nextpg = int(nextpg_node.split('page=')[1])
-        Logger('* NextPage          = %i' % nextpg)
-        Logger('* base url          = %s' %base_url)
+        Logger('* NextPage          = {}'.format(nextpg))
+        Logger('* base url          = {}'.format(base_url))
         oc.add(NextPageObject(
             key=Callback(DirectoryList,
                 page=nextpg, pname=pname, category=category,
@@ -817,7 +788,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         Dict.Save()
         return oc
     else:
-        return MC.message_container(type_title, '%s list is empty' %category)
+        return MC.message_container(type_title, '{} list is empty'.format(category))
 
 ####################################################################################################
 @route(PREFIX + '/homedirectorylist')
@@ -827,18 +798,18 @@ def HomePageList(tab, category, base_url, type_title, art):
     This returns those list.
     """
 
-    main_title = '%s | %s' % (type_title, category)
+    main_title = u'{} | {}'.format(type_title, category)
     oc = ObjectContainer(title2=main_title, art=R(art))
 
     html = RHTML.ElementFromURL(base_url)
 
     # scrape home page for Top (Day, Week, and Month) list
-    for node in html.xpath('//div[@id="tab-top-%s"]/div' %tab):
+    for node in html.xpath('//div[@id="tab-top-{}"]/div'.format(tab)):
         page_node = Common.StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
         item_sys_name = Common.StringCode(string=page_node.split('/')[-1], code='encode')
         item_title = node.xpath('./a/span/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
-        title2 = '%s | Latest %s' %(item_title, latest)
+        title2 = u'{} | Latest {}'.format(item_title, latest)
         summary = 'NA'  # no summarys are given in the 'Top' lists
         try:
             thumb = Common.CorrectCoverImage(node.xpath('./a/img')[0].get('src'))
@@ -863,7 +834,7 @@ def HomePageList(tab, category, base_url, type_title, art):
             'page_url': page_url,
             'art': art
             }
-        cover = GetThumb(cover_url=thumb, cover_file=cover_file)
+        cover = Callback(GetThumb, cover_url=thumb, cover_file=cover_file)
 
         # send results to ItemPage
         oc.add(DirectoryObject(
@@ -887,8 +858,8 @@ def ItemPage(item_info):
     art = item_info['art']
 
     # decode string & set title2 for oc
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
-    title2 = '%s | %s' % (type_title, item_title_decode)
+    item_title_decode = unicode(Common.StringCode(string=item_title, code='decode'))
+    title2 = u'{} | {}'.format(type_title, item_title_decode)
     oc = ObjectContainer(title2=title2, art=R(art))
 
     html = RHTML.ElementFromURL(page_url)
@@ -898,15 +869,15 @@ def ItemPage(item_info):
 
         # Check for Adult content, block if Prefs set.
         genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
-        Logger('* genres = %s' %genres)
+        Logger('* genres = {}'.format(genres))
         if genres:
             matching_list = set(genres) & ADULT_LIST
             if len(matching_list) > 0:
                 warning_string = ', '.join(list(matching_list))
-                Logger('* Adult Content Blocked: %s' %warning_string, force=True, kind='Info')
+                Logger('* Adult Content Blocked: {}'.format(warning_string), force=True, kind='Info')
                 Logger('*' * 80)
                 return MC.message_container('Warning',
-                    'Adult Content Blocked: %s' %warning_string)
+                    'Adult Content Blocked: {}'.format(warning_string))
 
     # page category stings depending on media
     page_category = 'Chapter(s)' if (type_title == 'Manga' or type_title == 'Comic') else 'Video(s)'
@@ -915,8 +886,8 @@ def ItemPage(item_info):
     item_info.update({'page_category': page_category})
 
     # format item_url for parsing
-    Logger('* page url = %s' %page_url)
-    Logger('* base url = %s' %base_url)
+    Logger('* page url = {}'.format(page_url))
+    Logger('* base url = {}'.format(base_url))
     Logger('*' * 80)
     if not item_info['cover_url']:
         try:
@@ -930,7 +901,7 @@ def ItemPage(item_info):
             item_info.update({'cover_url': content_url, 'cover_file': image_file})
         except:
             pass
-    cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+    cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
 
     if ('Manga' in type_title) or ('Comic' in type_title):
         manga_info = Metadata.GetBaseMangaInfo(html, page_url)
@@ -943,7 +914,7 @@ def ItemPage(item_info):
         oc.add(TVShowObject(
             key=Callback(MangaSubPage, item_info=item_info, manga_info=manga_info),
             rating_key=page_url, title=manga_info['title'], genres=genres,
-            source_title=manga_info['source_title'], summary=summary2,
+            source_title=manga_info['source_title'], summary=unicode(summary2),
             thumb=cover, art=R(art)
             ))
 
@@ -958,13 +929,13 @@ def ItemPage(item_info):
         oc.add(TVShowObject(
             key=Callback(MovieSubPage, item_info=item_info, movie_info=movie_info),
             rating_key=page_url, title=movie_info['title'], genres=genres,
-            source_title=movie_info['source_title'], summary=summary2,
+            source_title=movie_info['source_title'], summary=unicode(summary2),
             thumb=cover, art=R(art)
             ))
 
     else:
         show_info = Metadata.GetBaseShowInfo(html, page_url)
-        summary = string=show_info['summary'] if show_info['summary'] else (item_info['short_summary'] if item_info['short_summary'] else None)
+        summary = show_info['summary'] if show_info['summary'] else (item_info['short_summary'] if item_info['short_summary'] else None)
         item_info.update({'summary': summary})
         item_info.pop('short_summary')
         show_info.pop('summary')
@@ -973,7 +944,7 @@ def ItemPage(item_info):
         oc.add(TVShowObject(
             key=Callback(ShowSubPage, item_info=item_info, show_info=show_info),
             rating_key=page_url, title=show_info['tv_show_name'], genres=genres,
-            source_title=show_info['source_title'], summary=summary2,
+            source_title=show_info['source_title'], summary=unicode(summary2),
             thumb=cover, art=R(art)
             ))
 
@@ -996,7 +967,7 @@ def ItemPage(item_info):
                 }
             related.append(rel_item_info)
     else:
-        for rel in html.xpath('//a[starts-with(@href, "/%s/")]' %type_title):
+        for rel in html.xpath('//a[starts-with(@href, "/{}/")]'.format(type_title)):
             hrel = rel.get('href')
             if (len(hrel.split('/')) == 3) and (hrel != '/'+page_url.split('/', 3)[3]):
                 rel_title = rel.text_content().strip()
@@ -1019,13 +990,13 @@ def ItemPage(item_info):
         oc.add(DirectoryObject(
             key=Callback(RemoveBookmark, item_info=item_info),
             title='Remove Bookmark', thumb=R(BOOKMARK_REMOVE_ICON),
-            summary = 'Remove \"%s\" from your Bookmarks list.' % item_title_decode))
+            summary=u'Remove \"{}\" from your Bookmarks list.'.format(item_title_decode)))
     else:
         # Item not in 'Bookmarks' yet, so lets parse it for adding!
         oc.add(DirectoryObject(
             key=Callback(AddBookmark, item_info=item_info),
             title='Add Bookmark', thumb=R(BOOKMARK_ADD_ICON),
-            summary='Add \"%s\" to your Bookmarks list.' % item_title_decode))
+            summary=u'Add \"{}\" to your Bookmarks list.'.format(item_title_decode)))
 
     return oc
 
@@ -1037,11 +1008,11 @@ def RelatedList(r_list, title, art):
     if len(r_list) == 1:
         return ItemPage(r_list[0])
     else:
-        oc = ObjectContainer(title2=title + ' / Related', art=R(art))
+        oc = ObjectContainer(title2=unicode(title) + u' / Related', art=R(art))
         for r_info in r_list:
             oc.add(DirectoryObject(
                 key=Callback(ItemPage, item_info=r_info),
-                title=Common.StringCode(string=r_info['item_title'], code='decode'),
+                title=unicode(Common.StringCode(string=r_info['item_title'], code='decode')),
                 art=R(art)
                 ))
         return oc
@@ -1093,7 +1064,7 @@ def MovieSubPage(item_info, movie_info):
     """Setup Movie Page"""
 
     item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
-    title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
+    title2 = u'{} | {} | {}'.format(item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
@@ -1101,14 +1072,14 @@ def MovieSubPage(item_info, movie_info):
 
     movie_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if movie_list == 'Not Yet Aired':
-        return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+        return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
     else:
-        summary = Common.StringCode(string=item_info['summary'], code='decode') if item_info['summary'] else None
-        cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+        summary = unicode(Common.StringCode(string=item_info['summary'], code='decode')) if item_info['summary'] else None
+        cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
         genres, genres_list = Metadata.GetGenres(html)
         for movie in movie_list:
             oc.add(MovieObject(
-                title='%s | %s' %(movie['title'], movie['date']),
+                title='{} | {}'.format(movie['title'], movie['date']),
                 source_title=movie_info['source_title'],
                 summary=summary,
                 year=int(movie_info['year']) if movie_info['year'] else None,
@@ -1128,23 +1099,23 @@ def MangaSubPage(item_info, manga_info):
     #TODO split this into ~30 chapters per book or so, similar to what was done with seasons
 
     item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
-    title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
+    title2 = u'{} | {} | {}'.format(item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
     html = RHTML.ElementFromURL(item_info['page_url'])
 
     cp_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if cp_list == 'Not Yet Aired':
-        return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+        return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
     else:
-        cover = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+        cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
         for cp in reversed(cp_list):
             oc.add(PhotoAlbumObject(
                 key=Callback(GetPhotoAlbum,
                     url=cp['url'], source_title=manga_info['source_title'], title=cp['title'],
                     art=item_info['art']),
                 rating_key=cp['url'],
-                title='%s | %s' %(cp['title'], cp['date']),
+                title='{} | {}'.format(cp['title'], cp['date']),
                 source_title=manga_info['source_title'],
                 originally_available_at=Datetime.ParseDate(cp['date']) if cp['date'] else None,
                 thumb=cover,
@@ -1200,18 +1171,18 @@ def ShowSubPage(item_info, show_info):
     """Setup Show page"""
 
     item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
-    title2 = '%s | %s | %s' % (item_info['type_title'], item_title_decode, item_info['page_category'].lower())
+    title2 = u'{} | {} | {}'.format(item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
     html = RHTML.ElementFromURL(item_info['page_url'])
     ep_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if ep_list == 'Not Yet Aired':
-        return MC.message_container('Warning', '%s \"%s\" Not Yet Aired.' %(item_info['type_title'], item_title_decode))
+        return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
     else:
         tags = Metadata.string_to_list(Common.StringCode(string=show_info['tags'], code='decode')) if show_info['tags'] else []
-        thumb = GetThumb(cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
-        summary = Metadata.GetSummary(html)
+        thumb = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+        summary = unicode(Metadata.GetSummary(html))
         show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
         season_dict = None
         main_ep_count = len(ep_list)
@@ -1226,7 +1197,7 @@ def ShowSubPage(item_info, show_info):
             }
 
         Logger('*' * 80)
-        Logger('* ep_list lenght = %i' %main_ep_count)
+        Logger('* ep_list lenght = {}'.format(main_ep_count))
 
         for ep in ep_list:
             title_lower = ep['title'].lower()
@@ -1246,27 +1217,27 @@ def ShowSubPage(item_info, show_info):
 
         for season in sorted(season_dict.keys()):
             ep_count = len(season_dict[season])
-            Logger('* ep_count = %i' %ep_count)
+            Logger('* ep_count = {}'.format(ep_count))
             s0 = (ep_count if season == '0' else (len(season_dict['0']) if '0' in season_dict.keys() else 0))
             season_info.update({'season': season, 'ep_count': ep_count, 'fseason': season, 'season0': s0})
-            ep_info = '' if cp in CP_DATE else ' | %i Episodes' %ep_count
-            s0_summary = '%s: S0 Specials, Uncensored Episodes, and Miscellaneous Videos%s' %(show_info['tv_show_name'], ep_info)
-            s_summary = '%s: S%s Episodes%s' %(show_info['tv_show_name'], season, ep_info)
+            ep_info = '' if cp in CP_DATE else ' | {} Episodes'.format(ep_count)
+            s0_summary = '{}: S0 Specials, Uncensored Episodes, and Miscellaneous Videos{}'.format(show_info['tv_show_name'], ep_info)
+            s_summary = '{}: S{} Episodes{}'.format(show_info['tv_show_name'], season, ep_info)
             if (ep_count > ips) and (season != '0'):
                 season = int(season)
                 x, r = divmod(main_ep_count-s0, ips)
                 nseason_list = [str(t) for t in xrange(season, x + (1 if r > 0 else 0) + season)]
-                Logger('* new season list = %s' %nseason_list)
+                Logger('* new season list = {}'.format(nseason_list))
                 for i, nseason in enumerate(nseason_list):
                     nep_count = ((ips if r == 0 else r) if i+1 == len(nseason_list) else ips)
-                    Logger('* nep_count = %i' %nep_count)
+                    Logger('* nep_count = {}'.format(nep_count))
                     season_info.update({'season': nseason, 'ep_count': nep_count, 'fseason': str(i+1)})
-                    nep_info = '' if cp in CP_DATE else ' | %i Episodes' %nep_count
-                    s_summary = '%s: S%s seperated out S%s into multiple seasons%s' %(show_info['tv_show_name'], nseason, season, nep_info)
+                    nep_info = '' if cp in CP_DATE else ' | {} Episodes'.format(nep_count)
+                    s_summary = '{}: S{} seperated out S{} into multiple seasons{}'.format(show_info['tv_show_name'], nseason, season, nep_info)
                     oc.add(SeasonObject(
                         key=Callback(SeasonSubPage, season_info=season_info),
                         rating_key=item_info['page_url'] + nseason,
-                        title='Season %s' %nseason, show=show_info['tv_show_name'],
+                        title='Season {}'.format(nseason), show=show_info['tv_show_name'],
                         index=int(nseason), episode_count=nep_count,
                         source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art']),
                         summary=s_summary
@@ -1275,7 +1246,7 @@ def ShowSubPage(item_info, show_info):
                 oc.add(SeasonObject(
                     key=Callback(SeasonSubPage, season_info=season_info),
                     rating_key=item_info['page_url'] + season,
-                    title='Season %s' %season, show=show_info['tv_show_name'],
+                    title='Season {}'.format(season), show=show_info['tv_show_name'],
                     index=int(season), episode_count=ep_count,
                     source_title=show_info['source_title'], thumb=thumb, art=R(item_info['art']),
                     summary=s0_summary if season == '0' else s_summary
@@ -1289,7 +1260,7 @@ def ShowSubPage(item_info, show_info):
 def SeasonSubPage(season_info):
     """Setup Episodes for Season"""
 
-    title2 = '%s | Season %s' %(season_info['tv_show_name'], season_info['season'])
+    title2 = u'{} | Season {}'.format(season_info['tv_show_name'], season_info['season'])
 
     oc = ObjectContainer(title2=title2, art=R(season_info['art']))
 
@@ -1297,8 +1268,8 @@ def SeasonSubPage(season_info):
 
     ep_list = GetItemList(html, season_info['page_url'], season_info['item_title'], season_info['type_title'])
     tags = Metadata.string_to_list(Common.StringCode(string=season_info['tags'], code='decode')) if season_info['tags'] else []
-    thumb = GetThumb(cover_url=season_info['cover_url'], cover_file=season_info['cover_file'])
-    summary = Metadata.GetSummary(html)
+    thumb = Callback(GetThumb, cover_url=season_info['cover_url'], cover_file=season_info['cover_file'])
+    summary = unicode(Metadata.GetSummary(html))
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
     season_dict = None
     ips = int(season_info['ips'])
@@ -1324,7 +1295,7 @@ def SeasonSubPage(season_info):
             season_number = Metadata.GetSeasonNumber(nep['title'], show_name_raw, tags, summary)
             oc.add(EpisodeObject(
                 source_title=season_info['source_title'],
-                title=nep['title'] if cp in CP_DATE else '%s | %s' %(nep['title'], (nep['date'] if nep['date'] else 'NA')),
+                title=nep['title'] if cp in CP_DATE else '{} | {}'.format(nep['title'], (nep['date'] if nep['date'] else 'NA')),
                 show=season_info['tv_show_name'],
                 season=int(season_number),
                 index=int(ep_number),
@@ -1337,7 +1308,7 @@ def SeasonSubPage(season_info):
         for ep in ep_list2:
             oc.add(EpisodeObject(
                 source_title=season_info['source_title'],
-                title=ep['title'] if cp in CP_DATE else '%s | %s' %(ep['title'], (ep['date'] if ep['date'] else 'NA')),
+                title=ep['title'] if cp in CP_DATE else '{} | {}'.format(ep['title'], (ep['date'] if ep['date'] else 'NA')),
                 show=season_info['tv_show_name'],
                 season=int(ep['season_number']),
                 index=int(ep['ep_number']),
@@ -1376,7 +1347,7 @@ def Search(query=''):
 
     # set defaults
     query = query.strip()
-    title2 = 'Search for \"%s\" in...' % query
+    title2 = u'Search for \"{}\" in...'.format(query)
 
     oc = ObjectContainer(title2=title2)
 
@@ -1388,9 +1359,9 @@ def Search(query=''):
         b_prefs_name = b_prefs_names[0]
         b_prefs_name = 'comic' if b_prefs_name == 'kisscomic' else b_prefs_name
         search_url = [s for s in Common.SearchURLList() if b_prefs_name in s][0]
-        search_url_filled = search_url %String.Quote(query, usePlus=True)
+        search_url_filled = search_url.format(String.Quote(query, usePlus=True))
         type_title = 'Drama' if b_prefs_name == 'kissasian' else (b_prefs_name.split('kiss')[1].title() if 'kiss' in b_prefs_name else 'Comic')
-        art = 'art-%s.jpg' %type_title.lower()
+        art = 'art-{}.jpg'.format(type_title.lower())
 
         html = RHTML.ElementFromURL(search_url_filled)
         if html.xpath('//table[@class="listing"]'):
@@ -1398,16 +1369,16 @@ def Search(query=''):
     else:
         Logger('*' * 80)
         for search_url in Common.SearchURLList():
-            search_url_filled = search_url % String.Quote(query, usePlus=True)
+            search_url_filled = search_url.format(String.Quote(query, usePlus=True))
             type_title = Common.GetTypeTitle(search_url_filled)
             # change kissasian info to 'Drama'
-            art = 'art-%s.jpg' %type_title.lower()
-            thumb = 'icon-%s.png' %type_title.lower()
-            prefs_name = 'kissasian' if type_title == 'Drama' else 'kiss%s' %type_title.lower()
+            art = 'art-{}.jpg'.format(type_title.lower())
+            thumb = 'icon-{}.png'.format(type_title.lower())
+            prefs_name = 'kissasian' if type_title == 'Drama' else 'kiss{}'.format(type_title.lower())
 
             if Prefs[prefs_name]:
-                Logger('* Search url = %s' %search_url_filled)
-                Logger('* type title = %s' %type_title)
+                Logger('* Search url = {}'.format(search_url_filled))
+                Logger('* type title = {}'.format(type_title))
 
                 html = RHTML.ElementFromURL(search_url_filled)
                 if html.xpath('//table[@class="listing"]'):
@@ -1422,8 +1393,8 @@ def Search(query=''):
     else:
         Logger('* Search retunred no results')
         Logger('*' * 80)
-        return MC.message_container('Search',
-            'There are no search results for \"%s\". Try being less specific or make sure at least one source is selected in Preferences.' %query)
+    return MC.message_container('Search',
+        'There are no search results for \"{}\". Try being less specific or make sure at least one source is selected in Preferences.'.format(query))
 
 ####################################################################################################
 @route(PREFIX + '/searchpage')
@@ -1463,11 +1434,11 @@ def SearchPage(type_title, search_url, art):
                 cover_url = None
                 cover_file = None
 
-            Logger('* item_title    = %s' %item_title)
-            Logger('* item          = %s' %item_sys_name)
-            Logger('* type_title    = %s' %type_title)
-            Logger('* base_url      = %s' %base_url)
-            Logger('* item_url      = %s' %item_url)
+            Logger('* item_title    = {}'.format(item_title))
+            Logger('* item          = {}'.format(item_sys_name))
+            Logger('* type_title    = {}'.format(type_title))
+            Logger('* base_url      = {}'.format(base_url))
+            Logger('* item_url      = {}'.format(item_url))
 
             item_info = {
                 'item_sys_name': item_sys_name,
@@ -1484,7 +1455,7 @@ def SearchPage(type_title, search_url, art):
         else:
             # Send results to 'DirectoryList'
             query = search_url.rsplit('=')[-1]
-            Logger('* art           = %s' %art)
+            Logger('* art           = {}'.format(art))
             Logger('*' * 80)
             return DirectoryList(1, 'Search', query, search_url, type_title, art)
     # No results found :( keep trying
@@ -1493,10 +1464,10 @@ def SearchPage(type_title, search_url, art):
         Logger('*' * 80)
         query = search_url.rsplit('=')[-1]
         return MC.message_container('Search',
-            """
-            There are no search results for \"%s\" in \"%s\" Category.
+            u"""
+            There are no search results for \"{}\" in \"{}\" Category.
             Try being less specific.
-            """ %(query, type_title))
+            """.format(query, type_title))
 
 ####################################################################################################
 @route(PREFIX + '/addbookmark', item_info=dict)
@@ -1514,7 +1485,7 @@ def AddBookmark(item_info):
     # decode title string
     item_title_decode = Common.StringCode(string=item_title, code='decode')
     Logger('*' * 80)
-    Logger('* item to add = %s | %s' %(item_title_decode, item_sys_name), kind='Info')
+    Logger(u'* item to add = {} | {}'.format(item_title_decode, item_sys_name), kind='Info')
 
     # setup html for parsing
     html = RHTML.ElementFromURL(page_url)
@@ -1529,39 +1500,29 @@ def AddBookmark(item_info):
     # if no cover url then try and find one on the item page
     if cover_url:
         cover_url = Common.CorrectCoverImage(cover_url)
+        image_file = item_info['cover_file']
     else:
         try:
             cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
             if not 'http' in cover_url:
                 cover_url = None
+                image_file = None
+            else:
+                image_file = cover_url.split('/', 3)[3].replace('/', '_')
         except:
             cover_url = None
-    # Option to store covers locally as files
-    if cover_url:
-        try:
-            image_file = cover_url.split('/', 3)[3].replace('/', '_')
-        except:
             image_file = None
-        if Prefs['cache_covers'] or Prefs['cache_bookmark_covers']:
-            if not Common.CoverImageFileExist(image_file):
-                try:
-                    image_file = SaveCoverImage(cover_url)
-                except:
-                    image_file = None
-    else:
-        image_file = None
 
     # get summary
     summary = Metadata.GetSummary(html)
 
     # setup new bookmark json data to add to Dict
-
     new_bookmark = {
         type_title: item_sys_name, 'item_title': item_title, 'cover_file': image_file,
         'cover_url': cover_url, 'summary': summary, 'genres': genres, 'page_url': page_url}
 
     Logger('* new bookmark to add >>')
-    Logger('* %s' % new_bookmark)
+    Logger(u'* {}'.format(new_bookmark))
 
     bm = Dict['Bookmarks']
 
@@ -1570,51 +1531,51 @@ def AddBookmark(item_info):
         # Create new 'Bookmarks' section and fill with the first bookmark
         Dict['Bookmarks'] = {type_title: [new_bookmark]}
         Logger('* Inital bookmark list created >>')
-        Logger('* %s' %bm)
+        Logger(u'* {}'.format(bm))
         Logger('*' * 80)
 
         # Update Dict to include new 'Bookmarks' section
         Dict.Save()
 
         # Provide feedback that the Item has been added to bookmarks
-        return MC.message_container(item_title_decode,
-            '\"%s\" has been added to your bookmarks.' %item_title_decode)
+        return MC.message_container(unicode(item_title_decode),
+            u'\"{}\" has been added to your bookmarks.'.format(item_title_decode))
     # check if the category key 'Anime', 'Manga', 'Cartoon', 'Drama', or 'Comic' exist
     # if so then append new bookmark to one of those categories
     elif type_title in bm.keys():
         # fail safe for when clients are out of sync and it trys to add the bookmark in duplicate
         if (True if [b[type_title] for b in bm[type_title] if b[type_title] == item_sys_name] else False):
             # Bookmark already exist, don't add in duplicate
-            Logger('* bookmark \"%s\" already in your bookmarks' %item_title_decode, kind='Info')
+            Logger(u'* bookmark \"{}\" already in your bookmarks'.format(item_title_decode), kind='Info')
             Logger('*' * 80)
-            return MC.message_container(item_title_decode,
-                '\"%s\" is already in your bookmarks.' %item_title_decode)
+            return MC.message_container(unicode(item_title_decode),
+                u'\"{}\" is already in your bookmarks.'.format(item_title_decode))
         # append new bookmark to its correct category, i.e. 'Anime', 'Drama', etc...
         else:
             temp = {}
             temp.setdefault(type_title, bm[type_title]).append(new_bookmark)
             Dict['Bookmarks'][type_title] = temp[type_title]
-            Logger('* bookmark \"%s\" has been appended to your %s bookmarks' %(item_title_decode, type_title), kind='Info')
+            Logger(u'* bookmark \"{}\" has been appended to your {} bookmarks'.format(item_title_decode, type_title), kind='Info')
             Logger('*' * 80)
 
             # Update Dict to include new Item
             Dict.Save()
 
             # Provide feedback that the Item has been added to bookmarks
-            return MC.message_container(item_title_decode,
-                '\"%s\" has been added to your bookmarks.' %item_title_decode)
+            return MC.message_container(unicode(item_title_decode),
+                u'\"{}\" has been added to your bookmarks.'.format(item_title_decode))
     # the category key does not exist yet so create it and fill with new bookmark
     else:
         Dict['Bookmarks'].update({type_title: [new_bookmark]})
-        Logger('* bookmark \"%s\" has been created in new %s section in bookmarks' %(item_title_decode, type_title), kind='Info')
+        Logger(u'* bookmark \"{}\" has been created in new {} section in bookmarks'.format(item_title_decode, type_title), kind='Info')
         Logger('*' * 80)
 
         # Update Dict to include new Item
         Dict.Save()
 
         # Provide feedback that the Item has been added to bookmarks
-        return MC.message_container(item_title_decode,
-            '\"%s\" has been added to your bookmarks.' %item_title_decode)
+        return MC.message_container(unicode(item_title_decode),
+            u'\"{}\" has been added to your bookmarks.'.format(item_title_decode))
 
 ####################################################################################################
 @route(PREFIX + '/removebookmark', item_info=dict)
@@ -1627,37 +1588,32 @@ def RemoveBookmark(item_info):
     type_title = item_info['type_title']
 
     # decode string
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
+    item_title_decode = unicode(Common.StringCode(string=item_title, code='decode'))
 
     # index 'Bookmarks' list
     bm = Dict['Bookmarks'][type_title]
-    Logger('* bookmark length = %s' %len(bm))
+    Logger('* bookmark length = {}'.format(len(bm)))
     for i in xrange(len(bm)):
         # remove item's data from 'Bookmarks' list
         if bm[i][type_title] == item_sys_name:
             # if caching covers, then don't remove cover file
-            if Prefs['cache_covers']:
-                bm.pop(i)
-            else:
-                RemoveCoverImage(bm[i]['cover_file'])
-                bm.pop(i)
-
+            bm.pop(i)
             break
 
     # update Dict, and debug log
     Dict.Save()
-    Logger('* \"%s\" has been removed from Bookmark List' % item_title_decode, kind='Info')
+    Logger('* \"{}\" has been removed from Bookmark List'.format(item_title_decode), kind='Info')
 
     if len(bm) == 0:
         # if the last bookmark was removed then clear it's bookmark section
-        Logger('* %s bookmark was the last, so removed %s bookmark section' %(item_title_decode, type_title), force=True)
+        Logger('* {} bookmark was the last, so removed {} bookmark section'.format(item_title_decode, type_title), force=True)
         Logger('*' * 80)
         return ClearBookmarks(type_title)
     else:
         Logger('*' * 80)
         # Provide feedback that the Item has been removed from the 'Bookmarks' list
         return MC.message_container(type_title,
-            '\"%s\" has been removed from your bookmarks.' %item_title_decode)
+            '\"{}\" has been removed from your bookmarks.'.format(item_title_decode))
 
 ####################################################################################################
 @route(PREFIX + '/clearbookmarks')
@@ -1666,147 +1622,23 @@ def ClearBookmarks(type_title):
 
     Logger('*' * 80)
     if 'All' in type_title:
-        if not Prefs['cache_covers']:
-            for key in Dict['Bookmarks'].keys():
-                for bookmark in Dict['Bookmarks'][key]:
-                    RemoveCoverImage(bookmark['cover_file'])
-
         # delete 'Bookmarks' section from Dict
         del Dict['Bookmarks']
         Logger('* Entire Bookmark Dict Removed')
     else:
-        if not Prefs['cache_covers']:
-            for bookmark in Dict['Bookmarks'][type_title]:
-                RemoveCoverImage(bookmark['cover_file'])
-
         # delete section 'Anime', 'Manga', 'Cartoon', 'Drama', or 'Comic' from bookmark list
         del Dict['Bookmarks'][type_title]
-        Logger('* \"%s\" Bookmark Section Cleared' % type_title)
+        Logger('* \"{}\" Bookmark Section Cleared'.format(type_title))
 
     Dict['Bookmark_Deleted'] = {'bool': True, 'type_title': type_title}
     status = Dict['Bookmark_Deleted']
     Logger('*' * 80)
 
-    # update Dict
     Dict.Save()
 
     # Provide feedback that the correct 'Bookmarks' section is removed
     #   and send back to Bookmark Main Menu
     return BookmarksMain(title='My Bookmarks', status=status)
-
-####################################################################################################
-@route(PREFIX + '/cache-covers', start=bool)
-def CacheCovers(start=False, skip=True):
-    """Cache covers depending on prefs settings. Will remove or add covers if it can."""
-
-    bm = Dict['Bookmarks']
-    cf = Dict['cover_files']
-    Logger('*' * 80)
-
-    if not Dict['cache_covers_key']:
-        Dict['cache_covers_key'] = Prefs['cache_covers']
-        Dict['cache_bookmark_covers_key'] = Prefs['cache_bookmark_covers']
-
-    if (Prefs['cache_bookmark_covers'] == Dict['cache_bookmark_covers_key'] and
-        Prefs['cache_covers'] == Dict['cache_covers_key'] and start == False or skip == True):
-        Dict.Save()
-        # Attempt to update Anime Bookmarks to new domain and genres
-        if skip == True and bm:
-            if 'Anime' in bm.keys():
-                Thread.Create(BookmarksSub, type_title='Anime', art='anime-art.jpg')
-                Logger('* Attempting to update Anime Bookmarks', kind='Debug', force=True)
-        Logger('* Skipping Cache Covers on Prefs Update. Bookmark Covers Already Cached.', kind='Info', force=True)
-        return
-
-    if not Prefs['cache_bookmark_covers'] and not Prefs['cache_covers']:
-        # remove any cached covers from Dict['Bookmarks']
-        # unless Prefs['cache_covers'] is true, then keep cached covers
-        if cf:
-            for cover in cf:
-                RemoveCoverImage(image_file=cf[cover])
-
-            del Dict['cover_files']
-            Dict.Save()
-            Logger('* Removed cached covers using Dict[\'cover_files\'] list as key, and removed Dict[\'cover_files\'] once finished.', kind='Info')
-        elif bm:
-            [[RemoveCoverImage(image_file=bbm['cover_file']) for bbm in bm[key]] for key in bm.keys()]
-
-            Logger('* No Dict[\'cover_files\'] found, Removed cached covers using Dict[\'Bookmarks\'] list as key.', kind='Info')
-    elif not Prefs['cache_covers'] and Prefs['cache_bookmark_covers']:
-        # remove cached covers not in Dict['Bookmarks']
-        # and save covers from Dict['Bookmarks'] in not already saved
-        bookmark_cache = set([])
-        count = 0
-        if bm:
-            for key in bm.keys():
-                for sbm in bm[key]:
-                    bm_count = len(bm[key])
-                    if sbm['cover_file'] and sbm['cover_url']:
-                        cover_file = sbm['cover_file']
-                        bookmark_cache.add(cover_file)
-                        thumb = Common.CorrectCoverImage(sbm['cover_url'])
-                        if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
-                            Thread.Create(SaveCoverImage, image_url=thumb)
-                        elif not Common.CoverImageFileExist(cover_file):
-                            ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                            Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
-                        elif Common.CoverImageFileExist(cover_file):
-                            count =+ 1
-                        else:
-                            Log.Error('* %s | %s | Unknown Error Occurred' %(cover_file, thumb))
-                    else:
-                        Log.Error('* %s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
-
-        Logger('* Loaded %i Bookmark Covers from cache' %count, kind='Info')
-        if cf:
-            Logger('* Removing cached covers BUT keeping cached Bookmark Covers.', kind='Info')
-            cover_cache = set([c for c in cf])
-            cover_cache_diff = cover_cache.difference(bookmark_cache)
-            for cover in cover_cache_diff:
-                RemoveCoverImage(image_file=cf[cover])
-                del Dict['cover_files'][cover]
-
-            Logger('* Removed cached covers using Dict[\'cover_files\'] list as key, and removed Dict[\'cover_files\'] once finished.', kind='Info')
-            Logger('* But kept Bookmarks cached covers.', kind='Info')
-    elif Prefs['cache_covers']:
-        # cache bookmark covers from Dict['Bookmarks']
-        count = 0
-        if bm:
-            for key in bm.keys():
-                for sbm in bm[key]:
-                    bm_count = len(bm[key])
-                    if sbm['cover_file'] and sbm['cover_url']:
-                        cover_file = sbm['cover_file']
-                        thumb = Common.CorrectCoverImage(sbm['cover_url'])
-                        if not Common.CoverImageFileExist(cover_file) and bm_count <= 50:
-                            Thread.Create(SaveCoverImage, image_url=thumb)
-                        elif not Common.CoverImageFileExist(cover_file):
-                            ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                            Thread.CreateTimer(interval=ftimer, f=SaveCoverImage, image_url=thumb)
-                        elif Common.CoverImageFileExist(cover_file):
-                            count += 1
-                        else:
-                            Log.Error('* %s | %s | Unknown Error Occurred' %(cover_file, thumb))
-                    else:
-                        Log.Error('* %s | %s | Unknown Error Occurred' %(sbm['cover_file'], sbm['cover_url']))
-
-        Logger('* Loaded %i Bookmark Covers from cache' %count, kind='Info')
-        Logger('* All Covers will be cached.', kind='Info')
-    Logger('*' * 80)
-    Dict.Save()
-    return
-
-####################################################################################################
-@route(PREFIX + '/remove-cover-image')
-def RemoveCoverImage(image_file):
-    """Remove Cover Image"""
-    if image_file:
-        path = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources', image_file)
-
-        if Core.storage.file_exists(path):
-            Core.storage.remove(path)
-
-    return
 
 ####################################################################################################
 def UpdateLegacyBookmark(bm_info=dict):
@@ -1817,7 +1649,7 @@ def UpdateLegacyBookmark(bm_info=dict):
 
     type_title = bm_info['type_title']
     item_title = bm_info['item_title']
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
+    item_title_decode = unicode(Common.StringCode(string=item_title, code='decode'))
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
 
@@ -1853,8 +1685,8 @@ def UpdateLegacyBookmark(bm_info=dict):
             Log.Debug('*' * 80)
 
             bm[i].update(new_bookmark)
-            Log.Debug('* %s Bookmark \"%s\" Updated' %(type_title, item_title_decode))
-            Log.Debug('* updated bookmark = %s' %bm[i])
+            Log.Debug('* {} Bookmark \"{}\" Updated'.format(type_title, item_title_decode))
+            Log.Debug(u'* updated bookmark = {}'.format(bm[i]))
             Log.Debug('*' * 80)
             break
 
@@ -1874,33 +1706,33 @@ def GetDirSize(start_path='.'):
         count = 0
         for dirpath, dirnames, filenames in Core.storage.walk(start_path):
             for f in filenames:
-                # filter out default files
-                if not Regex(r'(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
-                    fp = Core.storage.join_path(dirpath, f)
-                    total_size += Core.storage.file_size(fp)
+                fp = Core.storage.join_path(dirpath, f)
+                total_size += Core.storage.file_size(fp)
+                if not Core.storage.dir_exists(fp):
                     count += 1
 
         if total_size > float(1000000000):
             # gigabytes
             for i in range(3):
                 total_size = total_size / bsize
-            d = '%i Cached | %s GB Used' %(count, str(round(total_size, 3)))
+            d = '{} Cached | {} GB Used'.format(count, str(round(total_size, 3)))
         elif total_size > float(1000000):
             # megabytes
             for i in range(2):
                 total_size = total_size / bsize
-            d = '%i Cached | %s MB Used' %(count, str(round(total_size, 3)))
+            d = '{} Cached | {} MB Used'.format(count, str(round(total_size, 3)))
         else:
             # kilobytes
             for i in range(1):
                 total_size = total_size / bsize
-            d = '%i Cached | %s kB Used' %(count, str(round(total_size, 3)))
+            d = '{} Cached | {} kB Used'.format(count, str(round(total_size, 3)))
 
         return d
     except:
         return 'Error'
 
 ####################################################################################################
+@route(PREFIX + '/get_thumb')
 def GetThumb(cover_url, cover_file):
     """
     Get Thumb
@@ -1909,22 +1741,30 @@ def GetThumb(cover_url, cover_file):
 
     cover = None
     if not cover_url:
+        Log.Error('* No cover_url')
         return cover
     elif Common.is_kiss_url(cover_url):
-        if Prefs['cache_covers'] and cover_file:
-            Logger('* cover file name   = %s' %cover_file)
-            if Common.CoverImageFileExist(cover_file):
-                if cover_file not in Dict['cover_files']:
-                    Logger('* cover not in cache dict yet, adding to Dict[\'cover_files\'] now')
-                    Dict['cover_files'].update({cover_file: cover_file})
-                cover = R(cover_file)
+        if cover_file:
+            type_title = Common.GetTypeTitle(cover_url)
+            Logger('* cover file name   = {}'.format(cover_file))
+            if Common.DataCoverExists(Core.storage.join_path(type_title, cover_file)):
+                Log.Debug('* Loading cover from DataCovers folder')
+                cover = Common.data_object(Common.dataCovers(Core.storage.join_path(type_title, cover_file)))
             else:
-                Logger('* cover not yet saved, saving %s now' %cover_file)
-                cover = R(CACHE_COVER_ICON)
-                Thread.Create(SaveCoverImage, image_url=cover_url)
+                Logger('* Cover not yet saved, saving {} now'.format(cover_file))
+                try:
+                    tt, f = SaveCoverImage(cover_url)
+                    cover = Common.data_object(Common.dataCovers(Core.storage.join_path(tt, f)))
+                except Exception, e:
+                    Log.Error(u'* {}'.format(e))
+                    cover = None
     elif 'http' in cover_url:
-        cover = Common.CorrectCoverImage(cover_url)
+        Log.Debug('* Thumb is NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
+        cover = Redirect(Common.CorrectCoverImage(cover_url))
 
+    if not cover:
+        Log.Error('* There is no cover')
+        return None
     return cover
 
 ####################################################################################################

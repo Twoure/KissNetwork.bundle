@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import requests
 import common as Common
 
 ########################################################################################
@@ -19,7 +21,7 @@ def GetSummary(html):
     summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p')
     # if summary found in <p> after <p><span>Summary:</span></p>
     if summary:
-        Log.Debug('* summary in <p>')
+        #Log.Debug('* summary in <p>')
         p_list = html.xpath('//div[@id="container"]//p')
         p_num = len(p_list)
         match = int(0)
@@ -37,32 +39,32 @@ def GetSummary(html):
                     sum_list.append(sum_text)
 
         if len(sum_list) > 1:
-            Log.Debug('* summary was in %i <p>\'s' %int(len(sum_list)))
+            #Log.Debug('* summary was in {} <p>\'s'.format(len(sum_list)))
             summary = '\n\n'.join(sum_list).replace('Related Series', '').replace('Related:', '').strip().replace('\n\n\n', '\n')
         else:
             if len(sum_list) == 1:
-                Log.Debug('* summary was in the only <p>')
+                #Log.Debug('* summary was in the only <p>')
                 summary = sum_list[0]
             else:
-                Log.Debug('* no summary found in <p>\'s, setting to \"None\"')
+                #Log.Debug('* no summary found in <p>\'s, setting to \"None\"')
                 summary = None
     else:
         summary = html.xpath('//p[span[@class="info"]="Summary:"]/following-sibling::p/span')
         # if summary found in <p><span> after <p><span>Summary:</span></p>
         if summary:
-            Log.Debug('* summary is in <p><span>')
+            #Log.Debug('* summary is in <p><span>')
             summary = summary[0].text_content().strip()
         else:
             summary = html.xpath('//div[@id="container"]//div[@class="barContent"]/table//td')
             # if summary found in own <table>
             if summary:
-                Log.Debug('* summary is in own <table>')
+                #Log.Debug('* summary is in own <table>')
                 summary = summary[0].text_content().strip()
             else:
                 summary = html.xpath('//div[@id="container"]//div[@class="bigBarContainer"]/div[@class="barContent"]/div/div')
                 # if summary found in own <div>
                 if summary:
-                    Log.Debug('* summary is in own <div>')
+                    #Log.Debug('* summary is in own <div>')
                     summary = summary[0].text_content().strip()
                 else:
                     summary = html.xpath('//p[span[@class="info"]="Summary:"]')
@@ -71,47 +73,26 @@ def GetSummary(html):
                         summary = summary[0].text_content().strip()
                         test = Regex('(?s)Summary\:.+?([\S].+)').search(summary)
                         if test:
-                            Log.Debug('* summary is in <p><span>Summary:</span>summary</p>')
+                            #Log.Debug('* summary is in <p><span>Summary:</span>summary</p>')
                             summary = test.group(1).strip()
                         else:
-                            Log.Debug('* no summary found, setting summary to \"None\"')
+                            #Log.Debug('* no summary found, setting summary to \"None\"')
                             summary = None
                     else:
                         # if no summary found then set to 'None'
-                        Log.Debug('* no summary found, setting summary to \"None\"')
+                        #Log.Debug('* no summary found, setting summary to \"None\"')
                         summary = None
 
     if summary:
-        #Log.Debug('* summary = %s' %summary)
+        #Log.Debug('* summary = {}'.format(summary))
         summary = Common.StringCode(string=summary, code='encode')
 
     return summary
 
 ########################################################################################
-def get_thumb_and_art(html, url):
-    """setup thumb and art for video"""
-
-    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
-    if Common.is_kiss_url(cover_url):
-        cover_file = cover_url.rsplit('/')[-1]
-    elif 'http' in cover_url:
-        cover_file = cover_url.split('/', 3)[3].replace('/', '_')
-    else:
-        Log.Error('*' * 80)
-        Log.Error('* cover url not a valid picture url | %s' %cover_url)
-        Log.Error('*' * 80)
-        cover_file = None
+def get_art(url):
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
-    if Common.CoverImageFileExist(cover_file):
-        thumb = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/%s?t=%s' %(cover_file, str(time_stamp))
-    elif cover_url:
-        thumb = cover_url
-    else:
-        thumb = None
-    # Get art background
-    art = '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-%s.jpg?t=%s' %(Common.GetTypeTitle(url).lower(), str(time_stamp))
-
-    return thumb, art
+    return '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-{}.jpg?t={}'.format(Common.GetTypeTitle(url).lower(), str(time_stamp))
 
 ########################################################################################
 def GetGenres(html):
@@ -168,11 +149,11 @@ def GetDateAired(html):
     """Get date aired from HTML"""
 
     date_aired = html.xpath('//p[span[@class="info"]="Date aired:"]/text()')
-    Log.Debug('* date_aired = %s' %date_aired)
+    #Log.Debug('* date_aired = {}'.format(date_aired))
     if date_aired:
         try:
             date_aired = date_aired[1].lower().split(' to ')[0].split('-')[0].strip()
-            Log.Debug('* date_aired after cleaning = %s' %date_aired)
+            #Log.Debug('* date_aired after cleaning = {}'.format(date_aired))
             try:
                 date = str(Datetime.ParseDate(date_aired))
             except:
@@ -191,7 +172,7 @@ def GetYear(html):
     """Get Year from date_aired"""
 
     date_aired, date = GetDateAired(html)
-    Log.Debug('* date_aired, date | %s, %s' %(date_aired, date))
+    #Log.Debug('* date_aired, date | {}, {}'.format(date_aired, date))
     if date_aired:
         try:
             year = int(Datetime.ParseDate(date_aired).year)
@@ -241,14 +222,14 @@ def GetEpisodeNameAndNumber(html, title, url):
             if not episode_number == int(0):
                 episode_number = int(str(episode_number).lstrip('0'))
             # set episode name
-            episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(2).lstrip(' -'))
+            episode_name = 'E{}{}'.format(episode_number, ' | ' + ep_node.group(2).lstrip(' -'))
         # if ep # with no text after it then:
         elif ep_node.group(3):
             episode_number = int(ep_node.group(3))
             if not episode_number == int(0):
                 episode_number = int(str(episode_number).lstrip('0'))
 
-            episode_name = 'Episode %i' %episode_number
+            episode_name = 'Episode {}'.format(episode_number)
         # if ep found with no number but has text after it then:
         elif ep_node.group(4):
             # get episode list from show page
@@ -260,7 +241,7 @@ def GetEpisodeNameAndNumber(html, title, url):
                 if int(video_id) == ep_id:
                     # add 1 to i since it starts at 0 in list
                     episode_number = int(i) + 1
-                    episode_name = 'E%i%s' %(episode_number, ' | ' + ep_node.group(4).lstrip(' -'))
+                    episode_name = 'E{}{}'.format(episode_number, ' | ' + ep_node.group(4).lstrip(' -'))
                     break
         # this shouldn't be needed but just in case the above fails
         else:
@@ -277,7 +258,7 @@ def GetEpisodeNameAndNumber(html, title, url):
             if int(video_id) == ep_id:
                 # add 1 to i since it starts at 0 in list
                 episode_number = int(i) + 1
-                episode_name = 'Episode %i' %episode_number
+                episode_name = 'Episode {}'.format(episode_number)
                 break
 
     return episode_name, str(episode_number)
@@ -379,15 +360,15 @@ def GetEpisodeTitle(season_number=int, episode_name=str, episode_number=int):
     # set episode title for EpisodeObject
     if season_number or season_number == 0:
         ep_test = Regex('E(?:\d+)(.*)').search(episode_name)
-        # if no show name then return 'Season %i | Episode %i'
+        # if no show name then return 'Season {} | Episode {}'
         if not ep_test:
-            new_title = 'Season %i | %s' %(season_number, episode_name)
+            new_title = 'Season {} | {}'.format(season_number, episode_name)
         # PHT displays season and episode already, so don't include in name
         elif Client.Platform == 'Plex Home Theater':
             new_title = ep_test.group(1).lstrip(' |')
         # shorten season and episode to include ep name
         else:
-            new_title = 'S%i | E%i%s' %(season_number, episode_number, ep_test.group(1))
+            new_title = 'S{} | E{}{}'.format(season_number, episode_number, ep_test.group(1))
     # no season # found, so just return ep # and name
     else:
         new_title = episode_name
@@ -408,7 +389,7 @@ def GetSourceTitle(url):
 ########################################################################################
 def get_title(html, video_id, show_name_raw):
     """Get the show title matching the video id"""
-    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "%s")]/../a/text()' %video_id)[0]
+    title_raw = html.xpath('//table[@class="listing"]/tr/td/a[contains(@href, "{}")]/../a/text()'.format(video_id))[0]
     title = title_raw.replace(show_name_raw, '').replace('\n', '').strip()
     return title
 

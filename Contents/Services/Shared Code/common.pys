@@ -7,6 +7,9 @@ Shared common code.
 
 # import section(s) not included in Plex Plug-In Framwork
 import os
+import pickle
+import shutil
+from io import open
 import domain as Domain
 
 # path constants
@@ -17,8 +20,16 @@ SUPPORT_PATH = Domain.SUPPORT_PATH
 # general constants
 PREFIX = '/video/kissnetwork'
 TITLE = 'KissNetwork'
+TIMEOUT = Datetime.Delta(hours=1)
 USER_AGENT = Domain.USER_AGENT
 LIST_VIEW_CLIENTS = ['Android', 'iOS']
+
+####################################################################################################
+def ParseVersion(version):
+    try:
+        return tuple(map(int, (version.split('.'))))
+    except:
+        return version
 
 ####################################################################################################
 def TypeTitleList():
@@ -30,7 +41,7 @@ def BaseURL(kind):
 
 ####################################################################################################
 def SearchURL(kind):
-    return BaseURL(kind) + '/Search/%s' %kind + '?keyword=%s'
+    return BaseURL(kind) + '/Search/{}'.format(kind) + '?keyword={}'
 
 ####################################################################################################
 def SearchURLList():
@@ -93,16 +104,106 @@ def GetBaseURL(url):
                 base_url = node[1]
                 break
 
-        Log.Warn('* Old %s URL parsed from page! URL Domain changed to %s' %(type_title, base_url))
+        Log.Warn('* Old {} URL parsed from page! URL Domain changed to {}'.format(type_title, base_url))
         Log.Warn('* {}'.format(url))
 
     return base_url
 
 ####################################################################################################
-def CoverImageFileExist(image_file):
-    """Check if resource file exist"""
+def ensure_dirs(path):
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path)
+        except:
+            raise
 
-    return os.path.isfile(os.path.join(RESOURCES_PATH, image_file)) if image_file else False
+####################################################################################################
+def file_exists(path):
+    return os.path.exists(path) and os.path.isfile(path)
+
+####################################################################################################
+def data_item_path(itemname):
+    return os.path.join(SUPPORT_PATH, 'DataItems', itemname)
+
+####################################################################################################
+def dataHTTP(itemname):
+    return os.path.join('DataHTTP', itemname)
+
+####################################################################################################
+def dataCovers(itemname):
+    return os.path.join('DataCovers', itemname)
+
+####################################################################################################
+def DataExists(itemname):
+    return os.path.isfile(data_item_path(itemname)) and (os.stat(data_item_path(itemname)).st_size != 0)
+
+####################################################################################################
+def DataCoverExists(image_file):
+    if image_file:
+        if DataExists(dataCovers(image_file)):
+            return True
+    Log.Warn('* {} does not exist.'.format(image_file))
+    return False
+
+####################################################################################################
+def DataLoad(itemname, is_object=False):
+    if DataExists(itemname):
+        filename = os.path.abspath(data_item_path(itemname))
+        try:
+            with open(filename, 'rb') as f:
+                data = f.read()
+            if is_object:
+                return pickle.loads(data)
+            else:
+                return data
+        except Exception, e:
+            Log.Critical(u'* {}'.format(e))
+    return None
+
+####################################################################################################
+def DataSave(itemname, data, is_object=False):
+    if data == None:
+        Log.Error('* No data to Save for \'{}\''.format(itemname))
+        return
+
+    if is_object:
+        data = pickle.dumps(data)
+
+    filename = os.path.abspath(data_item_path(itemname))
+    tempfile = '{}/._{}'.format(os.path.dirname(filename), os.path.basename(filename))
+    try:
+        if os.path.exists(tempfile):
+            os.remove(tempfile)
+        with open(tempfile, 'wb') as f:
+            f.write(str(data))
+        if os.path.exists(filename):
+            os.remove(filename)
+        shutil.move(tempfile, filename)
+    except Exception, e:
+        Log.Error(u'* {}'.format(e))
+        if os.path.exists(tempfile):
+            os.remove(tempfile)
+        raise
+
+####################################################################################################
+def data_object(filepath):
+    img_data = DataLoad(filepath)
+    if not img_data:
+        Log.Error('* Cannot find {}'.format(filepath))
+        return None
+
+    ext = String.SplitExtension(filepath)[-1]
+    mime_type = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+        '.gif': 'image/gif',  '.tiff': 'image/tiff', '.bmp': 'image/bmp'
+        }.get(ext, '*/*')
+
+    return DataObject(img_data, mime_type)
+
+####################################################################################################
+def load_data_cover_file(filename):
+    filepath = data_cover_file(filename)
+    return '/photo/:/transcode?url={}&width={}&height={}&maxSize=1'.format(String.Quote(filepath), 200, 260)
 
 ####################################################################################################
 def is_kiss_url(url):
@@ -135,7 +236,7 @@ def CorrectCoverImage(string):
             elif ext_l == '.g':
                 string = name + ext_l + 'if'
             else:
-                Log.Error('Content_url not valid picture | %s' %string)
+                Log.Error('Content_url not valid picture | {}'.format(string))
                 string = None
     else:
         pass

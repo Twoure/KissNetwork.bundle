@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+import os
+import pickle
+import shutil
+from io import open
+
+class DataItem(object):
+    def __init__(self):
+        self.data_path = os.path.join(
+            os.getcwd().lstrip('\\\?').split('Plug-in Support')[0],
+            'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork'
+            )
+
+    def list_dir(self, path):
+        return os.listdir(path)
+
+    def join_path(self, *args):
+        return os.path.join(*args)
+
+    def file_exists(self, path):
+        return os.path.exists(path) and os.path.isfile(path)
+
+    def ensure_dirs(self, path):
+        if not os.path.exists(path):
+            try:
+                os.makedirs(path)
+            except:
+                raise
+
+    def data_item_path(self, itemname):
+        return os.path.join(self.data_path, 'DataItems', itemname)
+
+    def HTTP(self, itemname):
+        return os.path.join('DataHTTP', itemname)
+
+    def Covers(self, itemname):
+        return os.path.join('DataCovers', itemname)
+
+    def Bookmarks(self, itemname):
+        return os.path.join('DataBookmarks', itemname)
+
+    def Exists(self, itemname):
+        return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)
+
+    def CoverExists(self, itemname):
+        if itemname and self.Exists(self.dataCovers(itemname)):
+            return True
+        Log.Warn('* {} does not exist.'.format(itemname))
+        return False
+
+    def Load(self, itemname, is_object=False):
+        if self.Exists(itemname):
+            filename = os.path.abspath(self.data_item_path(itemname))
+            try:
+                with open(filename, 'rb') as f:
+                    data = f.read()
+                if is_object:
+                    return pickle.loads(data)
+                else:
+                    return data
+            except Exception, e:
+                Log.Critical(u'* {}'.format(e))
+        return None
+
+    def Save(self, itemname, data, is_object=False):
+        if data == None:
+            Log.Error('* No data to Save for \'{}\''.format(itemname))
+            return
+
+        if is_object:
+            data = pickle.dumps(data)
+
+        filename = os.path.abspath(self.data_item_path(itemname))
+        tempfile = '{}/._{}'.format(os.path.dirname(filename), os.path.basename(filename))
+        try:
+            if os.path.exists(tempfile):
+                os.remove(tempfile)
+            with open(tempfile, 'wb') as f:
+                f.write(str(data))
+            if os.path.exists(filename):
+                os.remove(filename)
+            shutil.move(tempfile, filename)
+        except Exception, e:
+            Log.Error(u'* {}'.format(e))
+            if os.path.exists(tempfile):
+                os.remove(tempfile)
+            raise
+
+    def data_object(itemname):
+        img_data = self.Load(itemname)
+        if not img_data:
+            Log.Error('* Cannot find {}'.format(itemname))
+            return None
+
+        ext = String.SplitExtension(itemname)[-1]
+        mime_type = {
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+            '.gif': 'image/gif',  '.tiff': 'image/tiff', '.bmp': 'image/bmp'
+            }.get(ext, '*/*')
+
+        return DataObject(img_data, mime_type)
+
+Data = DataItem()

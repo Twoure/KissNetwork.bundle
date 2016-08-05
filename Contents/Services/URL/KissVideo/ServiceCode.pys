@@ -8,9 +8,12 @@ import common as Common
 import metadata as Metadata
 import subprefs as SubPrefs
 from openload import OpenloadStreamFromURL
+from io import open
 import kissdecrypt
 import requests
+import shutil
 import js2py
+import os
 
 KissDecrypt = kissdecrypt.KissDecrypt()
 KH = Headers.KissHeaders()
@@ -25,7 +28,7 @@ def MetadataObjectForURL(url):
     """
 
     Log.Debug('*' * 80)
-    Log.Debug('* MetadataObjectForURL url = %s' %url)
+    Log.Debug('* MetadataObjectForURL url = {}'.format(url))
     url = Common.CorrectURL(url)
 
     video_id = int(url.split('=')[-1])
@@ -36,7 +39,8 @@ def MetadataObjectForURL(url):
 
     genres, genres_list = Metadata.GetGenres(html)
     date_added = Metadata.GetDateAdded(html, url)
-    thumb, art = Metadata.get_thumb_and_art(html, url)
+    thumb = Callback(get_thumb, url=show_url)
+    art = Metadata.get_art(url)
 
     # Setup MovieObject for Moives
     if 'Movie' in genres:
@@ -46,7 +50,7 @@ def MetadataObjectForURL(url):
         # remove 'Movie' from genre list
         genre_list = [g for g in genres if not g == 'Movie']
         mi = Metadata.GetBaseMovieInfo(html, url)
-        summary = Common.StringCode(string=mi['summary'], code='decode') if mi['summary'] else None
+        summary = unicode(Common.StringCode(string=mi['summary'], code='decode')) if mi['summary'] else None
 
         return MovieObject(
             title=mi['title'],
@@ -65,7 +69,7 @@ def MetadataObjectForURL(url):
         Log.Debug('* This is a TV Show')
 
         si = Metadata.GetBaseShowInfo(html, url)
-        summary = Common.StringCode(string=si['summary'], code='decode') if si['summary'] else None
+        summary = unicode(Common.StringCode(string=si['summary'], code='decode')) if si['summary'] else None
         tags = Metadata.string_to_list(Common.StringCode(string=si['tags'], code='decode')) if si['tags'] else []
         show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
         start_title = Metadata.get_title(html, video_id, show_name_raw)
@@ -139,9 +143,9 @@ def PlayVideo(url, m, **kwargs):
     """
 
     Log.Debug('*' * 80)
-    Log.Debug('* Client.Product     = %s' %Client.Product)
-    Log.Debug('* Client.Platform    = %s' %Client.Platform)
-    Log.Debug('* Client.Version     = %s' %Client.Version)
+    Log.Debug('* Client.Product     = {}'.format(Client.Product))
+    Log.Debug('* Client.Platform    = {}'.format(Client.Platform))
+    Log.Debug('* Client.Version     = {}'.format(Client.Version))
 
     prefs = get_prefs()
 
@@ -156,7 +160,7 @@ def PlayVideo(url, m, **kwargs):
         r = NRequest(req_url, raw=True)
         headers = KH.get_headers_for_url(url)
         dc = headers['cookie']
-        headers.update({'cookie': '; '.join([dc, 'k_token=%s' %str(r.cookies['k_token'])])})
+        headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
         page_text = r.text
     else:
         headers = None
@@ -170,17 +174,17 @@ def PlayVideo(url, m, **kwargs):
     openload = Regex(r'src\=[\"\'](https?\:\/\/o(?:pen)?load.+?)[\"\']').search(page_text)
     streammoe = Regex(r'src\=[\"\'](https?\:\/\/stream\.moe\/embed.+?)[\"\']').search(page_text)
     if onedrive:
-        Log.Debug('* OneDrive URL       = %s' %onedrive.group(1))
+        Log.Debug('* OneDrive URL       = {}'.format(onedrive.group(1)))
         vurl = get_onedrive_url(onedrive.group(1))
     elif openload:
-        Log.Debug('* OpenLoad URL       = %s' %openload.group(1))
+        Log.Debug('* OpenLoad URL       = {}'.format(openload.group(1)))
         vurl = get_openload_url(openload.group(1))
     elif streammoe:
-        Log.Debug('* StreamMoe URL      = %s' %streammoe.group(1))
+        Log.Debug('* StreamMoe URL      = {}'.format(streammoe.group(1)))
         vurl = get_streammoe_url(streammoe.group(1))
     else:
         vurl = get_googlevideo_url(page_text, url, m, headers)
-    Log.Debug('* PlayVideo URL      = %s' %vurl)
+    Log.Debug('* PlayVideo URL      = {}'.format(vurl))
 
     if (prefs['samsung_fix'] == 'true') and (prefs['force_transcode'] == 'false') and (prefs['server'] == '0'):
         Log.Debug('* Samsung Fix ON')
@@ -188,12 +192,12 @@ def PlayVideo(url, m, **kwargs):
         try:
             vurl = get_url_redirect_v2(vurl)
             if 'googlevideo' in vurl and not vurl == False:
-                Log.Debug('* URL Redirect       = %s' %vurl.split('?')[0] + '...')
+                Log.Debug('* URL Redirect       = {}'.format(vurl.split('?')[0] + '...'))
             else:
-                Log.Debug('* URL Redirect       = %s' %vurl)
+                Log.Debug('* URL Redirect       = {}'.format(vurl))
         except Exception as e:
             Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
-            Log.Debug('* URL Redirect Error: %s' %str(e))
+            Log.Debug(u'* URL Redirect Error: {}'.format(e))
     else:
         Log.Debug('* Samsung Fix OFF')
 
@@ -221,7 +225,7 @@ def get_googlevideo_url(page_text, url, m, headers):
     type_title = Common.GetTypeTitle(url)
     type_title_lower = type_title.lower()
     if not olist:
-        Log.Error('* This Video is broken, Kiss%s is working to fix it.' %type_title)
+        Log.Error('* This Video is broken, Kiss{} is working to fix it.'.format(type_title))
         raise Ex.MediaNotAvailable
 
     vurl = False
@@ -242,7 +246,7 @@ def get_googlevideo_url(page_text, url, m, headers):
 
     enc_test = Regex(r'\/Scripts\/(kissenc\.min\.j[^\'\"]+)').search(page_text)
     if enc_test:
-        Log.Debug('* %s' %enc_test.group(1))
+        Log.Debug('* {}'.format(enc_test.group(1)))
 
     for node in olist:
         if enc_test:
@@ -252,7 +256,7 @@ def get_googlevideo_url(page_text, url, m, headers):
                 if js and (js.group(2) != 'window.location.href'):
                     ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
                     for s, ws, w in ra:
-                        s = s.replace(ws, 'var krsktest = %s; var temp' %w)
+                        s = s.replace(ws, 'var krsktest = {}; var temp'.format(w))
                         jsc = js2py.EvalJs()
                         jsc.execute(s)
                         jskt = jsc.krsktest
@@ -260,7 +264,7 @@ def get_googlevideo_url(page_text, url, m, headers):
                         if jskt.lower() == 'krsk':
                             post_data = {jskt: jsc.temp}
             except Exception as e:
-                Log.Error('* get_googlevideo_url Error: %s' %str(e))
+                Log.Error(u'* get_googlevideo_url Error: {}'.format(e))
             vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)
         else:
             vurl_old = String.Base64Decode(node.get('value'))
@@ -281,23 +285,23 @@ def get_googlevideo_url(page_text, url, m, headers):
                 itag = rfmt_dict[node.text.strip()[:-1]]
                 vurls.append((vurl_old, node.text.strip()[:-1]))
             except Exception as e:
-                itag = 'No itag Found: %s' %str(e)
+                itag = u'No itag Found: {}'.format(e)
 
         if not itag in fmt_dict.keys():
-            Log.Warn('* Format NOT Supported: %s' %itag)
+            Log.Warn('* Format NOT Supported: {}'.format(itag))
 
     if vurls:
-        Log.Debug('* pre resolution selected = %s' %m)
+        Log.Debug('* pre resolution selected = {}'.format(m))
         for item, mm in sorted(vurls, key=lambda tup: int(tup[1])):
             vurl = item
             nm = rfmt_dict[mm]
             if str(nm) == m[1:]:
-                #Log.Debug('* Selecting %sp stream' %mm)
+                #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
             elif int(mm) > int(fmt_dict[m[1:]]):
-                #Log.Debug('* Selecting %sp stream' %mm)
+                #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
-        Log.Debug('* Selecting %sp stream' %mm)
+        Log.Debug('* Selecting {}p stream'.format(mm))
 
     return vurl
 
@@ -322,11 +326,11 @@ def get_onedrive_url(onedrive_url):
             test = match.group(1).replace('\n\r', '').strip()
             for i, s in enumerate(['cid', 'skyApiDomain', 'mkt', 'appId', 'canary', 'oauthToken', 'authKey', 'ticket', 'gb', 'rset']):
                 if i == 0:
-                    data = {s: Regex(r'%s\:\ \'(.*)\'\,' %s).search(test).group(1)}
+                    data = {s: Regex(r'{}\:\ \'(.*)\'\,'.format(s)).search(test).group(1)}
                 elif not s == 'rset':
-                    data.update({s: Regex(r'%s\:\ \'(.*)\'\,' %s).search(test).group(1)})
+                    data.update({s: Regex(r'{}\:\ \'(.*)\'\,'.format(s)).search(test).group(1)})
                 else:
-                    data.update({s: Regex(r'%s\:\ \'(.*?)\'' %s).search(test).group(1)})
+                    data.update({s: Regex(r'{}\:\ \'(.*?)\''.format(s)).search(test).group(1)})
             break
 
     # parse parameters in URL
@@ -352,8 +356,8 @@ def get_onedrive_url(onedrive_url):
         # remove the download info after .mp4, that way the video will play instead of force downloading
         vurl = dl_data['DownloadUrl'].split('?')[0]
     except Exception as e:
-        Log.Error('* OneDrive Error: Cannot access %s' %dl_url)
-        Log.Error('* OneDrive Error: %s' %str(e))
+        Log.Error('* OneDrive Error: Cannot access {}'.format(dl_url))
+        Log.Error(u'* OneDrive Error: {}'.format(e))
         vurl = False
 
     return vurl
@@ -382,7 +386,7 @@ def get_streammoe_url(moe_url):
     try:
         page = HTTP.Request(moe_url).content
     except Exception as e:
-        Log.Error('* StreamMoe Error: %s' %str(e))
+        Log.Error(u'* StreamMoe Error: {}'.format(e))
         return False
 
     r = Regex(r'contents\s*?\=\s*?atob\([\'\"]([^\'\"]+)').search(page)
@@ -409,8 +413,8 @@ def get_url_redirect_v2(input_url, http_headers=None):
     elif 'Location' in r.headers.keys():
         return r.headers['Location']
     else:
-        Log.Debug('* URL Redirect: No Redirect URL for \"%s\"' %input_url)
-        Log.Debug('* URL Redirect: Headers = %s' %r.headers)
+        Log.Debug('* URL Redirect: No Redirect URL for \"{}\"'.format(input_url))
+        Log.Debug('* URL Redirect: Headers = {}'.format(r.headers))
     return input_url
 
 ####################################################################################################
@@ -433,51 +437,148 @@ def get_prefs():
     return prefs
 
 ####################################################################################################
-def ElementFromURL(url, count=0):
-    """setup requests html"""
+def get_element_from_url(url, name, count=0, resp=False):
+    """error handling for URL requests"""
 
-    page = requests.get(url, headers=KH.get_headers_for_url(url))
-    if (int(page.status_code) == 503) or (len(page.history) > 0):
-        if count <= 1:
-            count += 1
-            if len(page.history) > 0:
-                type_title = Common.GetTypeTitle(url)
-                req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
-                base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
-                if req_base_url == base_url:
-                    page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
-                    html = HTML.ElementFromString(page.text)
-                    return html
+    try:
+        page = requests.get(url, headers=KH.get_headers_for_url(url))
+        if (int(page.status_code) == 503) or (len(page.history) > 0):
+            if count <= 1:
+                count += 1
+                if len(page.history) > 0:
+                    type_title = Common.GetTypeTitle(url)
+                    req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
+                    base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
+                    if req_base_url == base_url:
+                        page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
+                        Common.DataSave(Common.dataHTTP(name), page.text, resp)
+                        html = page if resp else HTML.ElementFromString(page.text)
+                        return html
+                    else:
+                        Log.Warn('* ServiceCode, get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
+                        Log.Warn('* ServiceCode, get_element_from_url Error: page history {} | {}'.format(url, page.history))
+                        Domain.UpdateDomain(type_title, True)
+                        url = Common.CorrectURL(url)
                 else:
-                    Log.Warn('* ElementFromURL Error: HTTP 301 Redirect Error. Refreshing %s Domain' %type_title)
-                    Log.Warn('* ElementFromURL Error: page history %s | %s' %(url, page.history))
-                    Domain.UpdateDomain(type_title, True)
-                    url = Common.CorrectURL(url)
+                    Log.Warn('* ServiceCode, get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
+                    KH.get_headers_for_url(url, update=True)
+                return get_element_from_url(url, name, count, resp)
             else:
-                Log.Warn('* ElementFromURL Error: HTTP 503 Site Error. Refreshing site cookies')
-                KH.get_headers_for_url(url, update=True)
-            return ElementFromURL(url, count)
+                Log.Error('* ServiceCode, get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
+                if Common.DataExists(Common.dataHTTP(name)):
+                    Log.Warn('* Using old cached page')
+                    html = page if resp else HTML.ElementFromString(page.text)
+                else:
+                    html = False if resp else HTML.Element('head', 'Error')
+        elif (int(page.status_code) == 522):
+            Log.Error('* ServiceCode, get_element_from_url Error: HTTP 522 Site error, site is currently offline')
+            html = False if resp else HTML.Element('head', 'Error')
         else:
-            Log.Error('* ElementFromURL Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
-            html = HTML.Element('head', 'Error')
-    elif (int(page.status_code) == 522):
-        Log.Error('* ElementFromURL Error: HTTP 522 Site error, site is currently offline')
-        html = HTML.Element('head', 'Error')
-    else:
-        html = HTML.ElementFromString(page.text)
+            Common.DataSave(Common.dataHTTP(name), page.text, resp)
+            html = page if resp else HTML.ElementFromString(page.text)
+    except Exception, e:
+        Log.Error('* ServiceCode, get_element_from_url Error: Cannot load {}'.format(url))
+        Log.Error(u'* ServiceCode, get_element_from_url Error: {}'.format(e))
+        html = False if resp else HTML.Element('head', 'Error')
 
     return html
 
 ####################################################################################################
-def NRequest(url, headers=None, raw=False):
+def ElementFromURL(url):
+    """setup requests html"""
+
+    match = False
+    name = Hash.MD5(url)
+    path = Common.data_item_path('DataHTTP')
+    Common.ensure_dirs(path)
+    files = [f for f in os.listdir(path) if Common.file_exists(os.path.join(path, f))]
+
+    for filename in files:
+        if filename == name:
+            match = True
+            if (Datetime.FromTimestamp(os.path.getmtime(os.path.join(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
+                Log.Debug('* Re-Caching \'{}\' to DataHTTP'.format(url))
+                html = get_element_from_url(url, name)
+                break
+            else:
+                Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
+                html = HTML.ElementFromString(Common.DataLoad(Common.dataHTTP(filename)))
+                break
+
+    if not match:
+        Log.Debug('* Caching \'{}\' to DataHTTP'.format(url))
+        html = get_element_from_url(url, name)
+
+    return html
+
+####################################################################################################
+def NRequest(url, raw=False):
     """setup requests text page"""
 
-    if headers:
-        r = requests.get(url, headers=headers)
-    else:
-        r = requests.get(url, headers=KH.get_headers_for_url(url))
+    match = False
+    name = Hash.MD5(('resp_' if raw else '')+url)
+    path = Common.data_item_path('DataHTTP')
+    Common.ensure_dirs(path)
+    files = [f for f in os.listdir(path) if Common.file_exists(os.path.join(path, f))]
 
-    if not raw:
-        r = r.text
+    for filename in files:
+        if filename == name:
+            match = True
+            if (Datetime.FromTimestamp(os.path.getmtime(os.path.join(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
+                Log.Debug('* Fetching fresh data for \'{}\''.format(url))
+                r = get_element_from_url(url, name, resp=raw)
+                break
+            else:
+                Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
+                r = Common.DataLoad(Common.dataHTTP(filename), raw)
+                break
+
+    if not match:
+        Log.Debug('* URL Not Cached, Fetching fresh data from \'{}\''.format(url))
+        r = requests.get(url, headers=KH.get_headers_for_url(url))
+        r = r if raw else r.text
+        Common.DataSave(Common.dataHTTP(name), r, raw)
 
     return r
+
+########################################################################################
+def get_thumb(url):
+    thumb = None
+    html = ElementFromURL(url)
+    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
+
+    if Common.is_kiss_url(cover_url):
+        cover_file = cover_url.rsplit('/')[-1]
+        type_title = Common.GetTypeTitle(url)
+        if Common.DataCoverExists(os.path.join(type_title, cover_file)):
+            return Common.data_object(Common.dataCovers(os.path.join(type_title, cover_file)))
+
+        type_dir = Common.data_item_path(Common.dataCovers(type_title))
+        Common.ensure_dirs(type_dir)
+        path = os.path.join(type_dir, cover_file)
+        Log('* file save path \'{}\''.format(path))
+
+        if not Common.file_exists(path):
+            r = requests.get(cover_url, headers=KH.get_headers_for_url(cover_url), stream=True)
+            if r.status_code == 200:
+                with open(path, 'wb') as f:
+                    r.raw.decode_content = True
+                    shutil.copyfileobj(r.raw, f)
+                Log('* Successfully saved \'{}\' in DataCovers'.format(cover_url, path))
+            else:
+                Log.Error('* Save file requests status \'{}\''.format(r.status_code))
+        else:
+            Log.Warn('* Cover file already exists, Skipped file save.')
+
+        if Common.DataCoverExists(os.path.join(type_title, cover_file)):
+            return Common.data_object(Common.dataCovers(os.path.join(type_title, cover_file)))
+
+        Log.Error('* Issues loading \'{}\''.format(path))
+    elif 'http' in cover_url:
+        thumb = Redirect(cover_url)
+    else:
+        Log.Error('*' * 80)
+        Log.Error('* cover url not a valid picture url | {}'.format(cover_url))
+        Log.Error('*' * 80)
+
+    return thumb

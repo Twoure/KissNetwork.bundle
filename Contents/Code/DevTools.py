@@ -15,13 +15,13 @@ def ResetCustomDict(file_to_reset):
     Valid for only "Header_Dict" and "Domain_Dict"
     """
 
-    Log('\n----------Backing up %s File to %s.backup----------' %(file_to_reset, file_to_reset))
+    Log('\n----------Backing up {} File to {}.backup----------'.format(file_to_reset, file_to_reset))
     file_path = Core.storage.join_path(Core.storage.data_path, file_to_reset)
 
     if Core.storage.file_exists(file_path):
         # create backup of file being removed
         Core.storage.copy(file_path, file_path + '.backup')
-        Log('\n----------Removing %s File----------' %file_to_reset)
+        Log('\n----------Removing {} File----------'.format(file_to_reset))
         Core.storage.remove_tree(file_path)
 
     if file_to_reset == 'Domain_Dict':
@@ -29,7 +29,7 @@ def ResetCustomDict(file_to_reset):
     elif file_to_reset == 'Header_Dict':
         KH.create_dict()
 
-    Log('\n----------Reset %s----------\n----------New values for %s written to:\n%s' %(file_to_reset, file_to_reset, file_path))
+    Log('\n----------Reset {}----------\n----------New values for {} written to:\n{}'.format(file_to_reset, file_to_reset, file_path))
 
     return file_path
 
@@ -61,8 +61,8 @@ def DevTools(file_to_reset=None, header=None, message=None):
         elif file_to_reset == 'clear_url_cache':
             Log('\n----------Clearing URL Cache----------')
             count = ClearCache(Datetime.Delta())
-            message = 'Cleaned %i Cached URL files' %count
-            Log('\n----------Cleaned %i Cached files----------' %count)
+            message = 'Cleaned {} Cached URL files'.format(count)
+            Log('\n----------Cleaned {} Cached files----------'.format(count))
         return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsBM),
@@ -100,28 +100,28 @@ def DevToolsH(title=None, header=None, message=None):
         header = 'Header Tools'
         if title == 'Header_Dict':
             Thread.Create(ResetCustomDict, file_to_reset=title)
-            message = 'Resetting %s. New values for %s will be written soon' %(title, title)
+            message = 'Resetting {}. New values for {} will be written soon'.format(title, title)
 
             return DevToolsH(header=header, message=message, title=None)
         elif ( title == 'Anime' or title == 'Cartoon'
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
-            Log('\n----------Updating %s Headers in Header_Dict----------' %title)
+            Log('\n----------Updating {} Headers in Header_Dict----------'.format(title))
 
             for (h_name, h_url) in Common.BaseURLListTuple():
                 if h_name == title:
                     KH.get_headers_for_url(h_url, update=True)
                     break
 
-            message = 'Updated %s Headers.' %title
+            message = 'Updated {} Headers.'.format(title)
             return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
         summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
-    for (name, url) in sorted(Common.BaseURLListTuple()):
+    for name in sorted(Common.TypeTitleList()):
         oc.add(DirectoryObject(key=Callback(DevToolsH, title=name),
-            title='Update %s Headers' %name,
-            summary='Update %s Headers Only in the "Header_Dict" file.' %name))
+            title='Update {} Headers'.format(name),
+            summary='Update {} Headers Only in the \"Header_Dict\" file.'.format(name)))
 
     return oc
 
@@ -136,7 +136,7 @@ def DevToolsD(title=None, header=None, message=None):
         header = 'Domain Tools'
         if title == 'Domain_Dict':
             Thread.Create(ResetCustomDict, file_to_reset=title)
-            message = 'Resetting %s. New values for %s will be written soon' %(title, title)
+            message = 'Resetting {}. New values for {} will be written soon'.format(title, title)
 
             return DevToolsD(header=header, message=message, title=None)
         elif title == 'recache_default_domains':
@@ -147,11 +147,11 @@ def DevToolsD(title=None, header=None, message=None):
             return DevToolsD(header=header, message=message, title=None)
         elif ( title == 'Anime' or title == 'Cartoon'
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
-            Log('\n----------Updating %s Domain in Domain_Dict----------' %title)
+            Log('\n----------Updating {} Domain in Domain_Dict----------'.format(title))
 
             Domain.UpdateDomain(title, True)
 
-            message = 'Updated %s Domain.' %title
+            message = 'Updated {} Domain.'.format(title)
             return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsD, title='recache_default_domains'),
@@ -160,12 +160,25 @@ def DevToolsD(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsD, title='Domain_Dict'),
         title='Reset Domain_Dict File',
         summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
-    for (name, url) in sorted(Common.BaseURLListTuple()):
+    for name in sorted(Common.TypeTitleList()):
         oc.add(DirectoryObject(key=Callback(DevToolsD, title=name),
-            title='Update %s Domain' %name,
-            summary='Update %s Domain Only in the "Domain_Dict" file.' %name))
+            title='Update {} Domain'.format(name),
+            summary='Update {} Domain Only in the \"Domain_Dict\" file.'.format(name)))
 
     return oc
+
+####################################################################################################
+def ResetDataCovers():
+    Log('\n----------Cleaning Dirty DataCovers Directory----------')
+    if Core.storage.data_item_exists('DataCovers'):
+        dirpath = Core.storage.data_item_path('DataCovers')
+        for filename in Core.storage.list_dir(dirpath):
+            path = Core.storage.join_path(dirpath, filename)
+            if Core.storage.dir_exists(path):
+                Core.storage.remove_tree(path)
+            else:
+                Core.storage.remove(path)
+    return
 
 ####################################################################################################
 @route(PREFIX + '/devtools-cache')
@@ -176,81 +189,16 @@ def DevToolsC(title=None, header=None, message=None):
     """
     oc = ObjectContainer(title2='Cover Cache Tools', header=header, message=message)
 
-    if title:
+    if title == 'resources_cache':
         header = 'Cover Cache Tools'
-        if title == 'resources_cache':
-            Log('\n----------Cleaning Dirty Resources Directory, and deleating Dict Keys if any----------')
-
-            for dirpath, dirnames, filenames in Core.storage.walk(Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources')):
-                for f in filenames:
-                    # filter out default files
-                    if not Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(f):
-                        fp = Core.storage.join_path(dirpath, f)
-                        Core.storage.remove(fp)
-            if Dict['cover_files']:
-                del Dict['cover_files']
-
-            message = 'Reset Resources Directory, and Deleted Dict[\'cover_files\']'
-        elif ( title == 'Anime_cache' or title == 'Cartoon_cache'
-            or title == 'Drama_cache' or title == 'Manga_cache' or title == 'Comic_cache' ):
-            category = title.split('_')[0]
-            Log('\n----------Start Caching all %s Cover Images----------' %category)
-
-            qevent = Thread.Event()  # create new Event object
-            qevent.set()
-            test = Thread.Create(CacheAllCovers, category=category, qevent=qevent, page=1)
-            Log('\n\n%s\n\n' %test)
-            message = 'All %s Cover Images are being Cached' %category
-
-        elif title == 'All_cache':
-            Log('\n----------Start Caching All Cover Images----------')
-
-            Thread.Create(CacheCoverQ)
-
-            message = 'All Cover Images are being Cached'
-        return DevToolsC(header=header, message=message, title=None)
-
-    for (name, url) in [('All', '')] + sorted(Common.BaseURLListTuple()):
-        oc.add(DirectoryObject(key=Callback(DevToolsC, title='%s_cache' %name),
-            title='Cache All %s Covers' %name if not name == 'All' else 'Cache All Covers',
-            summary='Download all %s Covers' %name if not name == 'All' else 'Download All Covers'))
+        title = None
+        message = 'Reset DataCovers Directory'
+        ResetDataCovers()
     oc.add(DirectoryObject(key=Callback(DevToolsC, title='resources_cache'),
-        title='Reset Resources Directory',
-        summary='Clean Dirty Image Cache in Resources Directory.'))
+        title='Reset DataCovers Directory',
+        summary='Clean Dirty Image Cache within DataCovers Directory.'))
 
     return oc
-
-####################################################################################################
-def CacheCoverQ():
-    """
-    Setup CacheAllCovers in a Queried manner
-    Create Event, set = True
-    Create First CacheAllCovers Thread, set Event = False
-    For 2nd CacheAllCovers Thread, set Event to Wait until it is set to True
-        It will be set to True Once the 1st CacheAllCovers Thread is Finished
-        Once Wait is over, Re-set Event to Flase, and Start the 2nd CacheAllCovers Thread
-    Repeat Process for remaining CacheAllCovers Threads (3rd and 4th)
-    """
-
-    qevent = Thread.Event()  # create new Event object
-    qevent.set()  # set new Event object to True for first iteration of 'for loop'
-    for (cat, url) in sorted(Common.BaseURLListTuple()):
-        if qevent.is_set():
-            Log('Create the First Cache All Covers Thread for %s' %cat)
-            qevent.clear()  # set Event object to Flase for next iteration of 'for loop'
-            Log('qevent set to %s, for next iteration' %qevent.is_set())
-            Thread.Create(CacheAllCovers, category=cat, page=1, qevent=qevent)
-        else:
-            Log('set qevent to wait for %s' %cat)
-            qevent.wait()  # make the 'for loop' wait until the Thread created in the 1st iteration completes
-            Log('qevent is now set to %s, passing along %s' %(qevent.is_set(), cat))
-            qevent.clear()  # re-set Event to False for next interation of 'for loop'
-            Log('set qevent to %s for next iteration' %qevent.is_set())
-            Thread.Create(CacheAllCovers, category=cat, page=1, qevent=qevent)
-
-    Log.Info('Finished starting CacheAllCovers Query. %s is last to Cache Covers and will be done in about 7 minutes.' %cat)
-
-    return
 
 ####################################################################################################
 @route(PREFIX + '/devtools-bookmarks')
@@ -263,38 +211,22 @@ def DevToolsBM(title=None, header=None, message=None):
     oc = ObjectContainer(title2='Bookmark Tools', header=header, message=message)
 
     if title:
-        if title == 'hide_bm_clear':
-            Log('\n----------Hiding "Clear Bookmarks" and Sub List Clear from "My Bookmarks"----------')
-
-            if not Dict['hide_bm_clear']:
-                Dict['hide_bm_clear'] == 'hide'
-                Dict.Save()
-                message = '"Clear Bookmarks" is Hidden Now'
-            elif Dict['hide_bm_clear'] == 'hide':
-                Dict['hide_bm_clear'] = 'unhide'
-                Dict.Save()
-                message = '"Clear Bookmarks" is Un-Hidden Now'
-            elif Dict['hide_bm_clear'] == 'unhide':
-                Dict['hide_bm_clear'] = 'hide'
-                Dict.Save()
-                message = '"Clear Bookmarks" is Hidden Now'
-            return DevToolsBM(header='Hide BM Clear Opts', message=message, title=None)
-        elif title == 'All' and Dict['Bookmarks']:
+        if title == 'All' and Dict['Bookmarks']:
             Log('\n----------Deleting Bookmark section from Channel Dict----------')
             del Dict['Bookmarks']
             Dict.Save()
             message = 'Bookmarks Section Cleaned.'
         elif title and title in Dict['Bookmarks'].keys():
-            Log('\n----------Deleting %s Bookmark section from Channel Dict----------' %title)
+            Log('\n----------Deleting {} Bookmark section from Channel Dict----------'.format(title))
             del Dict['Bookmarks'][title]
             Dict.Save()
-            message = '%s Bookmark Section Cleaned.' %title
+            message = '{} Bookmark Section Cleaned.'.format(title)
         elif not Dict['Bookmarks']:
             Log('\n----------Bookmarks Section Alread Removed----------')
             message = 'Bookmarks Section Already Cleaned.'
         elif not title in Dict['Bookmarks'].keys():
-            Log('\n----------%s Bookmark Section Already Removed----------' %title)
-            message = '%s Bookmark Section Already Cleaned.' %title
+            Log('\n----------{} Bookmark Section Already Removed----------'.format(title))
+            message = '{} Bookmark Section Already Cleaned.'.format(title)
         return DevToolsBM(header='BookmarkTools', message=message, title=None)
     else:
         pass
@@ -305,15 +237,15 @@ def DevToolsBM(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsBM, title='hide_bm_clear'),
         title='Toggle Hiding "Clear Bookmarks" Function',
         summary='Hide the "Clear Bookmarks" Function from "My Bookmarks" and sub list. For those of us who do not want people randomly clearing our bookmarks.'))
-    for (name, url) in [('All', '')] + sorted(Common.BaseURLListTuple()):
+    for name in ['All'] + sorted(Common.TypeTitleList()):
         if name == 'All':
             oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-                title='Reset "%s" Bookmarks' %name,
-                summary='Delete Entire Bookmark Section. Same as "Clear All Bookmarks".'))
+                title='Reset \"{}\" Bookmarks'.format(name),
+                summary='Delete Entire Bookmark Section. Same as \"Clear All Bookmarks\".'))
         else:
             oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-                title='Reset "%s" Bookmarks' %name,
-                summary='Delete Entire "%s" Bookmark Section. Same as "Clear %s Bookmarks".' %(name, name)))
+                title='Reset \"{}\" Bookmarks'.format(name),
+                summary='Delete Entire \"{}\" Bookmark Section. Same as \"Clear {} Bookmarks\".'.format(name, name)))
 
     return oc
 
@@ -359,9 +291,9 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
             fp = Core.storage.join_path(Core.storage.data_path, file_name)
             if Core.storage.file_exists(fp):
                 Core.storage.remove(fp)
-                message = 'Removed %s Bookmark Backup' %file_name
+                message = 'Removed {} Bookmark Backup'.format(file_name)
             else:
-                message = '%s file already removed, not removing again' %file_name
+                message = '{} file already removed, not removing again'.format(file_name)
         elif title == 'load_backup':
             Log('\n----------Loading Bookmarks from Backup----------')
             new_bookmarks = LoadBMBackup(file_name)
@@ -370,24 +302,24 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
                     del Dict['Bookmarks']
                 Dict['Bookmarks'] = new_bookmarks
                 Dict.Save()
-                message = 'Replaced Current Bookmarks with %s backup file' %file_name
+                message = 'Replaced Current Bookmarks with {} backup file'.format(file_name)
             else:
-                message = 'Error: %s file does not exist' %file_name
+                message = 'Error: {} file does not exist'.format(file_name)
         return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
 
-    bmb_list = []
-    for dirpath, dirnames, filenames in Core.storage.walk(Core.storage.data_path):
-        for f in filenames:
-            # filter out default files
-            bmb = Regex(r'bookmark_backup_(\d+)\.json').search(f)
-            if bmb:
-                timestamp = Datetime.FromTimestamp(int(bmb.group(1)))
-                bmb_list.append(('Backup %s' %str(timestamp), bmb.group(0)))
+    bmb_list = list()
+    files = [f for f in Core.storage.list_dir(Core.storage.data_path) if not Core.storage.dir_exists(Core.storage.join_path(Core.storage.data_path, f))]
+    for filename in files:
+        # filter out default files
+        bmb = Regex(r'bookmark_backup_(\d+)\.json').search(filename)
+        if bmb:
+            timestamp = Datetime.FromTimestamp(int(bmb.group(1)))
+            bmb_list.append(('Backup {}'.format(str(timestamp)), bmb.group(0)))
 
-    for n, fn in bmb_list:
+    for n, fn in reversed(sorted(bmb_list)):
         oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title=title, file_name=fn),
             title=n,
-            summary="%s %s" %(title.split('_')[0].title(), n)
+            summary="{} {}".format(title.split('_')[0].title(), n)
             ))
 
     if len(oc) > 0:
@@ -401,112 +333,43 @@ def CreateBMBackup():
     """Create bookmark backup from current bookmarks"""
 
     timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
-    bm_bkup_file = Core.storage.join_path(Core.storage.data_path, 'bookmark_backup_%i.json' %timestamp)
+    bm_bkup_file = Core.storage.data_item_path('bookmark_backup_{}.json'.format(timestamp))
 
     if Dict['Bookmarks']:
         with open(bm_bkup_file, 'wb') as f:
             json.dump(Dict['Bookmarks'], f, indent=4, sort_keys=True, separators=(',', ': '))
         return True
-    else:
-        Log.Warn('* No Bookmarks to backup yet')
-        return False
+
+    Log.Warn('* No Bookmarks to backup yet')
+    return False
 
 ####################################################################################################
-def LoadBMBackup(file_name):
+def LoadBMBackup(filename):
     """load bookmark backup into json format string"""
 
-    fp = Core.storage.join_path(Core.storage.data_path, file_name)
-    if Core.storage.file_exists(fp) and Core.storage.file_size(fp) != 0:
-        with open(fp) as data_file:
-            data = json.load(data_file)
-
+    filepath = Core.storage.data_item_path(filename)
+    if filename and Core.storage.file_exists(filepath) and Core.storage.file_size(filepath) != 0:
+        with open(filepath) as datafile:
+            data = json.load(datafile)
         return data
-    else:
-        return False
-
-####################################################################################################
-def CacheAllCovers(category, qevent, page=1):
-    """Cache All, or any one of the Categories"""
-
-    if category == 'Drama':
-        drama_test = True
-    else:
-        drama_test = False
-    base_url = Common.DomainDict(category)
-    item_url = base_url + '/%sList?page=%s' % (category, page)
-
-    html = RHTML.ElementFromURL(item_url)
-
-    nextpg_node = None
-    # parse html for 'next' page node
-    for node in html.xpath('///div[@class="pagination pagination-left"]//li/a'):
-        if "Next" in node.text:
-            nextpg_node = str(node.get('href'))  # pull out next page if exist
-            break
-
-    listing = html.xpath('//table[@class="listing"]//td[@title]')
-    if not listing:
-        listing = html.xpath('//div[@class="item"]')
-
-    for item in listing:
-        if not drama_test:
-            title_html = HTML.ElementFromString(item.get('title'))
-        else:
-            title_html = item
-            drama_title_html = HTML.ElementFromString(item.get('title'))
-
-        try:
-            if drama_test:
-                thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
-            else:
-                thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
-
-            if Common.is_kiss_url(thumb):
-                cover_file = thumb.rsplit('/')[-1]
-            elif 'http' in thumb:
-                cover_file = thumb.split('/', 3)[3].replace('/', '_')
-            else:
-                Log.Debug('thumb missing valid url. | %s' %thumb)
-                Log.Debug('thumb xpath = %s' %title_html.xpath('//img/@src'))
-                Log.Debug('item name | %s | %s' %(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
-                thumb = None
-                cover_file = None
-        except:
-            thumb = None
-            cover_file = None
-
-        if thumb and (not Common.CoverImageFileExist(cover_file)):
-            if Common.is_kiss_url(thumb):
-                timer = float(Util.RandomInt(0,30)) + Util.Random()
-                Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=thumb)
-
-    if nextpg_node:
-        Thread.sleep(2)  # wait 2 sec before calling next page
-        Dict.Save()
-        nextpg = int(nextpg_node.split('page=')[1])
-        return CacheAllCovers(category=category, qevent=qevent, page=nextpg)
-    else:
-        Dict.Save()
-        Thread.sleep(5)  # wait 5 seconds before starting next Threaded instance of CacheAllCovers for next Category
-        qevent.set()  # set Event object to True for 'for loop' in CacheCoverQ()
-        Log.Info(
-            '%s Finished caching covers. Set qevent to %s, so next category can start caching covers.'
-            %(category, qevent.is_set()))
-        return
+    return False
 
 ####################################################################################################
 @route(PREFIX + '/save-cover-image', count=int)
 def SaveCoverImage(image_url, count=0, page_url=None):
     """Save image to Cover Image Path and return the file name"""
 
+    content_url = Common.CorrectCoverImage(image_url)
     if Common.is_kiss_url(image_url):
-        content_url = Common.GetBaseURL(image_url) + '/' + image_url.split('/', 3)[3]
         image_file = content_url.rsplit('/')[-1]
+        type_title = Common.GetTypeTitle(image_url)
     else:
-        content_url = image_url
         image_file = image_url.split('/', 3)[3].replace('/', '_')
+        type_title = 'Unknow'
 
-    path = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources', image_file)
+    data_covers_type_path = Core.storage.data_item_path(Core.storage.join_path('DataCovers', type_title))
+    Core.storage.ensure_dirs(data_covers_type_path)
+    path = Core.storage.join_path(data_covers_type_path, image_file)
     Log.Debug('Image File Path = {}'.format(path))
 
     if not Core.storage.file_exists(path):
@@ -520,14 +383,8 @@ def SaveCoverImage(image_url, count=0, page_url=None):
                 r.raw.decode_content = True
                 shutil.copyfileobj(r.raw, f)
 
-            Log.Debug('* Saved Image {}'.format(image_file))
-            # create dict for cover files, so we can clear them later
-            #   seperate from bookmark covers if need be
-            if Dict['cover_files']:
-                Dict['cover_files'].update({image_file: image_file})
-            else:
-                Dict['cover_files'] = {image_file: image_file}
-            return image_file
+            Log.Debug('* Saved {} Image {}'.format(type_title, image_file))
+            return (type_title, image_file)
         elif r.status_code == 503 and count < 3:
             count += 1
             timer = float(Util.RandomInt(5,10)) + Util.Random()
@@ -548,7 +405,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
                 if cover_url:
                     count +=1
                     timer = float(Util.RandomInt(5,10)) + Util.Random()
-                    Log.Warn('* Waiting %f sec before trying to Save new Image')
+                    Log.Warn('* Waiting {} sec before trying to Save new Image'.format(timer))
                     Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=cover_url, count=count)
                 else:
                     Log.Error('* No new cover image within {}'.format(page_url))
@@ -562,7 +419,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
             return None  #replace with "no image" icon later
     else:
         Log.Debug('* File Already Exists {}'.format(image_file))
-        return image_file
+        return (type_title, image_file)
 
 ####################################################################################################
 @route(PREFIX + '/cftest')
@@ -573,7 +430,7 @@ def SetUpCFTest(test):
         try:
             cftest = Headers.CFTest(test)
             Log.Info('*' * 80)
-            Log.Info('----------CFTest passed! %s Cookies:----------' %test)
+            Log.Info('----------CFTest passed! {} Cookies:----------'.format(test))
             Log.Info(cftest)
             Dict['cfscrape_test'] = True
             Dict.Save()
@@ -581,7 +438,7 @@ def SetUpCFTest(test):
             Dict['cfscrape_test'] = False
             Dict.Save()
             Log.Error('*' * 80)
-            Log.Error('----------%s Failed CFTest----------' %test)
+            Log.Error('----------{} Failed CFTest----------'.format(test))
             Log.Error(str(e))
             Log.Error('*' * 80)
     else:
@@ -595,26 +452,46 @@ def RestartChannel():
 
     try:
         # touch Contents/Code/__init__.py
-        plist_path = Core.storage.join_path(Common.BUNDLE_PATH, "Contents", "Info.plist")
-        Core.storage.utime(plist_path, None)
+        Core.storage.utime(Core.init_path, None)
         return True
     except Exception as e:
         Log.Error(str(e))
-        return False
+    return False
 
 ####################################################################################################
-def ClearCache(timeout):
+def ClearCache(itemname, timeout):
     """Clear old Cached URLs depending on input timeout"""
 
     cachetime = Datetime.Now()
     count = 0
-    Log.Debug('* Clearing Cached URLs older than %s' %str(cachetime - timeout))
-    path = Core.storage.join_path(Core.storage.data_path, "DataItems")
-    files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
-    for filename in files:
-        item = filename.split('__cachetime__')
-        if (Datetime.FromTimestamp(int(item[1])) + timeout) <= cachetime:
-            Data.Remove(filename)
-            count += 1
-    Log.Debug('* Cleaned %i Cached files' %count)
+    Log.Debug('* Clearing \'{}\' items older than {}'.format(itemname, str(cachetime - timeout)))
+    path = Core.storage.data_item_path(itemname)
+    Core.storage.ensure_dirs(path)
+
+    for dirpath, dirnames, filenames in Core.storage.walk(path):
+        for filename in filenames:
+            filepath = Core.storage.join_path(dirpath, filename)
+            if (Datetime.FromTimestamp(Core.storage.last_modified(filepath)) + timeout) <= cachetime:
+                if Core.storage.dir_exists(filepath):
+                    continue
+                Core.storage.remove_data_item(filepath)
+                count += 1
+
+    Log.Debug('* Cleaned {} Cached files from {}'.format(count, itemname))
     return count
+
+####################################################################################################
+def ClearOldCache(itempath):
+    """Clean old style of caching"""
+    itempath = Core.storage.abs_path(itempath)
+    if not Core.storage.file_exists(itempath):
+        return False
+
+    files = [f for f in Core.storage.list_dir(itempath) if not Core.storage.dir_exists(Core.storage.join_path(itempath, f))]
+    for filename in files:
+        if Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(filename):
+            continue
+        Core.storage.remove(Core.storage.join_path(itempath, filename))
+
+    Log.Debug('* Finished Resetting \'{}\''.format(itempath))
+    return True
