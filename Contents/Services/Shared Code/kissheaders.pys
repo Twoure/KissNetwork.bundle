@@ -5,9 +5,11 @@ KissNetwork shared code.
 Manipulate Headers for Kiss domains.
 """
 
+from __builtin__ import hasattr
 import os
 from io import open
 import json
+from threading import Thread, Event
 import domain as Domain
 import common as Common
 
@@ -17,7 +19,7 @@ try:
     import cfscrape
 except ImportError, e:
     cfscrape = None
-    Log.Critical('* cfscrape import ERROR: {}'.format(str(e)))
+    Log.Critical('* cfscrape import ERROR: {}'.format(e))
 
 ####################################################################################################
 def CFTest(kind):
@@ -27,12 +29,11 @@ def CFTest(kind):
 
 ####################################################################################################
 class KissHeaders(object):
-    def __init__(self, init_check=False):
+    def __init__(self):
         self.user_agent = Common.USER_AGENT
         self.header_file = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
         self.header_data = dict()
-        if init_check:
-            self.check_all_headers()
+        self.event = Event()
 
     def save_dict(self):
         if not self.header_data:
@@ -77,7 +78,7 @@ class KissHeaders(object):
                 cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=self.user_agent)
                 r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
             except Exception as e:
-                Log.Error('* set_header cfscrape.get_cookie_string Error: {}'.format(str(e)))
+                Log.Error('* set_header cfscrape.get_cookie_string Error: {}'.format(e))
                 cookie = 'na'
                 user_agent = self.user_agent
                 r_cf_clearance = None
@@ -92,11 +93,11 @@ class KissHeaders(object):
             return {
                 type_title: {
                     'cookie': cookie, 'user-agent': user_agent, 'referer': base_url,
-                    'expire': '%i' %expire
+                    'expire': '{}'.format(expire)
                     }
                 }
         except Exception as e:
-            Log.Error('* set_header Error: {}'.format(str(e)))
+            Log.Error('* set_header Error: {}'.format(e))
             return {}
 
     def create_dict(self):
@@ -165,12 +166,11 @@ class KissHeaders(object):
                 return False
 
         updated = False
-        current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
         for (type_title, base_url) in Common.BaseURLListTuple():
             if len(self.header_data) > 1:
                 expire = int(self.header_data[type_title]['expire'])
-                update = True if current_timestamp >= expire else False
-                if update:
+                current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
+                if current_timestamp >= expire:
                     updated = True
                     Log.Debug('* Time to update {} cookies'.format(type_title))
                     self.header_data.update(self.set_header(base_url))
@@ -182,8 +182,30 @@ class KissHeaders(object):
                         Log.Debug('* Time left until {} cookies need to be updated = {}'.format(type_title, deltatime))
                     else:
                         Log.Warn('* No Expire time within {} cookies'.format(type_title))
+
         if updated:
             if not self.save_dict():
                 Log.Error('* Failed to save new header data to file')
-                return False
-        return True
+        self.event.set()
+        Log('* Finished checking all headers')
+        return updated
+
+    def init_headers(self, init=False):
+        if init:
+            self.event.clear()
+            Log('* Starting check_all_headers() Thread')
+            self.que_thread = Thread(target=self.check_all_headers)
+            self.que_thread.start()
+        elif hasattr(self, 'que_thread') and self.event.is_set():
+            Log('* {}'.format(self.que_thread))
+            Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
+            Log('* Finished initializing Headers')
+            return True
+        elif hasattr(self, 'que_thread'):
+            Log('* {}'.format(self.que_thread))
+            Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
+            Log('* Headers are initializing')
+        else:
+            Log('* Headers initialization Skipping.')
+            return True
+        return False
