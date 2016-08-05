@@ -41,7 +41,10 @@ def get_element_from_url(url, name, count=0):
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
-                        Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                        if not Regex(r'(^The service is unavailable.$)').search(page.text):
+                            Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                        else:
+                            Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
                         html = HTML.ElementFromString(page.text)
                         return html
                     else:
@@ -60,15 +63,30 @@ def get_element_from_url(url, name, count=0):
                     html = HTML.ElementFromString(page.text)
                 else:
                     html = HTML.Element('head', 'Error')
-        elif (int(page.status_code) == 522):
-            Log.Error('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
-            html = HTML.Element('head', 'Error')
         else:
-            Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
-            html = HTML.ElementFromString(page.text)
+            try:
+                page.raise_for_status()
+                if not Regex(r'(^The service is unavailable.$)').search(page.text):
+                    Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                else:
+                    Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
+                html = HTML.ElementFromString(page.text)
+            except Exception, e:
+                if (int(page.status_code) == 522):
+                    Log.Error('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
+                elif (int(page.status_code) == 524):
+                    Log.Error('* get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
+                    if count < 1:
+                        Log.Debug('* ReTrying \'{}\''.format(page.url))
+                        count += 1
+                        return get_element_from_url(url, name, count)
+                else:
+                    Log.Error('* get_element_from_url Error: Unknown Site Error, check output below.')
+                Log.Error(u'* {}'.format(e))
+                html = HTML.Element('head', 'Error')
     except Exception as e:
         Log.Error('* get_element_from_url Error: Cannot load {}'.format(url))
-        Log.Error('* get_element_from_url Error: {}'.format(e))
+        Log.Error(u'* get_element_from_url Error: {}'.format(e))
         html = HTML.Element('head', 'Error')
 
     return html
