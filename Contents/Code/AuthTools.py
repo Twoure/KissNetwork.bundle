@@ -11,7 +11,7 @@ def CheckAdmin():
 
     Log.Debug('*' * 80)
     Log.Debug('* Checking if user is Admin')
-    Log.Debug('* Auth URL   = %s' %url)
+    Log.Debug('* Auth URL   = {}'.format(url))
 
     ptoken = Request.Headers.get('X-Plex-Token', '')
     if not ptoken:
@@ -30,6 +30,6 @@ def CheckAdmin():
                 return True
         except Exception as e:
             Log.Error('* Current User is NOT Admin')
-            Log.Error('* CheckAdmin: User denied access: %s' %str(e))
+            Log.Error('* CheckAdmin: User denied access: {}'.format(e))
             Log.Debug('*' * 80)
-            return False
+    return False

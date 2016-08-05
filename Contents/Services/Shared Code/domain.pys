@@ -27,8 +27,8 @@ USER_AGENT = (
 if MODULE_PATH not in sys.path:
     sys.path.append(MODULE_PATH)
     Log.Debug('*' * 80)
-    Log.Debug('* Module path below, added to sys.path, by domain.pys')
-    Log.Debug('* %s' %MODULE_PATH)
+    Log.Debug('* Library path below, added to sys.path, by domain.pys')
+    Log.Debug('* {}'.format(MODULE_PATH))
     Log.Debug('*' * 80)
 
 # Import Custom modules from MODULE_PATH
@@ -54,7 +54,7 @@ def SetDomainURL(string, fresh=False):
     This will find the new domain and return it
     """
 
-    Log.Debug('* SetDomainURL: string = %s' %string)
+    Log.Debug('* SetDomainURL: string = {}'.format(string))
 
     default_domain_dict = get_domain_dict(fresh)
     test = default_domain_dict[string]
@@ -62,31 +62,31 @@ def SetDomainURL(string, fresh=False):
     try:
         r = requests.head(test, headers={'user-agent': USER_AGENT})
     except Exception as e:
-        Log.Error('* SetDomainURL Error: Unable to handle URL \"%s\"' %test)
-        Log.Error('* SetDomainURL Error: %s' %str(e))
+        Log.Error('* SetDomainURL Error: Unable to handle URL \"{}\"'.format(test))
+        Log.Error('* SetDomainURL Error: {}'.format(e))
         return test
 
     status = int(r.status_code)
-    Log.Debug('* Header Status Code = %s' %str(status))
+    Log.Debug('* Header Status Code = {}'.format(status))
 
     if status == 301:
         try:
             r_domain = r.headers['location']
             r_domain = r_domain[:-1] if r_domain.endswith('/') else r_domain
-            Log.Debug('* Current Domain \"%s\" different from test \"%s\"' %(r_domain, test))
+            Log.Debug('* Current Domain \"{}\" different from test \"{}\"'.format(r_domain, test))
             return r_domain
         except Exception as e:
-            Log.Error('* SetDomainURL Error: Unable to process headers for \"%s\"' %test)
-            Log.Error('* SetDomainURL Error: %s' %str(e))
+            Log.Error('* SetDomainURL Error: Unable to process headers for \"{}\"'.format(test))
+            Log.Error('* SetDomainURL Error: {}'.format(e))
     elif status == 503 or status == 200:
         url = r.url[:-1] if r.url.endswith('/') else r.url
         if url == test:
-            Log.Debug('* Current Domain \"%s\" and test \"%s\" are the same.' %(url, test))
+            Log.Debug('* Current Domain \"{}\" and test \"{}\" are the same.'.format(url, test))
         else:
             Log.Error('* SetDomainURL Error: Status Code check FAILD.')
-            Log.Error('* SetDomainURL Error: Current Domain \"%s\" and \"%s\" are NOT the same.' %(url, test))
+            Log.Error('* SetDomainURL Error: Current Domain \"{}\" and \"{}\" are NOT the same.'.format(url, test))
     else:
-        Log.Critical('* SetDomainURL Error: Cannot find Domain for %s' %string.title())
+        Log.Critical('* SetDomainURL Error: Cannot find Domain for {}'.format(string.title()))
 
     return test
 
