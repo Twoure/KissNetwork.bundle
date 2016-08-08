@@ -211,17 +211,12 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ## Issues
 
 ##### General
-- First time the Channel runs (this means ever, not every time it starts just the first time) you need to wait about 20-30 seconds for the headers to be set.
-- If the headers are not set before Plex Framework tries to scrape the site then an error will occur.
-- Kissasian.com (Drama) has a very short cache time for its cookies, about 30-45 minutes.  This can bog down the Search function (only if Drama section enabled) since the Drama section will need re-caching after 30 minutes have passed since the last time it was cached.  You should notice a 5 second delay if it is re-caching the Drama section (or any one of the sites, if two sites have to re-cache then it may take 10 seconds etc...).
+- First time channel runs after installation or an upgrade, you may see a message saying to wait untile the headers are cached.  This is normal behavior.
 - Episode, Movie, VideoClip data may be incorrect depending on how the shows are archived on the Kiss sites.  I've accounted for most variations but some info will still be incorrect.
 
 ##### Anime, Cartoon, Drama, Manga, Comics
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
-- **Kisscartoon** has no "Mature" filter/genre so my Adult Prefs Optioin cannot filter out Adult Cartoons
-- Cover art does not load for Videos
-  - Plex Framework does not allow me to set headers for directory object thumbs, still looking into this issue
-  - I have added a local cover image caching option to work around cloudflare
+- **Kisscartoon** has no "Mature" filter/genre so my Adult Prefs Option cannot filter out Adult Cartoons
 
 ##### Manga, Comics
 - Kissmanga/ReadComicOnline is not the most useful reader for the _Plex Web_ client, but works reasonably well for Smart Phones, PMP, and PHT.
@@ -229,6 +224,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 ##### Drama
 - **Kissasian** keeps changing video URL obfuscation every few days.  Am able to decode daily, but will not be creating a new release every day it changes.
 - If and when _Drama_ videos start failing (when obfuscation changes), users can try the `dev` branch code.
+- Header Cache time is very short, ~30-45 minutes, so can bog down Search Function
 
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
@@ -259,7 +255,7 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 Hey you, you scrolled to the end of the page! [Yeah](http://i.imgur.com/ZGfN8eb.gifv)
 
-Little background to this project.  I decided it was time I start learning some Python, so what better way than to learn it and get some fun results to play with.  I started out working on revamping the unsupported app store.  Currently I've created a way to search github for new channels and import them into the store and then install them.  Also you can remove channels from the store, maybe it's old or you don't want them anymore.  My version would allow you to import your own custom channels from Github and not have to worry about asking me to add them. This works but has some bugs in it still.  For now that project is on the back-burner since I've gotten tired of it as-well-as I'm unsure if it's OK to put the store back up on Github.
+Little background to this project.  I decided it was time I start learning some Python, so what better way than to learn it and get some fun results to play with.
 
 [Mangahere.bundle](https://github.com/Twoure/Mangahere.bundle) (based off of [Mangafox.bundle](https://github.com/hojel/Mangafox.bundle)) was my first attempt at creating a new channel.  I soon realized that the Service URL could not handle pulling consecutive page images, so I set out to find a site that presented all the album images on one page per chapter.  Thus KissManga.bundle was born.  Once I got the basics down for Kissmanga I noticed that the other Kiss sites were created similarly and would take some tweaking of my code to crawl each site.
 
