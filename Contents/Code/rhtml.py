@@ -41,12 +41,15 @@ def get_element_from_url(url, name, count=0):
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
-                        if not Regex(r'(^The service is unavailable.$)').search(page.text):
-                            Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
-                        else:
+                        if Regex(r'(^The service is unavailable.$)').search(page.text):
                             Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-                        html = HTML.ElementFromString(page.text)
-                        return html
+                        elif Regex(r'\/recaptcha\/api\.js').search(page.text):
+                            Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
+                            Log.Warn(str(page.text))
+                            return HTML.Element('head', 'Error')
+                        else:
+                            Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                        return HTML.ElementFromString(page.text)
                     else:
                         Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
                         Log.Warn('* get_element_from_url Error: page history {} | {}'.format(url, page.history))
@@ -60,17 +63,19 @@ def get_element_from_url(url, name, count=0):
                 Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
                 if Data.Exists(Core.storage.join_path('DataHTTP', name)):
                     Log.Warn('* Using old cached page')
-                    html = HTML.ElementFromString(page.text)
-                else:
-                    html = HTML.Element('head', 'Error')
+                    return HTML.ElementFromString(page.text)
         else:
             try:
                 page.raise_for_status()
-                if not Regex(r'(^The service is unavailable.$)').search(page.text):
-                    Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
-                else:
+                if Regex(r'(^The service is unavailable.$)').search(page.text):
                     Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-                html = HTML.ElementFromString(page.text)
+                elif Regex(r'\/recaptcha\/api\.js').search(page.text):
+                    Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
+                    Log.Warn(str(page.text))
+                    return HTML.Element('head', 'Error')
+                else:
+                    Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                return HTML.ElementFromString(page.text)
             except Exception, e:
                 if (int(page.status_code) == 522):
                     Log.Error('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
@@ -83,10 +88,8 @@ def get_element_from_url(url, name, count=0):
                 else:
                     Log.Error('* get_element_from_url Error: Unknown Site Error, check output below.')
                 Log.Error(u'* {}'.format(e))
-                html = HTML.Element('head', 'Error')
     except Exception as e:
         Log.Error('* get_element_from_url Error: Cannot load {}'.format(url))
         Log.Error(u'* get_element_from_url Error: {}'.format(e))
-        html = HTML.Element('head', 'Error')
 
-    return html
+    return HTML.Element('head', 'Error')
