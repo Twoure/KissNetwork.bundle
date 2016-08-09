@@ -55,7 +55,7 @@ class KissHeaders(object):
 
         # check and load new dict
         if os.path.isfile(self.header_file) and os.stat(self.header_file).st_size != 0:
-            with open(self.header_file) as f:
+            with open(self.header_file, 'rb') as f:
                 data = json.load(f)
             if data:
                 self.header_data.update(data)
@@ -78,7 +78,7 @@ class KissHeaders(object):
                 cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=self.user_agent)
                 r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
             except Exception as e:
-                Log.Error('* set_header cfscrape.get_cookie_string Error: {}'.format(e))
+                Log.Error(u'* set_header cfscrape.get_cookie_string Error: {}'.format(e))
                 cookie = 'na'
                 user_agent = self.user_agent
                 r_cf_clearance = None
@@ -88,7 +88,7 @@ class KissHeaders(object):
                 expire = date + int(r_cf_clearance.group(2))
             else:
                 expire = Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364))
-                Log.Warn('* set_header Error: Cannot calculate expire time for {}.'.format(base_url))
+                Log.Warn(u'* set_header Error: Cannot calculate expire time for {}.'.format(base_url))
 
             return {
                 type_title: {
@@ -97,7 +97,7 @@ class KissHeaders(object):
                     }
                 }
         except Exception as e:
-            Log.Error('* set_header Error: {}'.format(e))
+            Log.Error(u'* set_header Error: {}'.format(e))
             return {}
 
     def create_dict(self):
@@ -121,16 +121,13 @@ class KissHeaders(object):
         current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
 
         if len(self.header_data) > 1:
+            update2 = True
             if type_title in self.header_data.keys():
                 if 'expire' in self.header_data[type_title].keys():
                     expire = int(self.header_data[type_title]['expire'])
-                    update = True if update else (True if current_timestamp >= expire else False)
-                else:
-                    update = True
-            else:
-                update = True
+                    update2 = True if update else (True if current_timestamp >= expire else False)
 
-            if update:
+            if update2:
                 Log.Debug('* Time to update {} cookies'.format(type_title))
 
                 self.header_data.update(self.set_header(base_url))
