@@ -421,8 +421,8 @@ def BookmarksMain(title, status):
                 # add a way to clear the entire bookmarks list, i.e. start fresh
                 oc.add(DirectoryObject(
                     key=Callback(ClearBookmarks, type_title='All'),
-                    title='Clear All Bookmarks',
-                    thumb=R(BOOKMARK_CLEAR_ICON),
+                    title='Clear All Bookmarks?',
+                    thumb=R(BOOKMARK_CLEAR_ICON), art=R(art),
                     summary='CAUTION! This will clear your entire bookmark list, even those hidden!'))
 
             return oc
@@ -512,8 +512,8 @@ def BookmarksSub(type_title, art):
         # add a way to clear this bookmark section and start fresh
         oc.add(DirectoryObject(
             key=Callback(ClearBookmarks, type_title=type_title),
-            title='Clear All \"{}\" Bookmarks'.format(type_title),
-            thumb=R(BOOKMARK_CLEAR_ICON),
+            title='Clear All \"{}\" Bookmarks?'.format(type_title),
+            thumb=R(BOOKMARK_CLEAR_ICON), art=R(art),
             summary='CAUTION! This will clear your entire \"{}\" bookmark section!'.format(type_title)))
 
     return oc
@@ -1601,7 +1601,7 @@ def RemoveBookmark(item_info):
         # if the last bookmark was removed then clear it's bookmark section
         Logger('* {} bookmark was the last, so removed {} bookmark section'.format(item_title_decode, type_title), force=True)
         Logger('*' * 80)
-        return ClearBookmarks(type_title)
+        return ClearBookmarksCheck(type_title)
     else:
         Logger('*' * 80)
         # Provide feedback that the Item has been removed from the 'Bookmarks' list
@@ -1611,19 +1611,41 @@ def RemoveBookmark(item_info):
 ####################################################################################################
 @route(PREFIX + '/clearbookmarks')
 def ClearBookmarks(type_title):
+
+    art = 'art-{}.jpg'.format(type_title.lower if type_title != 'All' else 'main')
+    oc = ObjectContainer(
+        title2=u'Clear \'{}\'?'.format(type_title), art=R(art), no_cache=True
+        )
+    oc.add(PopupDirectoryObject(
+        key=Callback(ClearBookmarksCheck, tt=type_title),
+        title='OK?'.format(type_title),
+        summary='Sure you want do Delete all \'{}\' bookmarks? If NOT then navigate back or away from this page.'.format(type_title),
+        thumb=R(BOOKMARK_CLEAR_ICON), art=R(art)
+        ))
+    return oc
+
+####################################################################################################
+@route(PREFIX + '/clearbookmarks/yes')
+def ClearBookmarksCheck(tt):
     """Remove 'Bookmarks' Section(s) from Dict. Note: This removes all bookmarks in list"""
 
     Logger('*' * 80)
-    if 'All' in type_title:
+    if 'All' in tt:
         # delete 'Bookmarks' section from Dict
-        del Dict['Bookmarks']
-        Logger('* Entire Bookmark Dict Removed')
+        if Dict['Bookmarks']:
+            del Dict['Bookmarks']
+            Logger('* Entire Bookmark Dict Removed')
+        else:
+            Logger('* Entire Bookmark Dict already removed.')
     else:
         # delete section 'Anime', 'Manga', 'Cartoon', 'Drama', or 'Comic' from bookmark list
-        del Dict['Bookmarks'][type_title]
-        Logger('* \"{}\" Bookmark Section Cleared'.format(type_title))
+        if Dict['Bookmarks'] and tt in Dict['Bookmarks'].keys():
+            del Dict['Bookmarks'][tt]
+            Logger('* \"{}\" Bookmark Section Cleared'.format(tt))
+        else:
+            Logger('* \"{}\" Bookmark Section Already Cleared'.format(tt))
 
-    Dict['Bookmark_Deleted'] = {'bool': True, 'type_title': type_title}
+    Dict['Bookmark_Deleted'] = {'bool': True, 'type_title': tt}
     status = Dict['Bookmark_Deleted']
     Logger('*' * 80)
 
@@ -1642,7 +1664,7 @@ def UpdateLegacyBookmark(bm_info=dict):
 
     type_title = bm_info['type_title']
     item_title = bm_info['item_title']
-    item_title_decode = unicode(Common.StringCode(string=item_title, code='decode'))
+    item_title_decode = Common.StringCode(string=item_title, code='decode')
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
 
@@ -1678,7 +1700,7 @@ def UpdateLegacyBookmark(bm_info=dict):
             Log.Debug('*' * 80)
 
             bm[i].update(new_bookmark)
-            Log.Debug('* {} Bookmark \"{}\" Updated'.format(type_title, item_title_decode))
+            Log.Debug(u'* {} Bookmark \"{}\" Updated'.format(type_title, item_title_decode))
             Log.Debug(u'* updated bookmark = {}'.format(bm[i]))
             Log.Debug('*' * 80)
             break
