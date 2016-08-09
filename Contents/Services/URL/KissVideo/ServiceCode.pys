@@ -6,8 +6,8 @@
 import kissheaders as Headers
 import common as Common
 import metadata as Metadata
-import subprefs as SubPrefs
 from openload import OpenloadStreamFromURL
+from preferences import Prefs
 from kissdecrypt import KissDecrypt
 from data import Data
 from io import open
@@ -101,11 +101,10 @@ def MediaObjectsForURL(url):
     Log.Debug('*' * 80)
     mo = []
     fmt_list = [('1080p', 'm37', 3000), ('720p', 'm22', 1500), ('480p', 'm59', 1125), ('360p', 'm18', 750)]
-    prefs = get_prefs()
     url = Common.CorrectURL(url)
 
     # create media objects for each video quality
-    if prefs['force_transcode'] == 'true':
+    if Prefs['force_transcode']:
         Log.Debug('* Force Transcoding ON')
         for fmt, m, b in fmt_list:
             mo.append(MediaObject(
@@ -146,14 +145,7 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Client.Platform    = {}'.format(Client.Platform))
     Log.Debug('* Client.Version     = {}'.format(Client.Version))
 
-    prefs = get_prefs()
-
-    if prefs['server'] == '1':
-        req_url = url + '&s=openload'
-    elif prefs['server'] == '2':
-        req_url = url + '&s=stream'
-    else:
-        req_url = url
+    req_url = url + ('&s={}'.format(Prefs['server']) if Prefs['server'] != 'KissNetwork' else '')
 
     if not 'Anime' in Common.GetTypeTitle(url):
         r = NRequest(req_url, raw=True)
@@ -166,7 +158,7 @@ def PlayVideo(url, m, **kwargs):
         page_text = NRequest(req_url)
 
     gtest = True if Regex(r'id\=[\"\'](selectQuality)').search(page_text) else False
-    if (gtest == False) and (prefs['server'] == '0'):
+    if (gtest == False) and (Prefs['server'] == 'KissNetwork'):
         page_text = NRequest(req_url + '&s=openload')
 
     onedrive = Regex(r'src\=[\"\'](https?\:\/\/onedrive\.live\.com\/prev\?.+?)[\"\']').search(page_text)
@@ -185,7 +177,7 @@ def PlayVideo(url, m, **kwargs):
         vurl = get_googlevideo_url(page_text, url, m, headers)
     Log.Debug('* PlayVideo URL      = {}'.format(vurl))
 
-    if (prefs['samsung_fix'] == 'true') and (prefs['force_transcode'] == 'false') and (prefs['server'] == '0'):
+    if Prefs['samsung_fix'] and (Prefs['force_transcode'] == False) and (Prefs['server'] == 'KissNetwork'):
         Log.Debug('* Samsung Fix ON')
         Log.Debug('* Note: Videos will NO longer play outside the network connection.')
         try:
@@ -194,9 +186,8 @@ def PlayVideo(url, m, **kwargs):
                 Log.Debug('* URL Redirect       = {}'.format(vurl.split('?')[0] + '...'))
             else:
                 Log.Debug('* URL Redirect       = {}'.format(vurl))
-        except Exception as e:
-            Log.Debug('* URL Redirect faild. Returning PlayVideo URL instead')
-            Log.Debug(u'* URL Redirect Error: {}'.format(e))
+        except:
+            Log.Exception('* URL Redirect faild. Returning PlayVideo URL instead')
     else:
         Log.Debug('* Samsung Fix OFF')
 
@@ -229,12 +220,11 @@ def get_googlevideo_url(page_text, url, m, headers):
 
     vurl = False
     vurls = list()
-    prefs = get_prefs()
     # format info taken from here:
     # https://github.com/rg3/youtube-dl/blob/fd050249afce1bcc9e7f4a127069375467007b55/youtube_dl/extractor/youtube.py#L281
     # mp4 {format: resolution} dictionary
     fmt_dict = {'37': '1080', '22': '720', '59': '480', '78': '480', '18': '360'}
-    if prefs['force_transcode'] == 'true':
+    if Prefs['force_transcode']:
         # When force transcoding, then provide support for webm and flv video resolutions
         # webm {format: resolution} dictionary
         fmt_dict.update({'43': '360', '44': '480', '45': '720', '46': '1080'})
@@ -253,17 +243,15 @@ def get_googlevideo_url(page_text, url, m, headers):
             try:
                 js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window\[[^\=]+).*?)\<\/script\>').search(page_text)
                 if js and (js.group(2) != 'window.location.href'):
-                    ra = Regex(r'(.+(window([^\=]+))[^\;]+)').findall(js.group(1))
-                    for s, ws, w in ra:
-                        s = s.replace(ws, 'var krsktest = {}; var temp'.format(w))
+                    ra = Regex(r'(.+window[^\=]+[^\;]+)').findall(js.group(1))
+                    for s in ra:
                         jsc = js2py.EvalJs()
-                        jsc.execute(s)
-                        jskt = jsc.krsktest
-                        jskt = jskt if isinstance(jskt, basestring) else jskt[0]
-                        if jskt.lower() == 'krsk':
-                            post_data = {jskt: jsc.temp}
-            except Exception as e:
-                Log.Error(u'* get_googlevideo_url Error: {}'.format(e))
+                        jsc.execute('var window = {};' + s)
+                        if 'krsk' in jsc.window.to_dict():
+                            post_data = jsc.window.to_dict()
+                            break
+            except:
+                Log.Exception('* get_googlevideo_url Error: >>>')
             vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)
         else:
             vurl_old = String.Base64Decode(node.get('value'))
@@ -354,9 +342,8 @@ def get_onedrive_url(onedrive_url):
         dl_data = JSON.ObjectFromURL(dl_url, headers=h)
         # remove the download info after .mp4, that way the video will play instead of force downloading
         vurl = dl_data['DownloadUrl'].split('?')[0]
-    except Exception as e:
-        Log.Error('* OneDrive Error: Cannot access {}'.format(dl_url))
-        Log.Error(u'* OneDrive Error: {}'.format(e))
+    except:
+        Log.Exception(u'* OneDrive Error: Cannot access {}'.format(dl_url))
         vurl = False
 
     return vurl
@@ -384,8 +371,8 @@ def get_streammoe_url(moe_url):
 
     try:
         page = HTTP.Request(moe_url).content
-    except Exception as e:
-        Log.Error(u'* StreamMoe Error: {}'.format(e))
+    except:
+        Log.Exception('* StreamMoe Error: >>>')
         return False
 
     r = Regex(r'contents\s*?\=\s*?atob\([\'\"]([^\'\"]+)').search(page)
@@ -415,25 +402,6 @@ def get_url_redirect_v2(input_url, http_headers=None):
         Log.Debug('* URL Redirect: No Redirect URL for \"{}\"'.format(input_url))
         Log.Debug('* URL Redirect: Headers = {}'.format(r.headers))
     return input_url
-
-####################################################################################################
-def get_prefs():
-    """
-    Get Prefs
-    If a new key has not been added yet, do so here
-    """
-
-    prefs = SubPrefs.GetPrefs()
-    if not 'samsung_fix' in prefs.keys():
-        prefs.update({'samsung_fix': 'false'})
-
-    if not 'force_transcode' in prefs.keys():
-        prefs.update({'force_transcode': 'false'})
-
-    if not 'server' in prefs.keys():
-        prefs.update({'server': '0'})
-
-    return prefs
 
 ####################################################################################################
 def get_element_from_url(url, name, count=0, resp=False):
@@ -497,9 +465,8 @@ def get_element_from_url(url, name, count=0, resp=False):
                 else:
                     Log.Error('* ServiceCode, get_element_from_url Error: Unknown Site Error, check output below.')
                 Log.Error(u'* {}'.format(e))
-    except Exception, e:
-        Log.Error('* ServiceCode, get_element_from_url Error: Cannot load {}'.format(url))
-        Log.Error(u'* ServiceCode, get_element_from_url Error: {}'.format(e))
+    except:
+        Log.Exception(u'* ServiceCode, get_element_from_url Error: Cannot load {}'.format(url))
 
     return False if resp else HTML.Element('head', 'Error')
 
