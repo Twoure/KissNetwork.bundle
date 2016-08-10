@@ -15,9 +15,8 @@ KissNetwork
     - [Sort List by...](#sort-list-by)
     - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
     - [Preferred Video Server](#preferred-video-server)
-    - [Cache All Covers Locally](#cache-all-covers-locally)
-    - [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally)
-    - [Samsung Fix (disables remote play)](#samsung-fix-disables-remote-play)
+    - [Hide "Clear Bookmarks"](#hide-clear-bookmarks)
+    - [Force Redirect Fix (disables remote play)](#force-redirect-disables-remote-play)
     - [Force Transcoding (enables remote play)](#force-transcoding-enables-remote-play)
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
@@ -26,13 +25,14 @@ KissNetwork
   - [About / Help](#about--help)
     - [Developer Tools](#developer-tools)
       - [Bookmark Tools](#bookmark-tools)
-      - [Cover Cache Tools](#cover-cache-tools)
+      - [Cache Tools](#cache-tools)
       - [Domain Tools](#domain-tools)
       - [Header Tools](#header-tools)
   - [Updater](#updater)
 - [Issues](#issues)
   - [General](#general)
   - [Anime, Cartoon, Drama, Manga](#anime-cartoon-drama-manga)
+  - [Cartoon](#cartoon)
   - [Manga, Comic](#manga-comic)
   - [Plex Home Theater](#plex-home-theater)
   - [OpenLoad, Stream](#openload-stream)
@@ -43,7 +43,7 @@ KissNetwork
 
 ## Introduction
 
-This is a plugin that creates a new channel in [Plex Media Server](https://plex.tv/) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.com](http://readcomiconline.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
+This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.com](http://readcomiconline.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
@@ -112,27 +112,21 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
   - Default behavior: Use GoogleVideo links when available, otherwise try using the provided links
   - If a server other than _KissNetwork_ is selected: Use selected video server, and default to GoogleVideo links when selected server fails.
 
-##### Cache All Covers Locally
-- **Enabled:** Will download and index cover images
-  - Overrides [Cache Bookmark Covers Locally](#cache-bookmark-covers-locally) function
-- **Disabled(_default_):** Will remove all downloaded images from computer.
-  - If "Cache Bookmark Covers Locally" is **Enabled**, then bookmark covers will be kept from deletion.
+##### Hide "Clear Bookmarks"
+- **Enabled:** Hide the _Clear Bookmarks_ function within Main Bookmarks menu and sub-menus
+- **Disabled(_default_):** Allow the _Clear Bookmarks_ function within Main Bookmarks menu and sub-menus
 
-##### Cache Bookmark Covers Locally
-- **Enabled:** AND "Cache All Covers Locally" **Disabled**, will download cover images and only display them in your "My Bookmarks" list.
-- **Disabled(_default_):** AND 'Cache All Covers Locally" **Disabled**, will delete all bookmarked covers from computer.
-
-##### Samsung Fix (disables remote play)
+##### Force Redirect (disables remote play)
 - **Enabled:** Turns On URL Redirect Function, making PMS follow the URL Redirect.
   - Follows URL through its redirect and returns the final URL
-  - GoogleVideo Links: will expand around PMS IP rendering unusable outside of local network (i.e. remote play disabled)
+  - _GoogleVideo_ Links: expand around PMS IP rendering unusable outside of local network _(i.e. remote play disabled)_
 - **Disabled(_default_):** URL Redirect is handled by client
 
 ##### Force Transcoding (enables remote play)
-- OpenLoad videos have a hash tied to the PMS server IP.  Enable to watch OpenLoad videos outside the PMS local network.
+- Openload/Stream.moe videos have a hash tied to the PMS server IP.  Enable to watch Openload/Stream.moe videos outside the PMS local network.
 - **Enabled:** Videos will be transcoded by PMS and available for use outside the servers network
   - Resolution will depend on available streams and client settings
-  - Overrides [Samsung Fix](#samsung-fix-disables-remote-play), because PMS will properly handle any URL Redirects
+  - Overrides [Force Redirect](#force-redirect-disables-remote-play), because PMS will properly handle any URL Redirects
 - **Disabled(_default_):** Transcoding depends on clients settings/support
 
 ##### Allow Adult Content
@@ -168,11 +162,10 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Developer Tools
 - [**Bookmark Tools**](#bookmark-tools)
-- [**Cover Cache Tools**](#cover-cache-tools)
+- [**Cache Tools**](#cache-tools)
 - [**Domain Tools**](#domain-tools)
 - [**Header Tools**](#header-tools)
 - **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test.
-- **Reset URL Cache:** Delete custom URL cache, separate from Plex Framework
 - **Restart KissNetwork Channel:** Will restart KissNetwork Channel in PMS, but will not refresh URL Service Code.
 
 ##### Bookmark Tools
@@ -185,12 +178,9 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - **Reset "Anime" Bookmarks:** Same as "Clear Anime Bookmarks"
 - **Reset... :** Same for Drama, Cartoon, Comic, and Manga
 
-##### Cover Cache Tools
-- The Cache Cover tools are experimental, and could result in a temporary IP ban from using the Kiss sites. If this happens, just wait for the allotted time to pass (usually an hour, but could be up to 24 hours, do not remember).  I have yet to hear people report this issue, but did encounter it while developing these tools since I had to test and re-test the download functions multiple times.
-- **Cache All Covers:** Download cover images from all sites.  Background process.
-- **Cache All Anime Covers:** Download All Anime covers only.  Do not download covers from the other sites.
-- **Cache All... :** Same for Drama, Cartoon, Comic, and Manga
-- **Reset Resources Directory:** Clean dirty image cache in `Resources` directory.  Will delete all cached images and remove cache images Dict key.
+##### Cache Tools
+- **Reset DataCovers Cache:** Force Remove all cached _Covers_ from DataCovers directory.
+- **Reset DataHTTP Cache:** Force Remove all cached _URLs_ from DataHTTP directory.
 
 ##### Domain Tools
 - **Reset Domain_Dict File:** Create backup of old Domain_Dict, then delete current, and write new Domain_Dict with freash domains
@@ -216,23 +206,24 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 
 ##### Anime, Cartoon, Drama, Manga, Comics
 - Hosted behind Cloudflare so added a modified version of [cloudflare-scrape](https://github.com/Anorov/cloudflare-scrape) as a work around
-- **Kisscartoon** has no "Mature" filter/genre so my Adult Prefs Option cannot filter out Adult Cartoons
+
+##### Cartoon
+- No _Mature_ filter/genre so Adult Prefs Option cannot filter out Adult Cartoons
 
 ##### Manga, Comics
 - Kissmanga/ReadComicOnline is not the most useful reader for the _Plex Web_ client, but works reasonably well for Smart Phones, PMP, and PHT.
 
 ##### Drama
-- **Kissasian** keeps changing video URL obfuscation every few days.  Am able to decode daily, but will not be creating a new release every day it changes.
-- If and when _Drama_ videos start failing (when obfuscation changes), users can try the `dev` branch code.
+- Keeps changing video URL obfuscation every so often.  Am able to decode daily, but will not be creating a new release every day it changes.  Depends on current frequency of changes.
+- If and when _Drama_ videos start failing _(when obfuscation changes)_, users can try the `dev` branch code, or Switch the server pref to Openload or Stream.
 - Header Cache time is very short, ~30-45 minutes, so can bog down Search Function
 
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
   - Working to fix this.  Have new message.py but have yet to integrate with bookmarks fully
 
-##### OpenLoad, Stream
-- OpenLoad links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
-- Stream links updated, but un-tested.  Not sure if _Force Transcoding_ is required anymore.
+##### Openload, Stream
+- Openload/Stream.moe links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
 
 [Table of Contents](#table-of-contents)
 
@@ -244,9 +235,11 @@ This is a plugin that creates a new channel in [Plex Media Server](https://plex.
 - Change Itempage to TVShowObject, so have Bookmark function within TVShowObject.
 
 ##### Bookmarks
+- Add option for user to add custom bookmark backup path
+- Improve bookmark backup functions, may setup rotating file style
 - Add option to add all seasons at once for a show
 - Group seasons into one show
-- Create separate directories for TV and Movies
+- Might create separate directories for TV and Movies
 - Might move bookmarks to own file like I did with Header_Dict
 
 [Table of Contents](#table-of-contents)
@@ -257,7 +250,7 @@ Hey you, you scrolled to the end of the page! [Yeah](http://i.imgur.com/ZGfN8eb.
 
 Little background to this project.  I decided it was time I start learning some Python, so what better way than to learn it and get some fun results to play with.
 
-[Mangahere.bundle](https://github.com/Twoure/Mangahere.bundle) (based off of [Mangafox.bundle](https://github.com/hojel/Mangafox.bundle)) was my first attempt at creating a new channel.  I soon realized that the Service URL could not handle pulling consecutive page images, so I set out to find a site that presented all the album images on one page per chapter.  Thus KissManga.bundle was born.  Once I got the basics down for Kissmanga I noticed that the other Kiss sites were created similarly and would take some tweaking of my code to crawl each site.
+[Mangahere.bundle](https://github.com/Twoure/Mangahere.bundle) (based off of [Mangafox.bundle](https://github.com/hojel/Mangafox.bundle)) was my first attempt at creating a new channel.  I soon realized that the URL ServiceCode could not handle pulling consecutive page images, so I set out to find a site that presented all the album images on one page per chapter.  Thus KissManga.bundle was born.  Once I got the basics down for Kissmanga I noticed that the other Kiss sites were created similarly and would take some tweaking of my code to crawl each site.
 
 This prompted me to make [KissNetwork.bundle](https://github.com/Twoure/KissNetwork.bundle).  I've tried to use Plex's built in framework as much as possible in hopes of maximizing cross platform compatibility.  It has been a fun project so far and has gotten me more comfortable with Python.  Have fun with it and let me know of any other issues or suggestions of how to make this faster and more user friendly.
 
