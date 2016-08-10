@@ -1,3 +1,4 @@
+CFTest = SharedCodeService.kissheaders.CFTest
 import shutil
 import json
 
@@ -50,7 +51,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
             if Dict['cfscrape_test']:
                 del Dict['cfscrape_test']
                 Dict.Save()
-                SetUpCFTest()
+                SetUpCFTest('Manga')
                 message = 'Reset cfscrape Code Test'
             else:
                 message = 'No Dict cfscrape Code Test Key to Remove'
@@ -60,7 +61,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
             message = 'Restarting channel'
         elif file_to_reset == 'clear_url_cache':
             Log('\n----------Clearing URL Cache----------')
-            count = ClearCache(Datetime.Delta())
+            count = ClearCache('DataHTTP', Datetime.Delta())
             message = 'Cleaned {} Cached URL files'.format(count)
             Log('\n----------Cleaned {} Cached files----------'.format(count))
         return DevTools(header=header, message=message, file_to_reset=None)
@@ -69,8 +70,8 @@ def DevTools(file_to_reset=None, header=None, message=None):
         title='Bookmark Tools',
         summary='Tools to Clean dirty bookmarks dictionary, and Toggle "Clear Bookmarks".'))
     oc.add(DirectoryObject(key=Callback(DevToolsC),
-        title='Cover Cache Tools',
-        summary='Tools to Cache All Covers or just certain sites. Includes Tool to Clean Dirty Resources Directory.'))
+        title='Cache Tools',
+        summary='Tools to Clean DataItems Cache.'))
     oc.add(DirectoryObject(key=Callback(DevToolsD),
         title='Domain Tools',
         summary='Tools to Reset "Domain_Dict" or Update parts of "Domain_Dict".'))
@@ -79,7 +80,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
         summary='Tools to Reset "Header_Dict" or Update parts of "Header_Dict".'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
         title='Reset Dict cfscrape Test Key',
-        summary='Delete previous test key so the channel can retest for a valid JavaScript Runtime.'))
+        summary='Delete previous test key so the channel can re-test the cfscrape code.'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='clear_url_cache'),
         title='Reset URL Cache',
         summary='Force delete current URL Cache.'))
@@ -168,45 +169,37 @@ def DevToolsD(title=None, header=None, message=None):
     return oc
 
 ####################################################################################################
-def ResetDataCovers():
-    Log('\n----------Cleaning Dirty DataCovers Directory----------')
-    if Core.storage.data_item_exists('DataCovers'):
-        dirpath = Core.storage.data_item_path('DataCovers')
-        for filename in Core.storage.list_dir(dirpath):
-            path = Core.storage.join_path(dirpath, filename)
-            if Core.storage.dir_exists(path):
-                Core.storage.remove_tree(path)
-            else:
-                Core.storage.remove(path)
-    return
-
-####################################################################################################
 @route(PREFIX + '/devtools-cache')
 def DevToolsC(title=None, header=None, message=None):
-    """
-    Tools to Cache Cover Images
-    Reset/Clean Channel Resources Diretory
-    """
-    oc = ObjectContainer(title2='Cover Cache Tools', header=header, message=message)
+    """Tools to Remove all Covers/URLs cached files"""
 
-    if title == 'resources_cache':
-        header = 'Cover Cache Tools'
-        title = None
-        message = 'Reset DataCovers Directory'
-        ResetDataCovers()
-    oc.add(DirectoryObject(key=Callback(DevToolsC, title='resources_cache'),
-        title='Reset DataCovers Directory',
-        summary='Clean Dirty Image Cache within DataCovers Directory.'))
+    oc = ObjectContainer(title2='Cache Tools', header=header, message=message)
+
+    if title:
+        header = 'Cache Tools'
+        if title == 'data_covers':
+            count = ClearCache('DataCovers', Datetime.Delta())
+            message = 'Cleaned {} Cached Cover files'.format(count)
+            Log(u'\n----------Removed {} Cached Cover files from DataCovers----------'.format(count))
+        elif title == 'data_http':
+            count = ClearCache('DataHTTP', Datetime.Delta())
+            message = 'Cleaned {} Cached URL files'.format(count)
+            Log(u'\n----------Removed {} Cached URL files from DataHTTP----------'.format(count))
+        return DevToolsC(title=None, header=header, message=message)
+
+    oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_covers'),
+        title='Reset DataCovers Cache',
+        summary='Remove all cached Covers from DataCovers directory.'))
+    oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_http'),
+        title='Reset DataHTTP Cache',
+        summary='Remove all cached URLs from DataHTTP directory.'))
 
     return oc
 
 ####################################################################################################
 @route(PREFIX + '/devtools-bookmarks')
 def DevToolsBM(title=None, header=None, message=None):
-    """
-    Tools to Delete all or certain sections of Bookmarks Dict
-    Toggle "Clear Bookmarks" Function On/Off
-    """
+    """Tools to Delete all or certain sections of Bookmarks Dict"""
 
     oc = ObjectContainer(title2='Bookmark Tools', header=header, message=message)
 
@@ -228,8 +221,6 @@ def DevToolsBM(title=None, header=None, message=None):
             Log('\n----------{} Bookmark Section Already Removed----------'.format(title))
             message = '{} Bookmark Section Already Cleaned.'.format(title)
         return DevToolsBM(header='BookmarkTools', message=message, title=None)
-    else:
-        pass
 
     oc.add(DirectoryObject(key=Callback(DevToolsBMB),
         title='Backup Tools',
@@ -291,9 +282,9 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
             fp = Core.storage.join_path(Core.storage.data_path, file_name)
             if Core.storage.file_exists(fp):
                 Core.storage.remove(fp)
-                message = 'Removed {} Bookmark Backup'.format(file_name)
+                message = u'Removed {} Bookmark Backup'.format(file_name)
             else:
-                message = '{} file already removed, not removing again'.format(file_name)
+                message = u'{} file already removed, not removing again'.format(file_name)
         elif title == 'load_backup':
             Log('\n----------Loading Bookmarks from Backup----------')
             new_bookmarks = LoadBMBackup(file_name)
@@ -302,9 +293,9 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
                     del Dict['Bookmarks']
                 Dict['Bookmarks'] = new_bookmarks
                 Dict.Save()
-                message = 'Replaced Current Bookmarks with {} backup file'.format(file_name)
+                message = u'Replaced Current Bookmarks with {} backup file'.format(file_name)
             else:
-                message = 'Error: {} file does not exist'.format(file_name)
+                message = u'Error: {} file does not exist'.format(file_name)
         return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
 
     bmb_list = list()
@@ -428,7 +419,7 @@ def SetUpCFTest(test):
 
     if not Dict['cfscrape_test']:
         try:
-            cftest = Headers.CFTest(test)
+            cftest = CFTest(test)
             Log.Info('*' * 80)
             Log.Info('----------CFTest passed! {} Cookies:----------'.format(test))
             Log.Info(cftest)
