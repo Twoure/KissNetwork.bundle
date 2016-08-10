@@ -3,19 +3,17 @@
 """Kiss(anime, cartoon, and drama) Service code"""
 
 # import Shared Service Code
-import kissheaders as Headers
 import common as Common
 import metadata as Metadata
+from kissheaders import Headers
 from openload import OpenloadStreamFromURL
-from preferences import Prefs
 from kissdecrypt import KissDecrypt
+from preferences import Prefs
 from data import Data
 from io import open
 import requests
 import shutil
 import js2py
-
-KH = Headers.KissHeaders()
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -149,7 +147,7 @@ def PlayVideo(url, m, **kwargs):
 
     if not 'Anime' in Common.GetTypeTitle(url):
         r = NRequest(req_url, raw=True)
-        headers = KH.get_headers_for_url(url)
+        headers = Headers.get_headers_for_url(url)
         dc = headers['cookie']
         headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
         page_text = r.text
@@ -408,7 +406,7 @@ def get_element_from_url(url, name, count=0, resp=False):
     """Error Handling for ServiceCode URL Requests"""
 
     try:
-        page = requests.get(url, headers=KH.get_headers_for_url(url))
+        page = requests.get(url, headers=Headers.get_headers_for_url(url))
         if (int(page.status_code) == 503) or (len(page.history) > 0):
             if count <= 1:
                 count += 1
@@ -417,7 +415,7 @@ def get_element_from_url(url, name, count=0, resp=False):
                     req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
-                        page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
+                        page = requests.get(page.url, headers=Headers.get_headers_for_url(req_base_url))
                         if Regex(r'(^The service is unavailable.$)').search(page.text):
                             Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
                         elif Regex(r'\/recaptcha\/api\.js').search(page.text):
@@ -434,7 +432,7 @@ def get_element_from_url(url, name, count=0, resp=False):
                         url = Common.CorrectURL(url)
                 else:
                     Log.Warn('* ServiceCode, get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
-                    KH.get_headers_for_url(url, update=True)
+                    Headers.get_headers_for_url(url, update=True)
                 return get_element_from_url(url, name, count, resp)
             else:
                 Log.Error('* ServiceCode, get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
@@ -522,7 +520,7 @@ def NRequest(url, raw=False):
 
     if not match:
         Log.Debug('* URL Not in Cache, Fetching fresh data from \'{}\''.format(url))
-        r = requests.get(url, headers=KH.get_headers_for_url(url))
+        r = requests.get(url, headers=Headers.get_headers_for_url(url))
         r = r if raw else r.text
         Data.Save(Data.HTTP(name), r, raw)
 
@@ -546,7 +544,7 @@ def get_thumb(url):
         Log('* file save path \'{}\''.format(path))
 
         if not Data.file_exists(path):
-            r = requests.get(cover_url, headers=KH.get_headers_for_url(cover_url), stream=True)
+            r = requests.get(cover_url, headers=Headers.get_headers_for_url(cover_url), stream=True)
             if r.status_code == 200:
                 with open(path, 'wb') as f:
                     r.raw.decode_content = True

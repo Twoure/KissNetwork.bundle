@@ -12,6 +12,7 @@ import json
 from threading import Thread, Event
 import domain as Domain
 import common as Common
+from preferences import Prefs
 
 # Import Shared Library Modules
 import requests
@@ -77,8 +78,8 @@ class KissHeaders(object):
             try:
                 cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=self.user_agent)
                 r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
-            except Exception as e:
-                Log.Error(u'* set_header cfscrape.get_cookie_string Error: {}'.format(e))
+            except:
+                Log.Exception(u'* set_header cfscrape.get_cookie_string Error: >>>')
                 cookie = 'na'
                 user_agent = self.user_agent
                 r_cf_clearance = None
@@ -96,8 +97,8 @@ class KissHeaders(object):
                     'expire': '{}'.format(expire)
                     }
                 }
-        except Exception as e:
-            Log.Error(u'* set_header Error: {}'.format(e))
+        except:
+            Log.Exception(u'* set_header Error: >>>')
             return {}
 
     def create_dict(self):
@@ -164,7 +165,8 @@ class KissHeaders(object):
 
         updated = False
         for (type_title, base_url) in Common.BaseURLListTuple():
-            if len(self.header_data) > 1:
+            site_pref = 'kissasian' if type_title == 'Drama' else 'kiss{}'.format(type_title.lower())
+            if len(self.header_data) > 1 and Prefs[site_pref]:
                 expire = int(self.header_data[type_title]['expire'])
                 current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
                 if current_timestamp >= expire:
@@ -206,3 +208,5 @@ class KissHeaders(object):
             Log('* Headers initialization Skipping.')
             return True
         return False
+
+Headers = KissHeaders()

@@ -4,20 +4,18 @@
 #                                                                                                  #
 ####################################################################################################
 # import Shared Service Code
-Headers = SharedCodeService.kissheaders
 Domain = SharedCodeService.domain
+Headers = SharedCodeService.kissheaders.Headers
 Common = SharedCodeService.common
 Metadata = SharedCodeService.metadata
 KData = SharedCodeService.data.Data
-
-KH = Headers.KissHeaders()
 
 if not Dict['init_run']:
     Dict['init_run'] = Datetime.Now()
 
 if Dict['init_run'] <= Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path)):
     Dict['init_run'] = Datetime.Now()
-    Thread.Create(KH.init_headers, init=True)
+    Thread.Create(Headers.init_headers, init=True)
 
 # set global variables needed for imported packages
 TITLE = Common.TITLE
@@ -133,7 +131,7 @@ def MainMenu():
     if not Dict['cfscrape_test']:
         return MC.message_container('Error',
             'CloudFlare bypass fail. Please report Error to Twoure with channel Log files.')
-    if not KH.init_headers():
+    if not Headers.init_headers():
         return MC.message_container('Warning', 'Please wait while channel caches headers.  Exit channel and try again later.')
 
     admin = CheckAdmin()
@@ -947,7 +945,7 @@ def ItemPage(item_info):
         jdata = JSON.ObjectFromURL(
             base_url + '/GetRelatedLinks', method='POST', cacheTime=CACHE_1HOUR,
             values={'keyword': page_url.split('/')[-1].replace('-', '+')},
-            headers=KH.get_headers_for_url(base_url)
+            headers=Headers.get_headers_for_url(base_url)
             )
         for jd in jdata:
             rel_title = jd['Name']
