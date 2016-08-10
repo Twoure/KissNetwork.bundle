@@ -217,18 +217,13 @@ def DevToolsBM(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsBMB),
         title='Backup Tools',
         summary='Manage bookmark backups.'))
-    oc.add(DirectoryObject(key=Callback(DevToolsBM, title='hide_bm_clear'),
-        title='Toggle Hiding "Clear Bookmarks" Function',
-        summary='Hide the "Clear Bookmarks" Function from "My Bookmarks" and sub list. For those of us who do not want people randomly clearing our bookmarks.'))
     for name in ['All'] + sorted(Common.TypeTitleList()):
+        name2 = '\"' + name + '\"'
         if name == 'All':
-            oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-                title='Reset \"{}\" Bookmarks'.format(name),
-                summary='Delete Entire Bookmark Section. Same as \"Clear All Bookmarks\".'))
-        else:
-            oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-                title='Reset \"{}\" Bookmarks'.format(name),
-                summary='Delete Entire \"{}\" Bookmark Section. Same as \"Clear {} Bookmarks\".'.format(name, name)))
+            name2 = ''
+        oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
+            title='Reset \"{}\" Bookmarks'.format(name),
+            summary='Delete Entire {} Bookmark Section. Same as \"Clear {} Bookmarks\".'.format(name2, name)))
 
     return oc
 
