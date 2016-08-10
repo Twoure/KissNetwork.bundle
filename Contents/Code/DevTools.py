@@ -59,11 +59,6 @@ def DevTools(file_to_reset=None, header=None, message=None):
             Log('\n----------Attempting to Restart KissNetwork Channel----------')
             RestartChannel()
             message = 'Restarting channel'
-        elif file_to_reset == 'clear_url_cache':
-            Log('\n----------Clearing URL Cache----------')
-            count = ClearCache('DataHTTP', Datetime.Delta())
-            message = 'Cleaned {} Cached URL files'.format(count)
-            Log('\n----------Cleaned {} Cached files----------'.format(count))
         return DevTools(header=header, message=message, file_to_reset=None)
 
     oc.add(DirectoryObject(key=Callback(DevToolsBM),
@@ -81,9 +76,6 @@ def DevTools(file_to_reset=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='cfscrape_test'),
         title='Reset Dict cfscrape Test Key',
         summary='Delete previous test key so the channel can re-test the cfscrape code.'))
-    oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='clear_url_cache'),
-        title='Reset URL Cache',
-        summary='Force delete current URL Cache.'))
     oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='restart_channel'),
         title='Restart KissNetwork Channel',
         summary='Should manually Restart the KissNetwork Channel.'))
