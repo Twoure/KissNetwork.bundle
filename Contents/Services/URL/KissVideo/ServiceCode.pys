@@ -175,8 +175,8 @@ def PlayVideo(url, m, **kwargs):
         vurl = get_googlevideo_url(page_text, url, m, headers)
     Log.Debug('* PlayVideo URL      = {}'.format(vurl))
 
-    if Prefs['samsung_fix'] and (Prefs['force_transcode'] == False) and (Prefs['server'] == 'KissNetwork'):
-        Log.Debug('* Samsung Fix ON')
+    if Prefs['force_redirect'] and (Prefs['force_transcode'] == False) and (Prefs['server'] == 'KissNetwork'):
+        Log.Debug('* Force Redirect ON')
         Log.Debug('* Note: Videos will NO longer play outside the network connection.')
         try:
             vurl = get_url_redirect_v2(vurl)
@@ -187,7 +187,7 @@ def PlayVideo(url, m, **kwargs):
         except:
             Log.Exception('* URL Redirect faild. Returning PlayVideo URL instead')
     else:
-        Log.Debug('* Samsung Fix OFF')
+        Log.Debug('* Force Redirect OFF')
 
     Log.Debug('*' * 80)
 

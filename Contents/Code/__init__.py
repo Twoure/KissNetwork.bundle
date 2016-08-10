@@ -1617,7 +1617,7 @@ def ClearBookmarks(type_title):
     oc.add(PopupDirectoryObject(
         key=Callback(ClearBookmarksCheck, tt=type_title),
         title='OK?'.format(type_title),
-        summary='Sure you want do Delete all \'{}\' bookmarks? If NOT then navigate back or away from this page.'.format(type_title),
+        summary='Sure you want to Delete all \'{}\' bookmarks? If NOT then navigate back or away from this page.'.format(type_title),
         thumb=R(BOOKMARK_CLEAR_ICON), art=R(art)
         ))
     return oc
