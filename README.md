@@ -75,10 +75,10 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
-  - OpenPHT (Ubuntu 14.04 LTS, v1.6.1)
-  - Android (4.4.2) (Plex Client App, v4.28.2.249)
-  - Plex Media Player (1.1.3)
-  - Plex/Web (2.7.6)
+  - OpenPHT (Ubuntu 14.04 LTS, v1.6.2)
+  - Android (4.4.2) (Plex Client App, v4.29.1.7)
+  - Plex Media Player (1.1.4)
+  - Plex/Web (2.7.7)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
