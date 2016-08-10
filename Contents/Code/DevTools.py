@@ -28,7 +28,7 @@ def ResetCustomDict(file_to_reset):
     if file_to_reset == 'Domain_Dict':
         Domain.CreateDomainDict()
     elif file_to_reset == 'Header_Dict':
-        KH.create_dict()
+        Headers.create_dict()
 
     Log('\n----------Reset {}----------\n----------New values for {} written to:\n{}'.format(file_to_reset, file_to_reset, file_path))
 
@@ -110,7 +110,7 @@ def DevToolsH(title=None, header=None, message=None):
 
             for (h_name, h_url) in Common.BaseURLListTuple():
                 if h_name == title:
-                    KH.get_headers_for_url(h_url, update=True)
+                    Headers.get_headers_for_url(h_url, update=True)
                     break
 
             message = 'Updated {} Headers.'.format(title)
@@ -365,7 +365,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
 
     if not Core.storage.file_exists(path):
         if Common.is_kiss_url(content_url):
-            r = requests.get(content_url, headers=KH.get_headers_for_url(content_url), stream=True)
+            r = requests.get(content_url, headers=Headers.get_headers_for_url(content_url), stream=True)
         else:
             r = requests.get(content_url, stream=True)
 

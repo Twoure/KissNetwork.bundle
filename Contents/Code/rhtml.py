@@ -31,7 +31,7 @@ def get_element_from_url(url, name, count=0):
     """error handling for URL requests"""
 
     try:
-        page = requests.get(url, headers=KH.get_headers_for_url(url))
+        page = requests.get(url, headers=Headers.get_headers_for_url(url))
         if (int(page.status_code) == 503) or (len(page.history) > 0):
             if count <= 1:
                 count += 1
@@ -40,7 +40,7 @@ def get_element_from_url(url, name, count=0):
                     req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
-                        page = requests.get(page.url, headers=KH.get_headers_for_url(req_base_url))
+                        page = requests.get(page.url, headers=Headers.get_headers_for_url(req_base_url))
                         if Regex(r'(^The service is unavailable.$)').search(page.text):
                             Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
                         elif Regex(r'\/recaptcha\/api\.js').search(page.text):
@@ -57,7 +57,7 @@ def get_element_from_url(url, name, count=0):
                         url = Common.CorrectURL(url)
                 else:
                     Log.Warn('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
-                    KH.get_headers_for_url(url, update=True)
+                    Headers.get_headers_for_url(url, update=True)
                 return get_element_from_url(url, name, count)
             else:
                 Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
