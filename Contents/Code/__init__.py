@@ -30,7 +30,7 @@ import rhtml as RHTML
 from updater import Updater
 from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
-from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache, ClearOldCache
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 
 
 # more global variables
@@ -110,6 +110,8 @@ def Start():
     # remove/clear old style of caching prior to v1.2.5
     if Dict['current_ch_version']:
         if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 5):
+            from DevTools import ClearOldCache, MoveOldBookmarks
+            Thread.Create(MoveOldBookmarks)
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.storage.data_path, 'DataItems'))
 

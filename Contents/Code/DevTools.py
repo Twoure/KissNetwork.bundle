@@ -266,9 +266,9 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
     if title and file_name:
         if title == 'delete_backup':
             Log('\n----------Remove Bookmark Backup----------')
-            fp = Core.storage.join_path(Core.storage.data_path, file_name)
-            if Core.storage.file_exists(fp):
-                Core.storage.remove(fp)
+            filepath = Core.storage.data_item_path(Core.storage.join_path('DataBookmarks', file_name))
+            if Core.storage.file_exists(filepath):
+                Core.storage.remove(filepath)
                 message = u'Removed {} Bookmark Backup'.format(file_name)
             else:
                 message = u'{} file already removed, not removing again'.format(file_name)
@@ -286,7 +286,9 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
         return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
 
     bmb_list = list()
-    files = [f for f in Core.storage.list_dir(Core.storage.data_path) if not Core.storage.dir_exists(Core.storage.join_path(Core.storage.data_path, f))]
+    folder = Core.storage.data_item_path('DataBookmarks')
+    Core.storage.ensure_dirs(folder)
+    files = [f for f in Core.storage.list_dir(folder) if not Core.storage.dir_exists(Core.storage.join_path(folder, f))]
     for filename in files:
         # filter out default files
         bmb = Regex(r'bookmark_backup_(\d+)\.json').search(filename)
@@ -311,7 +313,9 @@ def CreateBMBackup():
     """Create bookmark backup from current bookmarks"""
 
     timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
-    bm_bkup_file = Core.storage.data_item_path('bookmark_backup_{}.json'.format(timestamp))
+    folder = Core.storage.data_item_path('DataBookmarks')
+    Core.storage.ensure_dirs(folder)
+    bm_bkup_file = Core.storage.join_path(folder, u'bookmark_backup_{}.json'.format(int(timestamp)))
 
     if Dict['Bookmarks']:
         with open(bm_bkup_file, 'wb') as f:
@@ -325,12 +329,40 @@ def CreateBMBackup():
 def LoadBMBackup(filename):
     """load bookmark backup into json format string"""
 
-    filepath = Core.storage.data_item_path(filename)
-    if filename and Core.storage.file_exists(filepath) and Core.storage.file_size(filepath) != 0:
+    filepath = Core.storage.data_item_path(Core.storage.join_path('DataBookmarks', filename))
+    if filename and Core.storage.file_exists(filepath) and (Core.storage.file_size(filepath) != 0):
         with open(filepath) as datafile:
             data = json.load(datafile)
         return data
     return False
+
+####################################################################################################
+def MoveOldBookmarks():
+    """move old bookmarks into new directory"""
+
+    count = 0
+    old_dir = Core.storage.data_path
+    new_dir = Core.storage.data_item_path('DataBookmarks')
+    Core.storage.ensure_dirs(new_dir)
+
+    old_files = [f for f in Core.storage.list_dir(old_dir) if Regex(r'bookmark_backup_(\d+)\.json').search(f) and not Core.storage.dir_exists(Core.storage.join_path(old_dir, f))]
+    for filename in old_files:
+        old_filepath = Core.storage.join_path(old_dir, filename)
+        new_filepath = Core.storage.join_path(new_dir, filename)
+        if not Core.storage.file_exists(new_filepath):
+            Core.storage.copy(old_filepath, new_filepath)
+        else:
+            Log.Debug(u'* Skipped moving \'{}\' because it already exists within \'DataBookmarks\''.format(filename))
+
+        if Core.storage.file_exists(new_filepath) and (Core.storage.file_size(new_filepath) != 0):
+            count += 1
+            Core.storage.remove(old_filepath)
+
+    if count == 0:
+        Log.Debug('* No Old Bookmarks to Migrate')
+    else:
+        Log.Debug(u'* Finished Migrating \'{}\' Old Bookmarks to \'{}\''.format(count, new_dir))
+    return
 
 ####################################################################################################
 @route(PREFIX + '/save-cover-image', count=int)
