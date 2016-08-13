@@ -39,6 +39,7 @@ KissNetwork
 - [Plans](#plans)
   - [General](#general-1)
   - [Bookmarks](#bookmarks)
+- [Support](#support)
 - [About](#about)
 
 ## Introduction
@@ -241,6 +242,13 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - Group seasons into one show
 - Might create separate directories for TV and Movies
 - Might move bookmarks to own file like I did with Header_Dict
+
+[Table of Contents](#table-of-contents)
+
+## Support
+
+- [Plex Forums Thread](https://forums.plex.tv/discussion/186988)
+- [GitHub Issues](https://github.com/Twoure/KissNetwork.bundle/issues)
 
 [Table of Contents](#table-of-contents)
 
