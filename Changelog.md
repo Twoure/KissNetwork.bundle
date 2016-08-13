@@ -1,8 +1,36 @@
 # ChangeLog
 
 ##### 1.2.5
-- _07/xx/2016_
-  - Added `Simple UI` option to remove all sub list in favor of one list dictated by `Sort List by...` option
+- _08/xx/2016_
+  - Fixes:
+    - `LegacyBookmarkUpdate()` - fixed regex matching and added condition to update bookmark's domain when they change
+    - Openload - fixed for site changes
+  - Updates:
+    - Added `Simple UI` option to remove all sub list in favor of one list dictated by `Sort List by...` option [d5adj10](https://www.reddit.com/r/KissAnime/comments/47tee4/kissnetworkbundle_plex_channel_to_view_anime/d5adj10)
+    - `cloudflare-scrape`: updated to `v1.6.6`
+      - Switched from [PyExecJS](https://github.com/doloopwhile/PyExecJS) to [Js2Py](https://github.com/PiotrDabkowski/Js2Py)
+      - Removed unused libs and added new required libs
+      - No longer depends on external JRE :smile:
+    - Moved `headers.pys` into `kissheaders.pys`, and created a new Header Class
+      - Large speed boost, since no longer reading a file each time accessing a header value
+    - Moved `Prefix` and `Title` into `common.pys`
+    - Moved bookmark _Hide_ function into channel preferences
+    - Changed all strings to `.format()` notation
+    - Changed cache location for URLs, Thumbs, and Bookmark Backups
+      - Removed cover caching options from channel preferences
+      - Thumbs are cached for one month
+      - URLs are cached for one hour
+    - `rhtml.py` changed to Hash matching, removed unused libs
+    - `ServiceCode` - improved URL, Thumb, and Headers cache handling, as-well-as error handling
+    - Changed `Samsung Fix` to `Force Redirect`
+    - New `preferences.py` Class for use within `ServiceCode` to dynamically access channel Preferences
+    - New `data.pys` Class to handle thumbs within `ServiceCode`
+    - Headers only update on install/upgrade or when accessed and are expired
+    - When headers auto-check after first install, all headers are set regardless of selected domains within channel preferences
+    - When headers auto-check after upgrade, headers only updated from currently selected domains within channel preferences
+    - Added cached data migration/cleaning
+    - Added clear bookmark `OK?` function, so will no longer clear bookmarks on first press, and will ask for confirmation
+    - Added error logging for `Service Unavailable` and `Human Verification`. URLs do NOT Cache upon errors.
 
 ##### 1.2.4
 - _07/13/2016_
