@@ -121,7 +121,7 @@ class KissHeaders(object):
         base_url = Common.GetBaseURL(url)
         current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
 
-        if len(self.header_data) > 1:
+        if len(self.header_data) >= 1:
             update2 = True
             if type_title in self.header_data.keys():
                 if 'expire' in self.header_data[type_title].keys():
