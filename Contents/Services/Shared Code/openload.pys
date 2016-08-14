@@ -10,7 +10,7 @@ def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
         http_headers = {'User-Agnet': USER_AGENT, 'Referer': url}
 
-    html = HTML.ElementFromURL(url, headers=http_headers)
+    html = HTML.ElementFromURL(url, headers=http_headers, cacheTime=CACHE_1MINUTE)
     imageData = html.xpath('//img[@id="linkimg"]/@src')
     imageData = String.Base64Decode(imageData[0].split('base64,')[-1]) if imageData else None
     if not imageData:
@@ -43,7 +43,7 @@ def OpenloadStreamFromURL(url, http_headers=None):
         imageTabs[i][j].append(imageStr[idx])
 
     # get signature data
-    data = HTTP.Request('https://openload.co/assets/js/obfuscator/numbers.js', headers=http_headers, cacheTime=CACHE_1HOUR).content
+    data = HTTP.Request('https://openload.co/assets/js/obfuscator/n.js', headers=http_headers, cacheTime=CACHE_1HOUR).content
     signStr = Regex(r'(?i)[\'\"]([^\"\']+?)[\'\"]').search(data)
     if not signStr:
         Log.Error('* cannot find signitures')
