@@ -161,9 +161,7 @@ class PreferenceSet(object):
         return data
 
     def load_default_file(self):
-        file_path = self.default_prefs_path
         el = XML.element('PluginPreferences')
-
         for name, pref in self.prefs.items():
             el.append(XML.element(name, self.user_values_dict.get(name, pref.encode_value(pref.default_value))))
         return el
