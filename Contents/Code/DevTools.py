@@ -23,7 +23,7 @@ def ResetCustomDict(file_to_reset):
         # create backup of file being removed
         Core.storage.copy(file_path, file_path + '.backup')
         Log('\n----------Removing {} File----------'.format(file_to_reset))
-        Core.storage.remove_tree(file_path)
+        Core.storage.remove(file_path)
 
     if file_to_reset == 'Domain_Dict':
         Domain.CreateDomainDict()
