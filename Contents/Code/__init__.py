@@ -183,7 +183,12 @@ def MainMenu():
 
     if admin:
         #Updater(PREFIX + '/updater', oc)
-        Updater.gui_update(PREFIX + '/updater', oc, GIT_REPO, tag='latest', list_view_clients=Common.LIST_VIEW_CLIENTS)
+        Updater.gui_update(PREFIX + '/updater', oc, GIT_REPO, branch='dev', list_view_clients=Common.LIST_VIEW_CLIENTS)
+        """
+        Updater.gui_update(
+            prefix=PREFIX + '/updater', oc=oc, repo=GIT_REPO,
+            tag='latest', list_view_clients=Common.LIST_VIEW_CLIENTS)
+        """
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']

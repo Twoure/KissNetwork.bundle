@@ -181,18 +181,18 @@ class PluginUpdateService(object):
         stage_path = Core.storage.abs_path(Core.storage.join_path(self.stage, self.identifier))
         bundle_path = Core.storage.abs_path(self.bundle.path)
         stage_index = int([i for i, l in enumerate(self.splitall(stage_path)) if l == self.identifier][1])
-        bundle_index = int([i for i, l in enumerate(splitall(bundle_path)) if l == root][0])
+        bundle_index = int([i for i, l in enumerate(self.splitall(bundle_path)) if l == root][0])
 
         for dirpath, dirname, filenames in Core.storage.walk(stage_path):
             for f in filenames:
                 filepath = Core.storage.join_path(stage_path, dirpath, f)
-                filepaths = splitall(filepath)[stage_index:]
+                filepaths = self.splitall(filepath)[stage_index:]
                 stage_paths.append(Core.storage.join_path(root, *filepaths[1:]))
 
         for dirpath, dirname, filenames in Core.storage.walk(bundle_path):
             for f in filenames:
                 filepath = Core.storage.join_path(bundle_path, dirpath, f)
-                filepaths = splitall(filepath)[bundle_index:]
+                filepaths = self.splitall(filepath)[bundle_index:]
                 if Core.storage.join_path(root, *filepaths[1:]) not in stage_paths:
                     old_item_path = Core.storage.abs_path(Core.storage.join_path(self.plugins_path, *filepaths[1:]))
                     if Core.storage.dir_exists(old_item_path):
