@@ -269,14 +269,13 @@ class PluginUpdateService(object):
             archive.Close()
 
         self.clean_old_bundle()
-        """
         if not self.activate():
             Log(u"Unable to activate {}".format(self.identifier))
             if not self.reactivate():
                 Log.Critical(u"Unable to reactivate {}".format(self.identifier))
             self.unstage()
             return False
-        """
+
         self.unstage()
         self.cleanup()
 
@@ -288,13 +287,12 @@ class PluginUpdateService(object):
         if not self.install_zip_from_url(url, self.setup_stage):
             return False
 
+        # add install info to history record
         self.add_history_record(action, branch, tag, version, notes)
 
-        # Check whether this bundle contains services & instruct other plug-ins to reload if necessary
-        #self.check_if_service_reload_required([self.identifier])
-
-        # update current_info
-        #self.setup_current_info(self.identifier)
+        # Check whether this bundle contains services & instruct it to reload if necessary
+        if self.bundle.has_services:
+            self.reload_channel_service()
 
         Log("Installation of {} complete".format(self.identifier))
         return True
@@ -357,44 +355,32 @@ class PluginUpdateService(object):
         self.temp_info.clear()
 
         Log(u"Update of {} to {} complete".format(self.identifier, version))
+        self.restart_channel()
         return ObjectContainer(header=u'{}'.format(L('updater.success')), message=u'%s' % F('updater.updated', version))
 
-    """
-    def check_if_service_reload_required(self, identifiers):
-        \"\"\"
-        Check the list of bundle identifiers to see if any of the bundles contain services.
-        If they do, instruct running plug-ins to reload their service list.
-        \"\"\"
-        bundles = self.bundleservice.bundles
-        for ident in identifiers:
-            if ident in bundles:
-                bundle = bundles[ident]
-                if bundle['has_services']:
-                    Log("At least one bundle containing services has been updated - instructing all running plug-ins to reload.")
-                    self.reload_services_in_running_plugins()
-                    return
-        Log("No bundles containing services have been updated.")
-
-    def reload_services_in_running_plugins(self):
-        \"\"\" Get the list of plug-ins from PMS, and tell any that are running to reload services \"\"\"
-        no_reload = [
-            'com.plexapp.plugins.unsupportedservicestools', 'com.plexapp.plugins.WebTools',
-            'com.plexapp.plugins.uasviewer', 'com.plexapp.plugins.trakttv'
-            ]
-        plugins_list = XML.ElementFromURL('http://127.0.0.1:32400/:/plugins', cacheTime=0)
-        for plugin_el in plugins_list.xpath('//Plugin'):
-            if str(plugin_el.get('state')) == '0':
-                ident = str(plugin_el.get('identifier'))
-                if ident not in no_reload:
-                    try:
-                        Log("Plug-in %s is currrently running with old service code - reloading", ident)
-                        HTTP.Request('http://127.0.0.1:32400/:/plugins/%s/reloadServices' % ident, cacheTime=0, immediate=True)
-                    except:
-                        Log.Error("Unable to reload services in %s", ident)
+    def reload_services(self):
+        """Reload this channels Service Code"""
+        try:
+            Log(u"Plug-in {} is currrently running with old service code - reloading".format(self.identifer))
+            HTTP.Request(u'http://127.0.0.1:32400/:/plugins/{}/reloadServices'.foramt(self.identifier), cacheTime=0, immediate=True)
+        except:
+            Log.Exception(u"Unable to reload services in {}".format(self.indetifier))
 
         # Reload system services
         Core.services.load()
-    """
+
+    def restart_self_silently(self):
+        """Try to restart the channel from Plex API"""
+        HTTP.Request(u'http://127.0.0.1:32400/:/plugins/{}/restart'.format(self.identifier), immediate=True)
+
+    def restart_channel(self):
+        """Try to restart the channel by updating the timestamp of the Info.plist file"""
+        if Core.storage.file_exists(Core.plist_path):
+            Log(u"Restarting {}".format(self.identifier))
+            Core.storage.utime(Core.plist_path)
+            return True
+        Log(u"Failed to restart {} because of missing Info.plist file.".format(self.identifier))
+        return False
 
     def gui_update(self, prefix, oc, repo, branch='master', tag=None, list_view_clients=list):
         if self.is_update_available(repo, branch, tag):
