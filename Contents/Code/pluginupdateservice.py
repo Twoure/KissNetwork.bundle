@@ -292,7 +292,7 @@ class PluginUpdateService(object):
 
         # Check whether this bundle contains services & instruct it to reload if necessary
         if self.bundle.has_services:
-            self.reload_channel_service()
+            self.reload_services()
 
         Log("Installation of {} complete".format(self.identifier))
         return True
