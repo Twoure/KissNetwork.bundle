@@ -9,7 +9,8 @@
 from os.path import split as split_path
 
 #CHECK_INTERVAL              = 0  # CACHE_1HOUR * 12  # set to check every 12 hours
-CHECK_INTERVAL              = CACHE_1MINUTE * 10  # set to check every 10 mins, only for testing
+#CHECK_INTERVAL              = CACHE_1MINUTE * 10  # set to check every 10 mins, only for testing
+CHECK_INTERVAL              = CACHE_1MINUTE * 5  # set to check every 5 mins, only for testing
 HISTORY_KEY                 = u"_{}:History"
 IDENTIFIER_KEY              = "InstallIdentifier"
 NOTES_KEY                   = "InstallNotes"
@@ -165,7 +166,7 @@ class PluginUpdateService(object):
 
     def unstage(self):
         stage_path = Core.storage.join_path(self.stage, self.identifier)
-        Log(u"Unstaging files for {} (removing {})".format(self.identifier, stage_path))
+        Log(u"Unstaging files for {} (removing {})".format(self.identifier, self.stage_path))
         Core.storage.remove_tree(stage_path)
 
     def cleanup(self):
@@ -266,18 +267,18 @@ class PluginUpdateService(object):
 
         finally:
             archive.Close()
-        """
+
         self.clean_old_bundle()
+        """
         if not self.activate():
             Log(u"Unable to activate {}".format(self.identifier))
             if not self.reactivate():
                 Log.Critical(u"Unable to reactivate {}".format(self.identifier))
             self.unstage()
             return False
-
+        """
         self.unstage()
         self.cleanup()
-        """
 
         return True
 
@@ -295,7 +296,7 @@ class PluginUpdateService(object):
         # update current_info
         #self.setup_current_info(self.identifier)
 
-        Log("Installation of {} complete".complet(identifier))
+        Log("Installation of {} complete".format(self.identifier))
         return True
 
     def get_install_info(self, repo, branch='master', tag=None):
@@ -341,6 +342,9 @@ class PluginUpdateService(object):
         return bool(self.update_info)
 
     def update(self, repo, branch='master', tag=None):
+        if not self.update_info:
+            return ObjectContainer(header=u'{}'.format(L('updater.error')), message=u'Unable to install Update')
+
         url = self.archive_url.format(repo, branch if tag == branch else tag)
         tag = tag if tag != branch else None
         version = self.update_info['version']
@@ -396,8 +400,8 @@ class PluginUpdateService(object):
         if self.is_update_available(repo, branch, tag):
             Route.Connect(prefix, self.update)
             oc.add(DirectoryObject(
-                key=Callback(self.update(repo, branch, self.update_info['zipId'])),
+                key=Callback(self.update, repo=repo, branch=branch, tag=self.update_info['zipId']),
                 title=u'%s' % F('updater.update_available', self.update_info['version']),
-                summary=u'{}\n{}'.format(L('updater.install'),  self.update_info['info']),
+                summary=u'{}\n{}'.format(L('updater.install'),  self.update_info['notes']),
                 thumb=R('icon-update.png') if Client.Platform not in list_view_clients else None
                 ))
