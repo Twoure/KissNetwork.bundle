@@ -7,6 +7,7 @@
 # Date: 08/15/2016
 
 from os.path import split as split_path
+import shutil
 
 #CHECK_INTERVAL              = 0  # CACHE_1HOUR * 12  # set to check every 12 hours
 #CHECK_INTERVAL              = CACHE_1MINUTE * 10  # set to check every 10 mins, only for testing
@@ -204,19 +205,23 @@ class PluginUpdateService(object):
 
     def activate(self, fail_count=0):
         stage_path = Core.storage.join_path(self.stage, self.identifier)
-        final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
+        #final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
+        final_path = Core.storage.join_path(self.plugins_path, self.name)
 
         if not Core.storage.dir_exists(stage_path):
             Log(u"Unable to find stage for {}".format(self.identifier))
             return False
 
+        """
         if not Core.storage.dir_exists(final_path):
             Log(u"Unalbe to find final path for {}".format(self.identifier))
             return False
+        """
 
         Log(u"Activating a new installation of {}".format(self.identifier))
         try:
             Core.storage.rename(stage_path, final_path)
+            #shutil.copy2(stage_path, final_path)
         except:
             Log.Exception(u"Unable to activate {} at {}".format(self.identifier, final_path))
             if fail_count < 5:
@@ -270,9 +275,7 @@ class PluginUpdateService(object):
 
         self.clean_old_bundle()
         if not self.activate():
-            Log(u"Unable to activate {}".format(self.identifier))
-            if not self.reactivate():
-                Log.Critical(u"Unable to reactivate {}".format(self.identifier))
+            Log.Critical(u"Unable to activate {}".format(self.identifier))
             self.unstage()
             return False
 
@@ -364,7 +367,7 @@ class PluginUpdateService(object):
             Log(u"Plug-in {} is currrently running with old service code - reloading".format(self.identifer))
             HTTP.Request(u'http://127.0.0.1:32400/:/plugins/{}/reloadServices'.foramt(self.identifier), cacheTime=0, immediate=True)
         except:
-            Log.Exception(u"Unable to reload services in {}".format(self.indetifier))
+            Log.Exception(u"Unable to reload services in {}".format(self.identifier))
 
         # Reload system services
         Core.services.load()
