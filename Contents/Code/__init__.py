@@ -21,16 +21,18 @@ if Dict['init_run'] <= Datetime.FromTimestamp(Core.storage.last_modified(Core.pl
 TITLE = Common.TITLE
 PREFIX = Common.PREFIX
 TIMEOUT = Common.TIMEOUT
+GIT_REPO = 'Twoure/{}.bundle'.format(TITLE)
 
 # import section(s) not included in Plex Plug-In Framework
 import messages
 import requests
 from io import open
 import rhtml as RHTML
-from updater import Updater
+#from updater import Updater
 from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
 from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
+from pluginupdateservice import PluginUpdateService
 
 
 # more global variables
@@ -74,6 +76,7 @@ CACHE_COVER_ICON = 'icon-cache-cover.png'
 ABOUT_ICON = 'icon-about.png'
 
 MC = messages.NewMessageContainer(PREFIX, TITLE)
+Updater = PluginUpdateService(TITLE)
 
 ####################################################################################################
 def Start():
@@ -179,7 +182,9 @@ def MainMenu():
     Dict.Save()
 
     if admin:
-        Updater(PREFIX + '/updater', oc)
+        #Updater(PREFIX + '/updater', oc)
+        #Updater.gui_update(PREFIX + '/updater', oc, GIT_REPO, tag='latest', list_view_clients=Common.LIST_VIEW_CLIENTS)
+        Updater.gui_update(PREFIX + '/updater', oc, GIT_REPO, branch='dev', list_view_clients=Common.LIST_VIEW_CLIENTS)
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']
@@ -213,7 +218,6 @@ def MainMenu():
     elif admin:
         oc.add(PrefsObject(title='Preferences', thumb=prefs_thumb))
 
-    #oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=Callback(test_cover, filename=u'Anime/923209143618l.jpg')))
     oc.add(DirectoryObject(key=Callback(About), title='About / Help', thumb=about_thumb))
 
     if Client.Product in DumbKeyboard.clients:
