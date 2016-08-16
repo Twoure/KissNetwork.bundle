@@ -461,8 +461,8 @@ def RestartChannel():
     """Try to Restart the KissNetwork Channel"""
 
     try:
-        # touch Contents/Code/__init__.py
-        Core.storage.utime(Core.init_path, None)
+        # touch Contents/Info.plist
+        Core.storage.utime(Core.plist_path, None)
         return True
     except Exception as e:
         Log.Error(str(e))

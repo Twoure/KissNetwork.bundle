@@ -11,10 +11,14 @@ Metadata = SharedCodeService.metadata
 KData = SharedCodeService.data.Data
 
 if not Dict['init_run']:
+    Log('KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
     Dict['init_run'] = Datetime.Now()
 
 if Dict['init_run'] <= Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path)):
-    Dict['init_run'] = Datetime.Now()
+    init_datetime = Datetime.Now()
+    Log(u"Updating old init time {} to {}".format(str(Dict['init_urn']), str(init_datetime)))
+    Dict['init_run'] = init_datetime
+    Log("Sending request to re-check headers")
     Thread.Create(Headers.init_headers, init=True)
 
 # set global variables needed for imported packages

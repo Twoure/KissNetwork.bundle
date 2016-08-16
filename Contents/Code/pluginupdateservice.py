@@ -157,6 +157,21 @@ class PluginUpdateService(object):
                 allparts.insert(0, parts[1])
         return allparts
 
+    def copytree(self, src, dst):
+        if not Core.storage.file_exists(dst):
+            Log(u"Creating dir at '{}'".format(dst))
+            Core.storage.make_dirs(dst)
+        Log(u"Recursively copying contents of '{}' into '{}'".format(src, dst))
+        for item in Core.storage.list_dir(src):
+            s = Core.storage.join_path(src, item)
+            d = Core.storage.join_path(dst, item)
+            if Core.storage.dir_exists(s):
+                Log(u"Copying '{}' into '{}'".format(s, d))
+                self.copytree(s, d)
+            else:
+                Log(u"Copying with copy2 '{}' into '{}'".format(s, d))
+                shutil.copy2(s, d)
+
     @property
     def setup_stage(self):
         stage_path = Core.storage.join_path(self.stage, self.identifier)
@@ -205,23 +220,19 @@ class PluginUpdateService(object):
 
     def activate(self, fail_count=0):
         stage_path = Core.storage.join_path(self.stage, self.identifier)
-        #final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
-        final_path = Core.storage.join_path(self.plugins_path, self.name)
+        final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
+        #final_path = Core.storage.join_path(self.plugins_path, self.name+'.test')
 
         if not Core.storage.dir_exists(stage_path):
             Log(u"Unable to find stage for {}".format(self.identifier))
             return False
 
-        """
-        if not Core.storage.dir_exists(final_path):
-            Log(u"Unalbe to find final path for {}".format(self.identifier))
-            return False
-        """
-
         Log(u"Activating a new installation of {}".format(self.identifier))
         try:
-            Core.storage.rename(stage_path, final_path)
-            #shutil.copy2(stage_path, final_path)
+            if not Core.storage.dir_exists(final_path):
+                Core.storage.rename(stage_path, final_path)
+            else:
+                self.copytree(stage_path, final_path)
         except:
             Log.Exception(u"Unable to activate {} at {}".format(self.identifier, final_path))
             if fail_count < 5:
@@ -294,8 +305,8 @@ class PluginUpdateService(object):
         self.add_history_record(action, branch, tag, version, notes)
 
         # Check whether this bundle contains services & instruct it to reload if necessary
-        if self.bundle.has_services:
-            self.reload_services()
+        #if self.bundle.has_services:
+            #self.reload_services()
 
         Log("Installation of {} complete".format(self.identifier))
         return True
@@ -344,14 +355,16 @@ class PluginUpdateService(object):
 
     def update(self, repo, branch='master', tag=None):
         if not self.update_info:
-            return ObjectContainer(header=u'{}'.format(L('updater.error')), message=u'Unable to install Update')
+            try: return ObjectContainer(header=u'{}'.format(L('updater.error')), message=u'Unable to install Update')
+            except: return
 
         url = self.archive_url.format(repo, branch if tag == branch else tag)
         tag = tag if tag != branch else None
         version = self.update_info['version']
         action = 'Preform Update'
         if not self.install(url, action, branch, tag, version, self.update_info['notes']):
-            return ObjectContainer(header=u'{}'.format(L('updater.error')), message=u'Unable to install Update')
+            try: return ObjectContainer(header=u'{}'.format(L('updater.error')), message=u'Unable to install Update')
+            except: return
 
         # cleanup dict info
         self.update_info.clear()
@@ -359,13 +372,14 @@ class PluginUpdateService(object):
 
         Log(u"Update of {} to {} complete".format(self.identifier, version))
         self.restart_channel()
-        return ObjectContainer(header=u'{}'.format(L('updater.success')), message=u'%s' % F('updater.updated', version))
+        try: return ObjectContainer(header=u'{}'.format(L('updater.success')), message=u'%s' % F('updater.updated', version))
+        except: return
 
     def reload_services(self):
         """Reload this channels Service Code"""
         try:
-            Log(u"Plug-in {} is currrently running with old service code - reloading".format(self.identifer))
-            HTTP.Request(u'http://127.0.0.1:32400/:/plugins/{}/reloadServices'.foramt(self.identifier), cacheTime=0, immediate=True)
+            Log(u"Plug-in {} is currrently running with old service code - reloading".format(self.identifier))
+            HTTP.Request(u'http://127.0.0.1:32400/:/plugins/{}/reloadServices'.format(self.identifier), cacheTime=0, immediate=True)
         except:
             Log.Exception(u"Unable to reload services in {}".format(self.identifier))
 
@@ -380,14 +394,14 @@ class PluginUpdateService(object):
         """Try to restart the channel by updating the timestamp of the Info.plist file"""
         if Core.storage.file_exists(Core.plist_path):
             Log(u"Restarting {}".format(self.identifier))
-            Core.storage.utime(Core.plist_path)
+            Core.storage.utime(Core.plist_path, None)
             return True
         Log(u"Failed to restart {} because of missing Info.plist file.".format(self.identifier))
         return False
 
     def gui_update(self, prefix, oc, repo, branch='master', tag=None, list_view_clients=list):
+        Route.Connect(prefix, self.update)
         if self.is_update_available(repo, branch, tag):
-            Route.Connect(prefix, self.update)
             oc.add(DirectoryObject(
                 key=Callback(self.update, repo=repo, branch=branch, tag=self.update_info['zipId']),
                 title=u'%s' % F('updater.update_available', self.update_info['version']),
