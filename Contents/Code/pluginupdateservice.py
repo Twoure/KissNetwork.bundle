@@ -217,6 +217,7 @@ class PluginUpdateService(object):
                 filepaths = self.splitall(filepath)[bundle_index:]
                 if Core.storage.join_path(root, *filepaths[1:]) not in stage_paths:
                     old_item_path = Core.storage.abs_path(Core.storage.join_path(self.plugins_path, root, *filepaths[1:]))
+                    Log(u"File/Folder no longer exists.  Attempting to remove '{}'".format(old_item_path))
                     if Core.storage.dir_exists(old_item_path):
                         Core.storage.remove_tree(old_item_path)
                     elif Core.storage.file_exists(old_item_path):
