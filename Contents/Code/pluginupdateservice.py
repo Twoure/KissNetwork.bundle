@@ -172,6 +172,14 @@ class PluginUpdateService(object):
                 Log(u"Copying with copy2 '{}' into '{}'".format(s, d))
                 shutil.copy2(s, d)
 
+    def datetime_to_utc(self, dt):
+        n = Datetime.Now()
+        nutc = Datetime.UTCNow()
+        if n < nutc:
+            return dt + (nutc - n)
+        else:
+            return dt - (n - nutc)
+
     @property
     def setup_stage(self):
         stage_path = Core.storage.join_path(self.stage, self.identifier)
@@ -322,7 +330,7 @@ class PluginUpdateService(object):
                 zipId = info['tag_name']
                 version = zipId
             else:
-                date = Datetime.ParseDate(info['commit']['committer']['date']).strftime("%Y-%m-%d %H:%M:%S")
+                date = Datetime.ParseDate(info['commit']['author']['date'][:-1], "%Y-%m-%dT%H:%M:%S")
                 message = info['commit']['message']
                 zipId = branch
                 version = str(date)
@@ -345,14 +353,14 @@ class PluginUpdateService(object):
         if 'init_run' in Dict:
             date = Dict['init_run']
         else:
-            date = Datetime.Now()
+            date = Datetime.UTCNow()
             Dict['init_run'] = date
             Dict.Save()
 
-        Log(u"Is Repo datetime '{}' > init_run datetime '{}'? If so then present the update function".format(str(self.temp_info['date']), str(date.strftime("%Y-%m-%d %H:%M:%S"))))
+        Log(u"Is Repo datetime '{}' > init_run datetime '{}'? If so then present the update function".format(self.temp_info['date'], date))
         Log(u"Current Contents of update_info = '{}'".format(self.update_info))
 
-        if self.temp_info['date'] > date.strftime("%Y-%m-%d %H:%M:%S"):
+        if self.temp_info['date'] > date:
             self.update_info.update(self.temp_info.copy())
         return bool(self.update_info)
 

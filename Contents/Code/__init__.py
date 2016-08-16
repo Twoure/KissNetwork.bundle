@@ -12,11 +12,13 @@ KData = SharedCodeService.data.Data
 
 if not Dict['init_run']:
     Log('KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
-    Dict['init_run'] = Datetime.Now()
+    Dict['init_run'] = Datetime.UTCNow()
+Log(u"Dict['init_run'] = '{}'".format(Dict['init_run']))
 
-if Dict['init_run'] <= Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path)):
-    init_datetime = Datetime.Now()
-    Log(u"Updating old init time {} to {}".format(str(Dict['init_urn']), str(init_datetime)))
+Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.datetime_to_utc(Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path)))))
+if Dict['init_run'] <= Common.datetime_to_utc(Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path))):
+    init_datetime = Datetime.UTCNow()
+    Log(u"Updating old init time {} to {}".format(Dict['init_run'], init_datetime))
     Dict['init_run'] = init_datetime
     Log("Sending request to re-check headers")
     Thread.Create(Headers.init_headers, init=True)
