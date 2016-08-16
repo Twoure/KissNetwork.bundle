@@ -349,6 +349,9 @@ class PluginUpdateService(object):
             Dict['init_run'] = date
             Dict.Save()
 
+        Log(u"Is Repo datetime '{}' > init_run datetime '{}'? If so then present the update function".format(str(self.temp_info['date']), str(date.strftime("%Y-%m-%d %H:%M:%S"))))
+        Log(u"Current Contents of update_info = '{}'".format(self.update_info))
+
         if self.temp_info['date'] > date.strftime("%Y-%m-%d %H:%M:%S"):
             self.update_info.update(self.temp_info.copy())
         return bool(self.update_info)
