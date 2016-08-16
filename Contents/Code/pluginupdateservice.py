@@ -1,17 +1,15 @@
 #!/usr/bin/env python
-# Channel Updater
+# Plugin Update Service Code
 #------------------------------------------------------------
 # Code modified from installservice.py and bundleservice.py
 #------------------------------------------------------------
-# Edited by: Twoure
-# Date: 08/15/2016
+# Twoure - 08/16/2016
 
 from os.path import split as split_path
 import shutil
 
-#CHECK_INTERVAL              = 0  # CACHE_1HOUR * 12  # set to check every 12 hours
-#CHECK_INTERVAL              = CACHE_1MINUTE * 10  # set to check every 10 mins, only for testing
-CHECK_INTERVAL              = CACHE_1MINUTE * 5  # set to check every 5 mins, only for testing
+#CHECK_INTERVAL              = CACHE_1MINUTE * 5  # cache Github request URL for 5 mins. ONLY for testing
+CHECK_INTERVAL              = CACHE_1HOUR * 12  # cache Github request URL for 12 hours
 HISTORY_KEY                 = u"_{}:History"
 IDENTIFIER_KEY              = "InstallIdentifier"
 NOTES_KEY                   = "InstallNotes"
@@ -54,6 +52,10 @@ class BundleInfo(object):
 
 
 class PluginUpdateService(object):
+    """
+    Initialize by setting name to the Bundle's name
+    Example: if bundle is 'KissNetwork.bundle' then name='KissNetwork'
+    """
     def __init__(self, name):
         Log.Debug(u"Starting the {} Install Service".format(name))
         self.name = name
@@ -177,8 +179,7 @@ class PluginUpdateService(object):
         nutc = Datetime.UTCNow()
         if n < nutc:
             return dt + (nutc - n)
-        else:
-            return dt - (n - nutc)
+        return dt - (n - nutc)
 
     @property
     def setup_stage(self):
@@ -229,7 +230,6 @@ class PluginUpdateService(object):
     def activate(self, fail_count=0):
         stage_path = Core.storage.join_path(self.stage, self.identifier)
         final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
-        #final_path = Core.storage.join_path(self.plugins_path, self.name+'.test')
 
         if not Core.storage.dir_exists(stage_path):
             Log(u"Unable to find stage for {}".format(self.identifier))
@@ -321,7 +321,8 @@ class PluginUpdateService(object):
 
     def get_install_info(self, repo, branch='master', tag=None):
         url = self.release_url.format(repo, tag) if tag else self.commits_url.format(repo, branch)
-        Log(u"Fetching {} update info from {}".format(self.identifier, url))
+        Log(u"Fetching {} update info from '{}'".format(self.identifier, url))
+        Log(u"CHECK_INTERVAL = '{}'".format(Datetime.Delta(seconds=CHECK_INTERVAL)))
         try:
             info = JSON.ObjectFromURL(url, cacheTime=CHECK_INTERVAL, timeout=5)
             if tag:
@@ -357,8 +358,8 @@ class PluginUpdateService(object):
             Dict['init_run'] = date
             Dict.Save()
 
-        Log(u"Is Repo datetime '{}' > init_run datetime '{}'? If so then present the update function".format(self.temp_info['date'], date))
-        Log(u"Current Contents of update_info = '{}'".format(self.update_info))
+        #Log(u"Is Repo datetime '{}' > init_run datetime '{}'? If so then present the update function".format(self.temp_info['date'], date))
+        #Log(u"Current Contents of update_info = '{}'".format(self.update_info))
 
         if self.temp_info['date'] > date:
             self.update_info.update(self.temp_info.copy())
@@ -411,7 +412,39 @@ class PluginUpdateService(object):
         return False
 
     def gui_update(self, prefix, oc, repo, branch='master', tag=None, list_view_clients=list):
-        Route.Connect(prefix, self.update)
+        """
+        Create route for updater, and check for the latest release or commit depending on branch or tag inputs.
+        Update option will on appear when an update is available.
+        Change CHECK_INTERVAL to desired interval to allow for checking updates.
+        CHECK_INTERVAL = cache time for Github request URL.
+        Requires 'icon-update.png' within channel Resources directory for icon to display in menu, otherwise will be blank icon
+
+        Input Help:
+            prefix (required)
+                Pass-in the channel's prefix
+                Example: prefix='/video/kissnetwork/updater'
+
+            oc (required)
+                Pass-in the channel's current ObjectContainer so the updater can be added as a DirectoryObject
+
+            repo (required)
+                Pass-in the channel's Github repository information
+                Example: repo='Twoure/KissNetwork.bundle'
+
+            branch (optional)
+                Pass-in the channels'Github repository branch to track
+                Default: branch='master'
+                Example: branch='dev'
+
+            tag (optional)
+                Use tag if wanting to track Github releases
+                If tag is set, then branch is ignored...
+                Example: if branch='dev' and tag='latest' then the updater will only check for the latest release
+
+            list_view_clinets (optional)
+                Pass in a list of Client.Platform values to not display the updater icon on
+                Example: list_view_clients=['Android', 'iOS'], will set icon to None for Android and iOS clients.
+        """
         if self.is_update_available(repo, branch, tag):
             oc.add(DirectoryObject(
                 key=Callback(self.update, repo=repo, branch=branch, tag=self.update_info['zipId']),

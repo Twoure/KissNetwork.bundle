@@ -15,8 +15,8 @@ if not Dict['init_run']:
     Dict['init_run'] = Datetime.UTCNow()
 Log(u"Dict['init_run'] = '{}'".format(Dict['init_run']))
 
-Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.datetime_to_utc(Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path)))))
-if Dict['init_run'] <= Common.datetime_to_utc(Datetime.FromTimestamp(Core.storage.last_modified(Core.plist_path))):
+Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.item_last_modified(Core.plist_path, utc=True)))
+if Dict['init_run'] <= Common.item_last_modified(Core.plist_path, utc=True):
     init_datetime = Datetime.UTCNow()
     Log(u"Updating old init time {} to {}".format(Dict['init_run'], init_datetime))
     Dict['init_run'] = init_datetime

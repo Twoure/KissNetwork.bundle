@@ -35,8 +35,15 @@ def datetime_to_utc(dt):
     nutc = datetime.datetime.utcnow()
     if n < nutc:
         return dt + (nutc - n)
-    else:
-        return dt - (n - nutc)
+    return dt - (n - nutc)
+
+####################################################################################################
+def item_last_modified(path, utc=False):
+    if os.path.exists(path):
+        if utc:
+            return datetime_to_utc(datetime.datetime.fromtimestamp(os.path.getmtime(path)))
+        return datetime.datetime.fromtimestamp(os.path.getmtime(path))
+    return False
 
 ####################################################################################################
 def TypeTitleList():
