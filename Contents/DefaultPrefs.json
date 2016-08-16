@@ -86,6 +86,13 @@
     "default": "False"
   },
   {
+    "id": "update_channel",
+    "label": "Update Channel",
+    "type": "enum",
+    "values": ["Stable", "Development"],
+    "default": "Stable"
+  },
+  {
     "id": "debug",
     "label": "Enable Debug Logging",
     "type": "bool",

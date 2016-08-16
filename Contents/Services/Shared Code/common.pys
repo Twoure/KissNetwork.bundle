@@ -35,6 +35,8 @@ def datetime_to_utc(dt):
     nutc = datetime.datetime.utcnow()
     if n < nutc:
         return dt + (nutc - n)
+    elif n.strftime("%Y-%m-%d %H:%M:%S") == nutc.strftime("%Y-%m-%d %H:%M:%S"):
+        return dt
     return dt - (n - nutc)
 
 ####################################################################################################

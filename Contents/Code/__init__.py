@@ -3,7 +3,6 @@
 #                                   KissNetwork Plex Channel                                       #
 #                                                                                                  #
 ####################################################################################################
-# dummy edit for updater test #
 # import Shared Service Code
 Domain = SharedCodeService.domain
 Headers = SharedCodeService.kissheaders.Headers
@@ -35,11 +34,10 @@ import messages
 import requests
 from io import open
 import rhtml as RHTML
-#from updater import Updater
-from DumbTools import DumbKeyboard, DumbPrefs
 from AuthTools import CheckAdmin
-from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
+from DumbTools import DumbKeyboard, DumbPrefs
 from pluginupdateservice import PluginUpdateService
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 
 
 # more global variables
@@ -189,13 +187,18 @@ def MainMenu():
     Dict.Save()
 
     if admin:
-        #Updater(PREFIX + '/updater', oc)
-        Updater.gui_update(PREFIX + '/updater', oc, GIT_REPO, branch='dev', list_view_clients=Common.LIST_VIEW_CLIENTS)
-        """
-        Updater.gui_update(
-            prefix=PREFIX + '/updater', oc=oc, repo=GIT_REPO,
-            tag='latest', list_view_clients=Common.LIST_VIEW_CLIENTS)
-        """
+        if Prefs['update_channel'] == 'Stable':
+            # Setup Updater to track latest release
+            Updater.gui_update(
+                PREFIX + '/updater', oc, GIT_REPO,
+                tag='latest', list_view_clients=Common.LIST_VIEW_CLIENTS
+                )
+        else:
+            # Setup Updater to track branch commits
+            Updater.gui_update(
+                PREFIX + '/updater', oc, GIT_REPO,
+                branch='dev', list_view_clients=Common.LIST_VIEW_CLIENTS
+                )
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
     prefs_names = ['kissanime', 'kissasian', 'kisscartoon', 'kissmanga', 'kisscomic']

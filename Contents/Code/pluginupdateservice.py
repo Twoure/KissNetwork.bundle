@@ -59,14 +59,12 @@ class PluginUpdateService(object):
     def __init__(self, name):
         Log.Debug(u"Starting the {} Install Service".format(name))
         self.name = name
-        self.installing = False
         self.plugins_path = Core.storage.join_path(Core.app_support_path, 'Plug-ins')
         self.bundle = BundleInfo(Core.storage.join_path(self.plugins_path, name+'.bundle'), name+'.bundle')
         self.identifier = self.bundle.identifier
         self.stage = Core.storage.data_item_path('Stage')
         self.stage_path = Core.storage.join_path(self.stage, self.identifier)
         self.inactive = Core.storage.data_item_path('Deactivated')
-        self.inactive_path = Core.storage.join_path(self.inactive, self.identifier)
         self.archive_url = u'https://github.com/{}/archive/{}.zip'
         self.commits_url = u'https://api.github.com/repos/{}/commits/{}'
         self.release_url = u'https://api.github.com/repos/{}/releases/{}'
@@ -179,20 +177,20 @@ class PluginUpdateService(object):
         nutc = Datetime.UTCNow()
         if n < nutc:
             return dt + (nutc - n)
+        elif n.strftime("%Y-%m-%d %H:%M:%S") == nutc.strftime("%Y-%m-%d %H:%M:%S"):
+            return dt
         return dt - (n - nutc)
 
     @property
     def setup_stage(self):
-        stage_path = Core.storage.join_path(self.stage, self.identifier)
-        Log(u"Setting up staging area for {} at {}".format(self.identifier, stage_path))
-        Core.storage.remove_tree(stage_path)
-        Core.storage.make_dirs(stage_path)
-        return stage_path
+        Log(u"Setting up staging area for {} at {}".format(self.identifier, self.stage_path))
+        Core.storage.remove_tree(self.stage_path)
+        Core.storage.make_dirs(self.stage_path)
+        return self.stage_path
 
     def unstage(self):
-        stage_path = Core.storage.join_path(self.stage, self.identifier)
         Log(u"Unstaging files for {} (removing {})".format(self.identifier, self.stage_path))
-        Core.storage.remove_tree(stage_path)
+        Core.storage.remove_tree(self.stage_path)
 
     def cleanup(self):
         inactive_path = Core.storage.join_path(self.inactive, self.identifier)
@@ -203,14 +201,13 @@ class PluginUpdateService(object):
     def clean_old_bundle(self):
         stage_paths = list()
         root = self.bundle.name
-        stage_path = Core.storage.abs_path(Core.storage.join_path(self.stage, self.identifier))
         bundle_path = Core.storage.abs_path(self.bundle.path)
-        stage_index = int([i for i, l in enumerate(self.splitall(stage_path)) if l == self.identifier][1])
+        stage_index = int([i for i, l in enumerate(self.splitall(self.stage_path)) if l == self.identifier][1])
         bundle_index = int([i for i, l in enumerate(self.splitall(bundle_path)) if l == root][0])
 
-        for dirpath, dirname, filenames in Core.storage.walk(stage_path):
+        for dirpath, dirname, filenames in Core.storage.walk(self.stage_path):
             for f in filenames:
-                filepath = Core.storage.join_path(stage_path, dirpath, f)
+                filepath = Core.storage.join_path(self.stage_path, dirpath, f)
                 filepaths = self.splitall(filepath)[stage_index:]
                 stage_paths.append(Core.storage.join_path(root, *filepaths[1:]))
 
@@ -228,19 +225,18 @@ class PluginUpdateService(object):
                         Log.Warn(u"Cannot Remove Old \'{}\' file/folder".format(old_item_path))
 
     def activate(self, fail_count=0):
-        stage_path = Core.storage.join_path(self.stage, self.identifier)
         final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
 
-        if not Core.storage.dir_exists(stage_path):
+        if not Core.storage.dir_exists(self.stage_path):
             Log(u"Unable to find stage for {}".format(self.identifier))
             return False
 
         Log(u"Activating a new installation of {}".format(self.identifier))
         try:
             if not Core.storage.dir_exists(final_path):
-                Core.storage.rename(stage_path, final_path)
+                Core.storage.rename(self.stage_path, final_path)
             else:
-                self.copytree(stage_path, final_path)
+                self.copytree(self.stage_path, final_path)
         except:
             Log.Exception(u"Unable to activate {} at {}".format(self.identifier, final_path))
             if fail_count < 5:
@@ -252,7 +248,8 @@ class PluginUpdateService(object):
                 return False
         return True
 
-    def install_zip_from_url(self, url, stage_path):
+    def install_zip_from_url(self, url):
+        stage_path = self.setup_stage
         try:
             archive = Archive.Zip(HTTP.Request(url, cacheTime=0))
         except:
@@ -306,7 +303,7 @@ class PluginUpdateService(object):
     def install(self, url, action, branch='master', tag=None, version=None, notes=None):
         Log(u"Preforming Update of {}".format(self.identifier))
 
-        if not self.install_zip_from_url(url, self.setup_stage):
+        if not self.install_zip_from_url(url):
             return False
 
         # add install info to history record
@@ -326,7 +323,7 @@ class PluginUpdateService(object):
         try:
             info = JSON.ObjectFromURL(url, cacheTime=CHECK_INTERVAL, timeout=5)
             if tag:
-                date = Datetime.ParseDate(info['published_at']).strftime("%Y-%m-%d %H:%M:%S")
+                date = Datetime.ParseDate(info['published_at'][:-1], "%Y-%m-%dT%H:%M:%S")
                 message = info['body']
                 zipId = info['tag_name']
                 version = zipId
