@@ -445,6 +445,7 @@ class PluginUpdateService(object):
                 Pass in a list of Client.Platform values to not display the updater icon on
                 Example: list_view_clients=['Android', 'iOS'], will set icon to None for Android and iOS clients.
         """
+        Route.Connect(prefix, self.update)
         if self.is_update_available(repo, branch, tag):
             oc.add(DirectoryObject(
                 key=Callback(self.update, repo=repo, branch=branch, tag=self.update_info['zipId']),
