@@ -97,8 +97,8 @@ def MediaObjectsForURL(url):
     """
 
     Log.Debug('*' * 80)
-    mo = []
-    fmt_list = [('1080p', 'm37', 3000), ('720p', 'm22', 1500), ('480p', 'm59', 1125), ('360p', 'm18', 750)]
+    mo = list()
+    fmt_list = [('1080p', 'm37', 5000), ('720p', 'm22', 2500), ('480p', 'm59', 1125), ('360p', 'm18', 650)]
     url = Common.CorrectURL(url)
 
     # create media objects for each video quality
