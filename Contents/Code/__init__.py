@@ -17,7 +17,7 @@ Log(u"Dict['init_run'] = '{}'".format(Dict['init_run']))
 
 Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.item_last_modified(Core.plist_path, utc=True)))
 if Dict['init_run'] <= Common.item_last_modified(Core.plist_path, utc=True):
-    init_datetime = Datetime.UTCNow()
+    init_datetime = Common.item_last_modified(Core.plist_path, utc=True)
     Log(u"Updating old init time {} to {}".format(Dict['init_run'], init_datetime))
     Dict['init_run'] = init_datetime
     Log("Sending request to re-check headers")
@@ -1740,8 +1740,8 @@ def GetDirSize(start_path='.'):
         for dirpath, dirnames, filenames in Core.storage.walk(start_path):
             for f in filenames:
                 fp = Core.storage.join_path(dirpath, f)
-                total_size += Core.storage.file_size(fp)
                 if not Core.storage.dir_exists(fp):
+                    total_size += Core.storage.file_size(fp)
                     count += 1
 
         if total_size > float(1000000000):

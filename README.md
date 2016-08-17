@@ -21,6 +21,7 @@ KissNetwork
     - [Allow Adult Content](#allow-adult-content)
     - [Enable Developer Tools](#enable-developer-tools)
     - [Auth Admin Through Plex.tv](#auth-admin-through-plextv)
+    - [Update Channel](#update-channel)
     - [Enable Debug Logging](#enable-debug-logging)
   - [About / Help](#about--help)
     - [Developer Tools](#developer-tools)
@@ -28,7 +29,6 @@ KissNetwork
       - [Cache Tools](#cache-tools)
       - [Domain Tools](#domain-tools)
       - [Header Tools](#header-tools)
-  - [Updater](#updater)
 - [Issues](#issues)
   - [General](#general)
   - [Anime, Cartoon, Drama, Manga](#anime-cartoon-drama-manga)
@@ -77,9 +77,9 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
   - OpenPHT (Ubuntu 14.04 LTS, v1.6.2)
-  - Android (4.4.2) (Plex Client App, v4.29.1.7)
+  - Android (4.4.2) (Plex Client App, v4.30.1.170)
   - Plex Media Player (1.1.4)
-  - Plex/Web (2.7.7)
+  - Plex/Web (2.7.8)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
@@ -154,6 +154,12 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
   - **Note:** If PMS _NOT_ setup as _Plex Home_ then all shared users will have admin access
 - If using Plex Web Client on Host Server Machine and not signed-in, then no Plex Token will be available to authenticate.  In this use case, the assumption is you are the admin so the channel will treat you as such.
 
+##### Update Channel
+- Select channel to track updates from.  Updater caches the Github request URL for 12 hours.
+- Update button visible only to PMS admin and when update avalible.
+- **Stable(_default_):** Tracks the latest release, same as the old updater
+- **Development:** Tracks the latest commit within the [dev]() branch
+
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
 
@@ -193,10 +199,6 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - **Update Anime Headers:** Update Anime Headers in the `Header_Dict` file only
 - **Update... :** Same for Drama, Cartoon, Comic, and Manga
 
-### Updater
-- Update button visible only to PMS admin and when update avalible
-- Checks KissNetwork.bundle Github [atom feed](https://github.com/Twoure/KissNetwork.bundle/commits/master.atom) every 12 hours.
-
 [Table of Contents](#table-of-contents)
 
 ## Issues
@@ -231,7 +233,6 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 ## Plans
 
 ##### General
-- Might look into grouping seasons of the same show for the directory list
 - Continue Improving Metadata
 - Change Itempage to TVShowObject, so have Bookmark function within TVShowObject.
 

@@ -444,7 +444,7 @@ class PluginUpdateService(object):
                 If tag is set, then branch is ignored...
                 Example: if branch='dev' and tag='latest' then the updater will only check for the latest release
 
-            list_view_clinets (optional)
+            list_view_clients (optional)
                 Pass in a list of Client.Platform values to not display the updater icon on
                 Example: list_view_clients=['Android', 'iOS'], will set icon to None for Android and iOS clients.
         """

@@ -31,6 +31,12 @@
     - Added cached data migration/cleaning
     - Added clear bookmark `OK?` function, so will no longer clear bookmarks on first press, and will ask for confirmation
     - Added error logging for `Service Unavailable` and `Human Verification`. URLs do NOT Cache upon errors.
+    - Added New `PluginUpdateService` and removed old `updater.py`
+      - Allows for either tracking branch commits or releases
+      - New _Update Channel_ option within Prefs: Stable = track release, Development = track commits within `dev` branch
+      - Downloads new code within a staged path (similar to Plex's channel install service)
+      - Then differences the old bundle with the new code, and removes old files/folders from current bundle
+      - After unused files/folders are removed, the new code is copyied into the bundles directory (stage code is removed after copy), then restarts the channel to apply changes
 
 ##### 1.2.4
 - _07/13/2016_
