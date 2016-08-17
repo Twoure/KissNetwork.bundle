@@ -16,14 +16,12 @@ if not Dict['init_run']:
 Log(u"Dict['init_run'] = '{}'".format(Dict['init_run']))
 
 Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.item_last_modified(Core.plist_path, utc=True)))
-"""
 if Dict['init_run'] <= Common.item_last_modified(Core.plist_path, utc=True):
     init_datetime = Datetime.UTCNow()
     Log(u"Updating old init time {} to {}".format(Dict['init_run'], init_datetime))
     Dict['init_run'] = init_datetime
     Log("Sending request to re-check headers")
     Thread.Create(Headers.init_headers, init=True)
-"""
 
 # set global variables needed for imported packages
 TITLE = Common.TITLE

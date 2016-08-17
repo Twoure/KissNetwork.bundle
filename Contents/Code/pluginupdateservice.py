@@ -8,8 +8,8 @@
 from os.path import split as split_path
 import shutil
 
-CHECK_INTERVAL              = CACHE_1MINUTE * 5  # cache Github request URL for 5 mins. ONLY for testing
-#CHECK_INTERVAL              = CACHE_1HOUR * 12  # cache Github request URL for 12 hours
+#CHECK_INTERVAL              = CACHE_1MINUTE * 5  # cache Github request URL for 5 mins. ONLY for testing
+CHECK_INTERVAL              = CACHE_1HOUR * 12  # cache Github request URL for 12 hours
 HISTORY_KEY                 = u"_{}:History"
 IDENTIFIER_KEY              = "InstallIdentifier"
 NOTES_KEY                   = "InstallNotes"
@@ -131,15 +131,16 @@ class PluginUpdateService(object):
         return record[0]
 
     def setup_current_info(self):
+        self.current_info.clear()
         record = self.read_last_history_record()
         if record:
-            info = dict()
-            info['version'] = record[VERSION_KEY]
-            info['branch'] = record[BRANCH_KEY]
+            self.current_info.update({'date': record[DATE_KEY], 'branch': record[BRANCH_KEY]})
             if NOTES_KEY in record.keys():
-                info['notes'] = record[NOTES_KEY]
-
-            self.current_info.update(info)
+                self.current_info.update({'notes': record[NOTES_KEY]})
+            if VERSION_KEY in record.keys():
+                self.current_info.update({'version': record[VERSION_KEY]})
+            if TAG_KEY in record.keys():
+                self.current_info.update({'tag': record[TAG_KEY]})
         return bool(self.current_info)
 
     def splitall(self, path):
@@ -205,8 +206,6 @@ class PluginUpdateService(object):
         bundle_path = Core.storage.abs_path(self.bundle.path).lstrip('\\\?')
         stage_index = int([i for i, l in enumerate(self.splitall(stage_path)) if l == self.identifier][1])
         bundle_index = int([i for i, l in enumerate(self.splitall(bundle_path)) if l == root][0])
-        Log(u"Stage Index '{}' | Bundle Index '{}'".format(stage_index, bundle_index))
-        Log(u"Root = '{}'".format(root))
 
         for dirpath, dirname, filenames in Core.storage.walk(stage_path):
             for f in filenames:
@@ -214,24 +213,22 @@ class PluginUpdateService(object):
                 filepaths = self.splitall(filepath)[stage_index:]
                 stage_paths.append(Core.storage.join_path(root, *filepaths[1:]))
 
-        Log(u"stage_paths = {}".format(stage_paths))
         for dirpath, dirname, filenames in Core.storage.walk(bundle_path):
             for f in filenames:
                 filepath = Core.storage.join_path(bundle_path, dirpath, f).lstrip('\\\?')
                 filepaths = self.splitall(filepath)[bundle_index:]
-                Log(u"path info >>>\nfilepath = '{}'\nfilepaths = '{}'\nis part not in stage_paths? = '{}' | '{}'".format(
-                    filepath, filepaths, Core.storage.join_path(root, *filepaths[1:]),
-                    Core.storage.join_path(root, *filepaths[1:]) not in stage_paths
-                    ))
                 if Core.storage.join_path(root, *filepaths[1:]) not in stage_paths:
                     old_item_path = Core.storage.abs_path(Core.storage.join_path(self.plugins_path, root, *filepaths[1:]))
-                    Log(u"File/Folder no longer exists.  Attempting to remove '{}'".format(old_item_path))
-                    if Core.storage.dir_exists(old_item_path):
-                        Core.storage.remove_tree(old_item_path)
-                    elif Core.storage.file_exists(old_item_path):
-                        Core.storage.remove(old_item_path)
-                    else:
-                        Log.Warn(u"Cannot Remove Old \'{}\' file/folder".format(old_item_path))
+                    Log(u"File/Folder does not exists in current Version.  Attempting to remove '{}'".format(old_item_path))
+                    try:
+                        if Core.storage.dir_exists(old_item_path):
+                            Core.storage.remove_tree(old_item_path)
+                        elif Core.storage.file_exists(old_item_path):
+                            Core.storage.remove(old_item_path)
+                        else:
+                            Log.Warn(u"Cannot Remove Old '{}' file/folder, does not exists.".format(old_item_path))
+                    except:
+                        Log.Exception(u"Error Removing Old '{}' file/folder".format(old_item_path))
 
     def activate(self, fail_count=0):
         final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
