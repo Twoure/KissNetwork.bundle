@@ -8,8 +8,8 @@
 from os.path import split as split_path
 import shutil
 
-#CHECK_INTERVAL              = CACHE_1MINUTE * 5  # cache Github request URL for 5 mins. ONLY for testing
-CHECK_INTERVAL              = CACHE_1HOUR * 12  # cache Github request URL for 12 hours
+CHECK_INTERVAL              = CACHE_1MINUTE * 5  # cache Github request URL for 5 mins. ONLY for testing
+#CHECK_INTERVAL              = CACHE_1HOUR * 12  # cache Github request URL for 12 hours
 HISTORY_KEY                 = u"_{}:History"
 IDENTIFIER_KEY              = "InstallIdentifier"
 NOTES_KEY                   = "InstallNotes"
@@ -201,20 +201,28 @@ class PluginUpdateService(object):
     def clean_old_bundle(self):
         stage_paths = list()
         root = self.bundle.name
-        bundle_path = Core.storage.abs_path(self.bundle.path)
-        stage_index = int([i for i, l in enumerate(self.splitall(self.stage_path)) if l == self.identifier][1])
+        stage_path = self.stage_path.lstrip('\\\?')
+        bundle_path = Core.storage.abs_path(self.bundle.path).lstrip('\\\?')
+        stage_index = int([i for i, l in enumerate(self.splitall(stage_path)) if l == self.identifier][1])
         bundle_index = int([i for i, l in enumerate(self.splitall(bundle_path)) if l == root][0])
+        Log(u"Stage Index '{}' | Bundle Index '{}'".format(stage_index, bundle_index))
+        Log(u"Root = '{}'".format(root))
 
-        for dirpath, dirname, filenames in Core.storage.walk(self.stage_path):
+        for dirpath, dirname, filenames in Core.storage.walk(stage_path):
             for f in filenames:
-                filepath = Core.storage.join_path(self.stage_path, dirpath, f)
+                filepath = Core.storage.join_path(stage_path, dirpath, f).lstrip('\\\?')
                 filepaths = self.splitall(filepath)[stage_index:]
                 stage_paths.append(Core.storage.join_path(root, *filepaths[1:]))
 
+        Log(u"stage_paths = {}".format(stage_paths))
         for dirpath, dirname, filenames in Core.storage.walk(bundle_path):
             for f in filenames:
-                filepath = Core.storage.join_path(bundle_path, dirpath, f)
+                filepath = Core.storage.join_path(bundle_path, dirpath, f).lstrip('\\\?')
                 filepaths = self.splitall(filepath)[bundle_index:]
+                Log(u"path info >>>\nfilepath = '{}'\nfilepaths = '{}'\nis part not in stage_paths? = '{}' | '{}'".format(
+                    filepath, filepaths, Core.storage.join_path(root, *filepaths[1:]),
+                    Core.storage.join_path(root, *filepaths[1:]) not in stage_paths
+                    ))
                 if Core.storage.join_path(root, *filepaths[1:]) not in stage_paths:
                     old_item_path = Core.storage.abs_path(Core.storage.join_path(self.plugins_path, root, *filepaths[1:]))
                     Log(u"File/Folder no longer exists.  Attempting to remove '{}'".format(old_item_path))
