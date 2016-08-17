@@ -67,7 +67,7 @@ class KissHeaders(object):
             Log.Error('* cannot create new header dict')
             return False
         if not self.load_dict():
-            Log.Error('* tried re-save header dict but failed.')
+            Log.Error('* tried to re-save header dict but failed.')
             return False
         return bool(self.header_data)
 
@@ -98,7 +98,7 @@ class KissHeaders(object):
                     }
                 }
         except:
-            Log.Exception(u'* set_header Error: >>>')
+            Log.Exception(u'* set_header() Error: >>>')
             return {}
 
     def create_dict(self):
@@ -115,7 +115,7 @@ class KissHeaders(object):
         if not self.header_data:
             self.load_dict()
             if not self.header_data:
-                Log.Error('* Cannot load {} header, because header file does not exist'.format(type_title))
+                Log.Error(u'* Cannot load {} header, because header file does not exist'.format(type_title))
                 return {}
 
         base_url = Common.GetBaseURL(url)
@@ -129,7 +129,7 @@ class KissHeaders(object):
                     update2 = True if update else (True if current_timestamp >= expire else False)
 
             if update2:
-                Log.Debug('* Time to update {} cookies'.format(type_title))
+                Log.Debug(u'* {} cookies expired. Collecting fresh cookies.'.format(type_title))
 
                 self.header_data.update(self.set_header(base_url))
 
@@ -143,7 +143,7 @@ class KissHeaders(object):
                     current_datetime = Datetime.FromTimestamp(int(current_timestamp))
                     expire_datetime = Datetime.FromTimestamp(int(expire))
                     deltatime = str(expire_datetime - current_datetime)
-                    Log.Debug('* Time left until {} cookies need to be updated = {}'.format(type_title, deltatime))
+                    Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
                 else:
                     Log.Warn('* No Expire time within {} cookies'.format(type_title))
         else:
@@ -171,16 +171,16 @@ class KissHeaders(object):
                 current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
                 if current_timestamp >= expire:
                     updated = True
-                    Log.Debug('* Time to update {} cookies'.format(type_title))
+                    Log.Debug(u'* {} cookies expired. Collecting fresh cookies.'.format(type_title))
                     self.header_data.update(self.set_header(base_url))
                 else:
                     if 'expire' in self.header_data[type_title].keys():
                         current_datetime = Datetime.FromTimestamp(int(current_timestamp))
                         expire_datetime = Datetime.FromTimestamp(int(expire))
                         deltatime = str(expire_datetime - current_datetime)
-                        Log.Debug('* Time left until {} cookies need to be updated = {}'.format(type_title, deltatime))
+                        Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
                     else:
-                        Log.Warn('* No Expire time within {} cookies'.format(type_title))
+                        Log.Warn(u'* No Expire time within {} cookies'.format(type_title))
 
         if updated:
             if not self.save_dict():
