@@ -444,12 +444,11 @@ def SetUpCFTest(test):
             Log.Info(cftest)
             Dict['cfscrape_test'] = True
             Dict.Save()
-        except Exception as e:
+        except:
             Dict['cfscrape_test'] = False
             Dict.Save()
             Log.Error('*' * 80)
-            Log.Error('----------{} Failed CFTest----------'.format(test))
-            Log.Error(str(e))
+            Log.Exception('----------{} Failed CFTest----------'.format(test))
             Log.Error('*' * 80)
     return
 
@@ -461,8 +460,8 @@ def RestartChannel():
         # touch Contents/Info.plist
         Core.storage.utime(Core.plist_path, None)
         return True
-    except Exception as e:
-        Log.Error(str(e))
+    except:
+        Log.Exception('* Failed to Restart KissNetwork')
     return False
 
 ####################################################################################################

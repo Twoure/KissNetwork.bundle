@@ -122,7 +122,7 @@ def LoadDomainDict():
     """load domain dict to json format string"""
 
     if os.path.isfile(DOMAIN_FILE) and os.stat(DOMAIN_FILE).st_size != 0:
-        with open(DOMAIN_FILE) as data_file:
+        with open(DOMAIN_FILE, 'rb') as data_file:
             data = json.load(data_file)
 
         return data
