@@ -331,7 +331,7 @@ def LoadBMBackup(filename):
 
     filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, filename))
     if filename and Core.storage.file_exists(filepath) and (Core.storage.file_size(filepath) != 0):
-        with open(filepath) as datafile:
+        with open(filepath, 'rb') as datafile:
             data = json.load(datafile)
         return data
     return False
