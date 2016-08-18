@@ -1795,7 +1795,7 @@ def GetThumb(cover_url, cover_file):
                     Log.Exception(u'* Cannot Save/Load "{}"'.format(cover_url))
                     cover = None
     elif 'http' in cover_url:
-        Loggger('* Thumb NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
+        Logger('* Thumb NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
         cover = Redirect(Common.CorrectCoverImage(cover_url))
 
     if not cover:
