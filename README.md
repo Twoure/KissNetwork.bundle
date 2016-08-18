@@ -158,7 +158,7 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - Select channel to track updates from.  Updater caches the Github request URL for 12 hours.
 - Update button visible only to PMS admin and when update avalible.
 - **Stable(_default_):** Tracks the latest release, same as the old updater
-- **Development:** Tracks the latest commit within the [dev]() branch
+- **Development:** Tracks the latest commit within the [dev](https://github.com/Twoure/KissNetwork.bundle/tree/dev) branch
 
 ##### Enable Debug Logging
 - Turn on extra logging for debugging purposes
