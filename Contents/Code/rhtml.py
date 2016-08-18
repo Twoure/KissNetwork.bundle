@@ -4,7 +4,7 @@ def ElementFromURL(url):
 
     match = False
     name = Hash.MD5(url)
-    path = Core.storage.data_item_path('DataHTTP')
+    path = Core.storage.data_item_path(URL_CACHE_DIR)
     Core.storage.ensure_dirs(path)
     files = [f for f in Core.storage.list_dir(path) if not Core.storage.dir_exists(Core.storage.join_path(path, f))]
 
@@ -12,16 +12,16 @@ def ElementFromURL(url):
         if filename == name:
             match = True
             if (Datetime.FromTimestamp(Core.storage.last_modified(Core.storage.join_path(path, filename))) + TIMEOUT) <= Datetime.Now():
-                Log.Debug('* Re-Caching \'{}\' to DataHTTP'.format(url))
+                Log.Debug('* Re-Caching \'{}\' to {}'.format(url, URL_CACHE_DIR))
                 html = get_element_from_url(url, name)
                 break
             else:
-                Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
-                html = HTML.ElementFromString(Data.Load(Core.storage.join_path('DataHTTP', filename)))
+                Log.Debug('* Fetching \'{}\' from {}'.format(url, URL_CACHE_DIR))
+                html = HTML.ElementFromString(Data.Load(Core.storage.join_path(URL_CACHE_DIR, filename)))
                 break
 
     if not match:
-        Log.Debug('* Caching \'{}\' to DataHTTP'.format(url))
+        Log.Debug('* Caching \'{}\' to {}'.format(url, URL_CACHE_DIR))
         html = get_element_from_url(url, name)
 
     return html
@@ -48,7 +48,7 @@ def get_element_from_url(url, name, count=0):
                             Log.Warn(str(page.text))
                             return HTML.Element('head', 'Error')
                         else:
-                            Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                            Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
                         return HTML.ElementFromString(page.text)
                     else:
                         Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
@@ -61,7 +61,7 @@ def get_element_from_url(url, name, count=0):
                 return get_element_from_url(url, name, count)
             else:
                 Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
-                if Data.Exists(Core.storage.join_path('DataHTTP', name)):
+                if Data.Exists(Core.storage.join_path(URL_CACHE_DIR, name)):
                     Log.Warn('* Using old cached page')
                     return HTML.ElementFromString(page.text)
         else:
@@ -74,7 +74,7 @@ def get_element_from_url(url, name, count=0):
                     Log.Warn(str(page.text))
                     return HTML.Element('head', 'Error')
                 else:
-                    Data.Save(Core.storage.join_path('DataHTTP', name), page.text)
+                    Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
                 return HTML.ElementFromString(page.text)
             except Exception, e:
                 if (int(page.status_code) == 522):

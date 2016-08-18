@@ -5,11 +5,17 @@ import pickle
 import shutil
 from io import open
 
+# Setup Constants for Plugin
+IDENTIFIER                  = 'com.plexapp.plugins.kissnetwork'
+URL_CACHE_DIR               = 'DataHTTP'
+THUMB_CACHE_DIR             = 'DataCovers'
+BOOKMARK_CACHE_DIR          = 'DataBookmarks'
+
 class DataItem(object):
     def __init__(self):
         self.data_path = os.path.join(
             os.getcwd().lstrip('\\\?').split('Plug-in Support')[0],
-            'Plug-in Support', 'Data', 'com.plexapp.plugins.kissnetwork'
+            'Plug-in Support', 'Data', IDENTIFIER
             )
         self.last_modified = os.path.getmtime
 
@@ -33,13 +39,13 @@ class DataItem(object):
         return os.path.join(self.data_path, 'DataItems', itemname)
 
     def HTTP(self, itemname):
-        return os.path.join('DataHTTP', itemname)
+        return os.path.join(URL_CACHE_DIR, itemname)
 
     def Covers(self, itemname):
-        return os.path.join('DataCovers', itemname)
+        return os.path.join(THUMB_CACHE_DIR, itemname)
 
     def Bookmarks(self, itemname):
-        return os.path.join('DataBookmarks', itemname)
+        return os.path.join(BOOKMARK_CACHE_DIR, itemname)
 
     def Exists(self, itemname):
         return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)

@@ -20,9 +20,8 @@ BRANCH_KEY                  = "InstallBranch"
 TAG_KEY                     = "InstallTag"
 
 class BundleInfo(object):
-    def __init__(self, plugin_path, name):
+    def __init__(self, plugin_path):
         self.path = plugin_path
-        self.name = name
         self.bundled = Core.bundled_plugins_path in plugin_path if Core.bundled_plugins_path is not None else False
         self.load_plist()
 
@@ -52,15 +51,13 @@ class BundleInfo(object):
 
 
 class PluginUpdateService(object):
-    """
-    Initialize by setting name to the Bundle's name
-    Example: if bundle is 'KissNetwork.bundle' then name='KissNetwork'
-    """
-    def __init__(self, name):
-        Log.Debug(u"Starting the {} Install Service".format(name))
-        self.name = name
+    def __init__(self):
+        self.bundle_name = self.splitall(Core.bundle_path)[-1]
+        self.name = self.bundle_name.split('.bundle')[0]
+        Log(u"Starting the {} Install Service".format(self.name))
+
         self.plugins_path = Core.storage.join_path(Core.app_support_path, 'Plug-ins')
-        self.bundle = BundleInfo(Core.storage.join_path(self.plugins_path, name+'.bundle'), name+'.bundle')
+        self.bundle = BundleInfo(Core.bundle_path)
         self.identifier = self.bundle.identifier
         self.stage = Core.storage.data_item_path('Stage')
         self.stage_path = Core.storage.join_path(self.stage, self.identifier)
@@ -84,8 +81,8 @@ class PluginUpdateService(object):
             Log.Error("Unable to remove inactive root")
         Core.storage.make_dirs(self.inactive)
 
-        if HISTORY_KEY.format(name) in Dict:
-            self.history = Dict[HISTORY_KEY.format(name)]
+        if HISTORY_KEY.format(self.name) in Dict:
+            self.history = Dict[HISTORY_KEY.format(self.name)]
         else:
             self.history = list()
         self.history_lock = Thread.Lock()
@@ -201,7 +198,7 @@ class PluginUpdateService(object):
 
     def clean_old_bundle(self):
         stage_paths = list()
-        root = self.bundle.name
+        root = self.bundle_name
         stage_path = self.stage_path.lstrip('\\\?')
         bundle_path = Core.storage.abs_path(self.bundle.path).lstrip('\\\?')
         stage_index = int([i for i, l in enumerate(self.splitall(stage_path)) if l == self.identifier][1])
@@ -231,7 +228,7 @@ class PluginUpdateService(object):
                         Log.Exception(u"Error Removing Old '{}' file/folder".format(old_item_path))
 
     def activate(self, fail_count=0):
-        final_path = Core.storage.join_path(self.plugins_path, self.bundle.name)
+        final_path = Core.storage.join_path(self.plugins_path, self.bundle_name)
 
         if not Core.storage.dir_exists(self.stage_path):
             Log(u"Unable to find stage for {}".format(self.identifier))
@@ -453,6 +450,6 @@ class PluginUpdateService(object):
             oc.add(DirectoryObject(
                 key=Callback(self.update, repo=repo, branch=branch, tag=self.update_info['zipId']),
                 title=u'%s' % F('updater.update_available', self.update_info['version']),
-                summary=u'{}\n{}'.format(L('updater.install'),  self.update_info['notes']),
+                summary=u'{}\n{}'.format(L('updater.install'), self.update_info['notes']),
                 thumb=R('icon-update.png') if Client.Platform not in list_view_clients else None
                 ))

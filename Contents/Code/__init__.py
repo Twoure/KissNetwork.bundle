@@ -4,17 +4,19 @@
 #                                                                                                  #
 ####################################################################################################
 # import Shared Service Code
-Domain = SharedCodeService.domain
-Headers = SharedCodeService.kissheaders.Headers
-Common = SharedCodeService.common
-Metadata = SharedCodeService.metadata
-KData = SharedCodeService.data.Data
+Domain                      = SharedCodeService.domain
+Headers                     = SharedCodeService.kissheaders.Headers
+Common                      = SharedCodeService.common
+Metadata                    = SharedCodeService.metadata
+KData                       = SharedCodeService.data.Data
 
+# setup initial run status
 if not Dict['init_run']:
     Log('KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
     Dict['init_run'] = Datetime.UTCNow()
 Log(u"Dict['init_run'] = '{}'".format(Dict['init_run']))
 
+# Check Info.plist for changes, file modified time should only change with updates or install
 Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.item_last_modified(Core.plist_path, utc=True)))
 if Dict['init_run'] <= Common.item_last_modified(Core.plist_path, utc=True):
     init_datetime = Common.item_last_modified(Core.plist_path, utc=True)
@@ -24,12 +26,15 @@ if Dict['init_run'] <= Common.item_last_modified(Core.plist_path, utc=True):
     Thread.Create(Headers.init_headers, init=True)
 
 # set global variables needed for imported packages
-TITLE = Common.TITLE
-PREFIX = Common.PREFIX
-TIMEOUT = Common.TIMEOUT
-GIT_REPO = 'Twoure/{}.bundle'.format(TITLE)
+TITLE                       = Common.TITLE
+PREFIX                      = Common.PREFIX
+TIMEOUT                     = Common.TIMEOUT
+GIT_REPO                    = 'Twoure/{}.bundle'.format(TITLE)
+URL_CACHE_DIR               = 'DataHTTP'
+THUMB_CACHE_DIR             = 'DataCovers'
+BOOKMARK_CACHE_DIR          = 'DataBookmarks'
 
-# import section(s) not included in Plex Plug-In Framework
+# import local and remote packages
 import messages
 import requests
 from io import open
@@ -39,49 +44,44 @@ from DumbTools import DumbKeyboard, DumbPrefs
 from pluginupdateservice import PluginUpdateService
 from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 
-
 # more global variables
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
-CFTest_KEY = 'Manga'
+CFTest_KEY                  = 'Manga'
 
+# Set background art and icon defaults
 # KissAnime
-ANIME_ART = 'art-anime.jpg'
-ANIME_ICON = 'icon-anime.png'
-
+ANIME_ART                   = 'art-anime.jpg'
+ANIME_ICON                  = 'icon-anime.png'
 # KissAsian
-ASIAN_ART = 'art-drama.jpg'
-ASIAN_ICON = 'icon-drama.png'
-
+ASIAN_ART                   = 'art-drama.jpg'
+ASIAN_ICON                  = 'icon-drama.png'
 # KissCartoon
-CARTOON_ART = 'art-cartoon.jpg'
-CARTOON_ICON = 'icon-cartoon.png'
-
+CARTOON_ART                 = 'art-cartoon.jpg'
+CARTOON_ICON                = 'icon-cartoon.png'
 # KissManga
-MANGA_ART = 'art-manga.jpg'
-MANGA_ICON = 'icon-manga.png'
-
+MANGA_ART                   = 'art-manga.jpg'
+MANGA_ICON                  = 'icon-manga.png'
 # ReadComincOnline
-COMIC_ART = 'art-comic.jpg'
-COMIC_ICON = 'icon-comic.png'
-
-# set background art and icon defaults
-MAIN_ART = 'art-main.jpg'
-MAIN_ICON = 'icon-default.png'
-NEXT_ICON = 'icon-next.png'
-CATEGORY_VIDEO_ICON = 'icon-video.png'
-CATEGORY_PICTURE_ICON = 'icon-pictures.png'
-BOOKMARK_ICON = 'icon-bookmark.png'
-BOOKMARK_ADD_ICON = 'icon-add-bookmark.png'
-BOOKMARK_REMOVE_ICON = 'icon-remove-bookmark.png'
-BOOKMARK_CLEAR_ICON = 'icon-clear-bookmarks.png'
-SEARCH_ICON = 'icon-search.png'
-PREFS_ICON = 'icon-prefs.png'
-CACHE_COVER_ICON = 'icon-cache-cover.png'
-ABOUT_ICON = 'icon-about.png'
+COMIC_ART                   = 'art-comic.jpg'
+COMIC_ICON                  = 'icon-comic.png'
+# General
+MAIN_ART                    = 'art-main.jpg'
+MAIN_ICON                   = 'icon-default.png'
+NEXT_ICON                   = 'icon-next.png'
+CATEGORY_VIDEO_ICON         = 'icon-video.png'
+CATEGORY_PICTURE_ICON       = 'icon-pictures.png'
+BOOKMARK_ICON               = 'icon-bookmark.png'
+BOOKMARK_ADD_ICON           = 'icon-add-bookmark.png'
+BOOKMARK_REMOVE_ICON        = 'icon-remove-bookmark.png'
+BOOKMARK_CLEAR_ICON         = 'icon-clear-bookmarks.png'
+SEARCH_ICON                 = 'icon-search.png'
+PREFS_ICON                  = 'icon-prefs.png'
+CACHE_COVER_ICON            = 'icon-cache-cover.png'
+ABOUT_ICON                  = 'icon-about.png'
 
 MC = messages.NewMessageContainer(PREFIX, TITLE)
-Updater = PluginUpdateService(TITLE)
+Updater = PluginUpdateService()
 
 ####################################################################################################
 def Start():
@@ -104,7 +104,6 @@ def Start():
     Log.Debug('* Platform.ServerVersion = {}'.format(Platform.ServerVersion))
     Log.Debug('*' * 80)
 
-
     # setup test for cfscrape
     SetUpCFTest(CFTest_KEY)
 
@@ -112,8 +111,8 @@ def Start():
     ValidatePrefs()
 
     # Clear Old Cached URLs & Cover Thumbs
-    Thread.Create(ClearCache, itemname='DataHTTP', timeout=TIMEOUT)
-    Thread.Create(ClearCache, itemname='DataCovers', timeout=Datetime.Delta(weeks=4))
+    Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)
+    Thread.Create(ClearCache, itemname=THUMB_CACHE_DIR, timeout=Datetime.Delta(weeks=4))
 
     # remove/clear old style of caching prior to v1.2.5
     if Dict['current_ch_version']:
@@ -140,13 +139,12 @@ def MainMenu():
     SetUpCFTest(CFTest_KEY)
     if not Dict['cfscrape_test']:
         return MC.message_container('Error',
-            'CloudFlare bypass fail. Please report Error to Twoure with channel Log files.')
+            'CloudFlare bypass failed. Please report Error to Twoure with channel Log files.')
     if not Headers.init_headers():
         return MC.message_container('Warning', 'Please wait while channel caches headers.  Exit channel and try again later.')
 
     admin = CheckAdmin()
-
-    oc = ObjectContainer(title2=TITLE, no_cache=admin)
+    oc = ObjectContainer(title2=TITLE, no_cache=Client.Product in ['Plex Web'])
 
     cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
 
@@ -215,7 +213,7 @@ def MainMenu():
         else:
             KissMain(url=p_data['url'], title=p_data['title'], art=p_data['art'], ob=False, oc=oc)
     else:
-        for d in sorted(data, key=lambda k: k['title']):
+        for d in Util.ListSortedByKey(data, 'title'):
             if Prefs[d['prefs_name']]:
                 oc.add(DirectoryObject(
                     key=Callback(KissMain, url=d['url'], title=d['title'], art=d['art']),
@@ -345,24 +343,24 @@ def TopList(type_title, url, art):
 ####################################################################################################
 @route(PREFIX + '/about')
 def About():
-    """Return Resource Directory Size, and KissNetwork's Current Channel Version"""
+    """
+    Return Resource Directory Size, and KissNetwork's Current Channel Version
+    Includes Developer Tools Menu if enabled within prefs and current user is admin
+    """
 
     oc = ObjectContainer(title2='About / Help')
 
     # Get Resources Directory Size
-    d = GetDirSize(Core.storage.data_item_path('DataCovers'))
-    if d == 'Error':
-        cache_string = 'N/A | Removing Files Still'
-    else:
-        cache_string = d
-    # show developer tools if enabled in prefs and current user is admin
+    d = GetDirSize(Core.storage.data_item_path(THUMB_CACHE_DIR))
+
     if Prefs['devtools'] and CheckAdmin():
         add_dev_tools(oc)
 
     oc.add(DirectoryObject(key=Callback(About),
         title='Version {}'.format(get_channel_version()), summary='Current Channel Version'))
     oc.add(DirectoryObject(key=Callback(About),
-        title=cache_string, summary='Number of Images Cached | Total Images Cached Size'))
+        title='N/A | Still Removing Files' if d == 'Error' else d,
+        summary='Number of Images Cached | Total Images Cached Size'))
 
     return oc
 
@@ -463,7 +461,8 @@ def BookmarksSub(type_title, art):
 
     # Fill in DirectoryObject information from the bookmark list
     # create empty list for testing covers
-    for bookmark in sorted(Dict['Bookmarks'][type_title], key=lambda k: k[type_title]):
+    #for bookmark in sorted(Dict['Bookmarks'][type_title], key=lambda k: k[type_title]):
+    for bookmark in Util.ListSortedByKey(Dict['Bookmarks'][type_title], type_title):
         item_title = bookmark['item_title']
         summary = bookmark['summary']
         summary2 = Common.StringCode(string=summary, code='decode') if summary else None
@@ -1348,8 +1347,7 @@ def CreatePhotoObject(title, url, art, source_title, include_container=False, *a
 
     if include_container:
         return ObjectContainer(objects=[photo_object])
-    else:
-        return photo_object
+    return photo_object
 
 ####################################################################################################
 @route(PREFIX + '/search')
@@ -1769,7 +1767,7 @@ def GetDirSize(start_path='.'):
 def GetThumb(cover_url, cover_file):
     """
     Get Thumb
-    Return cover file or save new cover and return cover caching icon
+    Return DataObject of cached thumb, or Redirect(cover_url) for non-kiss hosted thumbs
     """
 
     cover = None
@@ -1781,7 +1779,7 @@ def GetThumb(cover_url, cover_file):
             type_title = Common.GetTypeTitle(cover_url)
             Logger('* cover file name   = {}'.format(cover_file))
             if KData.CoverExists(Core.storage.join_path(type_title, cover_file)):
-                Log.Debug('* Loading cover from DataCovers folder')
+                Log.Debug(u'* Loading cover from {} folder'.format(THUMB_CACHE_DIR))
                 cover = KData.data_object(KData.Covers(Core.storage.join_path(type_title, cover_file)))
             else:
                 Logger('* Cover not yet saved, saving {} now'.format(cover_file))

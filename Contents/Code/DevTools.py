@@ -38,7 +38,7 @@ def ResetCustomDict(file_to_reset):
 @route(PREFIX + '/devtools')
 def DevTools(file_to_reset=None, header=None, message=None):
     """
-    Includes "Bookmark Tools", "Header Tools" and "Cover Cache Tools"
+    Includes "Bookmark Tools", "Header Tools" and "Cache Tools"
     Reset Domain_Dict and CloudFlare Test Key
     """
 
@@ -170,21 +170,21 @@ def DevToolsC(title=None, header=None, message=None):
     if title:
         header = 'Cache Tools'
         if title == 'data_covers':
-            count = ClearCache('DataCovers', Datetime.Delta())
+            count = ClearCache(THUMB_CACHE_DIR, Datetime.Delta())
             message = 'Cleaned {} Cached Cover files'.format(count)
-            Log(u'\n----------Removed {} Cached Cover files from DataCovers----------'.format(count))
+            Log(u'\n----------Removed {} Cached Cover files from {}----------'.format(count, THUMB_CACHE_DIR))
         elif title == 'data_http':
-            count = ClearCache('DataHTTP', Datetime.Delta())
+            count = ClearCache(URL_CACHE_DIR, Datetime.Delta())
             message = 'Cleaned {} Cached URL files'.format(count)
-            Log(u'\n----------Removed {} Cached URL files from DataHTTP----------'.format(count))
+            Log(u'\n----------Removed {} Cached URL files from {}----------'.format(count, URL_CACHE_DIR))
         return DevToolsC(title=None, header=header, message=message)
 
     oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_covers'),
-        title='Reset DataCovers Cache',
-        summary='Remove all cached Covers from DataCovers directory.'))
+        title=u'Reset {} Cache'.format(THUMB_CACHE_DIR),
+        summary=u'Remove all cached Covers from {} directory.'.format(THUMB_CACHE_DIR)))
     oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_http'),
-        title='Reset DataHTTP Cache',
-        summary='Remove all cached URLs from DataHTTP directory.'))
+        title=u'Reset {} Cache'.format(URL_CACHE_DIR),
+        summary=u'Remove all cached URLs from {} directory.'.format(URL_CACHE_DIR)))
 
     return oc
 
@@ -266,7 +266,7 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
     if title and file_name:
         if title == 'delete_backup':
             Log('\n----------Remove Bookmark Backup----------')
-            filepath = Core.storage.data_item_path(Core.storage.join_path('DataBookmarks', file_name))
+            filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, file_name))
             if Core.storage.file_exists(filepath):
                 Core.storage.remove(filepath)
                 message = u'Removed {} Bookmark Backup'.format(file_name)
@@ -286,7 +286,7 @@ def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
         return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
 
     bmb_list = list()
-    folder = Core.storage.data_item_path('DataBookmarks')
+    folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
     Core.storage.ensure_dirs(folder)
     files = [f for f in Core.storage.list_dir(folder) if not Core.storage.dir_exists(Core.storage.join_path(folder, f))]
     for filename in files:
@@ -313,7 +313,7 @@ def CreateBMBackup():
     """Create bookmark backup from current bookmarks"""
 
     timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
-    folder = Core.storage.data_item_path('DataBookmarks')
+    folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
     Core.storage.ensure_dirs(folder)
     bm_bkup_file = Core.storage.join_path(folder, u'bookmark_backup_{}.json'.format(int(timestamp)))
 
@@ -329,7 +329,7 @@ def CreateBMBackup():
 def LoadBMBackup(filename):
     """load bookmark backup into json format string"""
 
-    filepath = Core.storage.data_item_path(Core.storage.join_path('DataBookmarks', filename))
+    filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, filename))
     if filename and Core.storage.file_exists(filepath) and (Core.storage.file_size(filepath) != 0):
         with open(filepath) as datafile:
             data = json.load(datafile)
@@ -342,7 +342,7 @@ def MoveOldBookmarks():
 
     count = 0
     old_dir = Core.storage.data_path
-    new_dir = Core.storage.data_item_path('DataBookmarks')
+    new_dir = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
     Core.storage.ensure_dirs(new_dir)
 
     old_files = [f for f in Core.storage.list_dir(old_dir) if Regex(r'bookmark_backup_(\d+)\.json').search(f) and not Core.storage.dir_exists(Core.storage.join_path(old_dir, f))]
@@ -352,7 +352,7 @@ def MoveOldBookmarks():
         if not Core.storage.file_exists(new_filepath):
             Core.storage.copy(old_filepath, new_filepath)
         else:
-            Log.Debug(u'* Skipped moving \'{}\' because it already exists within \'DataBookmarks\''.format(filename))
+            Log.Debug(u'* Skipped moving \'{}\' because it already exists within \'{}\''.format(filename, BOOKMARK_CACHE_DIR))
 
         if Core.storage.file_exists(new_filepath) and (Core.storage.file_size(new_filepath) != 0):
             count += 1
@@ -377,7 +377,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
         image_file = image_url.split('/', 3)[3].replace('/', '_')
         type_title = 'Unknow'
 
-    data_covers_type_path = Core.storage.data_item_path(Core.storage.join_path('DataCovers', type_title))
+    data_covers_type_path = Core.storage.data_item_path(Core.storage.join_path(THUMB_CACHE_DIR, type_title))
     Core.storage.ensure_dirs(data_covers_type_path)
     path = Core.storage.join_path(data_covers_type_path, image_file)
     Log.Debug('Image File Path = {}'.format(path))
@@ -451,9 +451,6 @@ def SetUpCFTest(test):
             Log.Error('----------{} Failed CFTest----------'.format(test))
             Log.Error(str(e))
             Log.Error('*' * 80)
-    else:
-        Log.Debug('* CFTest Previously Passed, not running again.')
-
     return
 
 ####################################################################################################
@@ -499,7 +496,7 @@ def ClearOldCache(itempath):
 
     files = [f for f in Core.storage.list_dir(itempath) if not Core.storage.dir_exists(Core.storage.join_path(itempath, f))]
     for filename in files:
-        if Regex('(^icon\-(?:\S+)\.png$|^art\-(?:\S+)\.jpg$)').search(filename):
+        if Regex(r'^((?:icon|art)\-\S+\.(?:png|jpg))$').search(filename):
             continue
         Core.storage.remove(Core.storage.join_path(itempath, filename))
 
