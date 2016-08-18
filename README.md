@@ -70,7 +70,7 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Plex Media Server:
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 1.0.3
+  - Ubuntu 14.04 LTS: PMS version 1.1.0
   - Windows 7: PMS version 0.9.16.6
 
 ##### Plex Clients:

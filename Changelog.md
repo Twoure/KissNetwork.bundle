@@ -1,10 +1,11 @@
 # ChangeLog
 
 ##### 1.2.5
-- _08/xx/2016_
+- _08/18/2016_
   - Fixes:
     - `LegacyBookmarkUpdate()` - fixed regex matching and added condition to update bookmark's domain when they change
     - Openload - fixed for site changes
+    - Fixed `open()` method to comply with PMS `v1.1.0`
   - Updates:
     - Added `Simple UI` option to remove all sub list in favor of one list dictated by `Sort List by...` option [d5adj10](https://www.reddit.com/r/KissAnime/comments/47tee4/kissnetworkbundle_plex_channel_to_view_anime/d5adj10)
     - `cloudflare-scrape`: updated to `v1.6.6`

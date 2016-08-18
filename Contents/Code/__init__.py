@@ -96,12 +96,14 @@ def Start():
 
     HTTP.CacheTime = 0
     HTTP.Headers['User-Agent'] = Common.USER_AGENT
+    version = get_channel_version()
 
     Log.Debug('*' * 80)
     Log.Debug('* Platform.OS            = {}'.format(Platform.OS))
     Log.Debug('* Platform.OSVersion     = {}'.format(Platform.OSVersion))
     Log.Debug('* Platform.CPU           = {}'.format(Platform.CPU))
     Log.Debug('* Platform.ServerVersion = {}'.format(Platform.ServerVersion))
+    Log.Debug('* Channel.Version        = {}'.format(version))
     Log.Debug('*' * 80)
 
     # setup test for cfscrape
@@ -117,13 +119,16 @@ def Start():
     # remove/clear old style of caching prior to v1.2.5
     if Dict['current_ch_version']:
         if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 5):
+            Log(u"Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
             from DevTools import ClearOldCache, MoveOldBookmarks
             Thread.Create(MoveOldBookmarks)
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.storage.data_path, 'DataItems'))
+        elif Common.ParseVersion(Dict['current_ch_version']) < Common.ParseVersion(version):
+            Log(u"Channel updated from {} to {}".format(Dict['current_ch_version'], version))
 
     # setup current channel version
-    Dict['current_ch_version'] = get_channel_version()
+    Dict['current_ch_version'] = version
 
 ####################################################################################################
 @handler(PREFIX, TITLE, MAIN_ICON, MAIN_ART)
@@ -1786,11 +1791,11 @@ def GetThumb(cover_url, cover_file):
                 try:
                     tt, f = SaveCoverImage(cover_url)
                     cover = KData.data_object(KData.Covers(Core.storage.join_path(tt, f)))
-                except Exception, e:
-                    Log.Error(u'* {}'.format(e))
+                except:
+                    Log.Exception(u'* Cannot Save/Load "{}"'.format(cover_url))
                     cover = None
     elif 'http' in cover_url:
-        Log.Debug('* Thumb NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
+        Loggger('* Thumb NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
         cover = Redirect(Common.CorrectCoverImage(cover_url))
 
     if not cover:

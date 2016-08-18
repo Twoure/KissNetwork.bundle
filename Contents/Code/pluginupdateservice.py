@@ -336,7 +336,9 @@ class PluginUpdateService(object):
                 zipId = branch
                 version = str(date)
             self.temp_info.update({'date': date, 'notes': message, 'branch': branch, 'zipId': zipId, 'version': version})
-            Log(u"Successfully retrieved Github info = {}".format(self.temp_info))
+            Log("Successfully retrieved Github info >>>")
+            Log(u"branch='{}', date='{}', version='{}', zipId='{}'".format(
+                self.temp_info['branch'], self.temp_info['date'], self.temp_info['version'], self.temp_info['zipId']))
         except:
             Log.Exception(u"Error retrieving {} Github info from {}".format(self.identifier, url))
             return False
