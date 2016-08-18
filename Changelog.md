@@ -32,6 +32,7 @@
     - Added cached data migration/cleaning
     - Added clear bookmark `OK?` function, so will no longer clear bookmarks on first press, and will ask for confirmation
     - Added error logging for `Service Unavailable` and `Human Verification`. URLs do NOT Cache upon errors.
+    - Added _Xbox One_ & _Apple TV v4_ to _DumbTools_, so can support Search/Prefs input
     - Added New `PluginUpdateService` and removed old `updater.py`
       - Allows for either tracking branch commits or releases
       - New _Update Channel_ option within Prefs: Stable = track release, Development = track commits within `dev` branch
