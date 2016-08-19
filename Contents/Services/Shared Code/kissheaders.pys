@@ -113,13 +113,14 @@ class KissHeaders(object):
     def get_headers_for_url(self, url, update=False):
         type_title = Common.GetTypeTitle(url)
         if not self.header_data:
+            Log("* Loading Header Dict")
             self.load_dict()
             if not self.header_data:
                 Log.Error(u'* Cannot load {} header, because header file does not exist'.format(type_title))
                 return {}
 
         base_url = Common.GetBaseURL(url)
-        current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
+        current_timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
 
         if len(self.header_data) >= 1:
             update2 = True
@@ -140,7 +141,7 @@ class KissHeaders(object):
                 Log.Debug('* New Cookies saved for {} Header'.format(base_url))
             else:
                 if 'expire' in self.header_data[type_title].keys():
-                    current_datetime = Datetime.FromTimestamp(int(current_timestamp))
+                    current_datetime = Datetime.FromTimestamp(current_timestamp)
                     expire_datetime = Datetime.FromTimestamp(int(expire))
                     deltatime = str(expire_datetime - current_datetime)
                     Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
@@ -168,14 +169,14 @@ class KissHeaders(object):
             site_pref = 'kissasian' if type_title == 'Drama' else 'kiss{}'.format(type_title.lower())
             if len(self.header_data) > 1 and Prefs[site_pref]:
                 expire = int(self.header_data[type_title]['expire'])
-                current_timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
+                current_timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
                 if current_timestamp >= expire:
                     updated = True
                     Log.Debug(u'* {} cookies expired. Collecting fresh cookies.'.format(type_title))
                     self.header_data.update(self.set_header(base_url))
                 else:
                     if 'expire' in self.header_data[type_title].keys():
-                        current_datetime = Datetime.FromTimestamp(int(current_timestamp))
+                        current_datetime = Datetime.FromTimestamp(current_timestamp)
                         expire_datetime = Datetime.FromTimestamp(int(expire))
                         deltatime = str(expire_datetime - current_datetime)
                         Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
