@@ -5,7 +5,7 @@
   <key>CFBundleIdentifier</key>
   <string>com.plexapp.plugins.kissnetwork</string>
   <key>CFBundleVersion</key>
-  <string>1.2.5</string>
+  <string>1.2.6</string>
   <key>PlexClientPlatforms</key>
   <string>*</string>
   <key>PlexFrameworkVersion</key>

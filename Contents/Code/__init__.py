@@ -116,7 +116,7 @@ def Start():
 
     # remove/clear old style of caching prior to v1.2.5
     if Dict['current_ch_version']:
-        if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 5):
+        if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 6):
             Log(u"Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
             from DevTools import ClearOldCache, MoveOldBookmarks
             Thread.Create(MoveOldBookmarks)
