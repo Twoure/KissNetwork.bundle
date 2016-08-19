@@ -31,20 +31,21 @@ def ParseVersion(version):
 
 ####################################################################################################
 def datetime_to_utc(dt):
-    n = datetime.datetime.now()
-    nutc = datetime.datetime.utcnow()
+    n = datetime.datetime.now().replace(microsecond=0)
+    nutc = datetime.datetime.utcnow().replace(microsecond=0)
     if n < nutc:
         return dt + (nutc - n)
-    elif n.strftime("%Y-%m-%d %H:%M:%S") == nutc.strftime("%Y-%m-%d %H:%M:%S"):
+    elif n == nutc:
         return dt
     return dt - (n - nutc)
 
 ####################################################################################################
 def item_last_modified(path, utc=False):
     if os.path.exists(path):
+        ts = os.path.getmtime(path)
         if utc:
-            return datetime_to_utc(datetime.datetime.fromtimestamp(os.path.getmtime(path)))
-        return datetime.datetime.fromtimestamp(os.path.getmtime(path))
+            return datetime_to_utc(datetime.datetime.fromtimestamp(ts)).replace(microsecond=0)
+        return datetime.datetime.fromtimestamp(ts).replace(microsecond=0)
     return False
 
 ####################################################################################################

@@ -171,11 +171,11 @@ class PluginUpdateService(object):
                 shutil.copy2(s, d)
 
     def datetime_to_utc(self, dt):
-        n = Datetime.Now()
-        nutc = Datetime.UTCNow()
+        n = Datetime.Now().replace(microsecond=0)
+        nutc = Datetime.UTCNow().replace(microsecond=0)
         if n < nutc:
             return dt + (nutc - n)
-        elif n.strftime("%Y-%m-%d %H:%M:%S") == nutc.strftime("%Y-%m-%d %H:%M:%S"):
+        elif n == nutc:
             return dt
         return dt - (n - nutc)
 

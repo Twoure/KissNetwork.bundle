@@ -13,12 +13,12 @@ KData                       = SharedCodeService.data.Data
 # setup initial run status
 if not Dict['init_run']:
     Log('KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
-    Dict['init_run'] = Datetime.UTCNow()
+    Dict['init_run'] = Datetime.UTCNow().replace(microsecond=0)
 Log(u"Dict['init_run'] = '{}'".format(Dict['init_run']))
 
 # Check Info.plist for changes, file modified time should only change with updates or install
 Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.item_last_modified(Core.plist_path, utc=True)))
-if Dict['init_run'] <= Common.item_last_modified(Core.plist_path, utc=True):
+if Dict['init_run'] < Common.item_last_modified(Core.plist_path, utc=True):
     init_datetime = Common.item_last_modified(Core.plist_path, utc=True)
     Log(u"Updating old init time {} to {}".format(Dict['init_run'], init_datetime))
     Dict['init_run'] = init_datetime
