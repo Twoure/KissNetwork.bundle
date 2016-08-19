@@ -356,7 +356,7 @@ class PluginUpdateService(object):
         if 'init_run' in Dict:
             date = Dict['init_run']
         else:
-            date = Datetime.UTCNow()
+            date = Datetime.UTCNow().replace(microsecond=0)
             Dict['init_run'] = date
             Dict.Save()
 

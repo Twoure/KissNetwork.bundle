@@ -45,6 +45,7 @@ from pluginupdateservice import PluginUpdateService
 from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
 
 # more global variables
+SORT_OPT = {'Alphabetical': '', 'Popularity': '/MostPopular', 'Latest Update': '/LatestUpdate', 'Newest': '/Newest'}
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 CFTest_KEY                  = 'Manga'
@@ -108,9 +109,6 @@ def Start():
 
     # setup test for cfscrape
     SetUpCFTest(CFTest_KEY)
-
-    # check prefs
-    ValidatePrefs()
 
     # Clear Old Cached URLs & Cover Thumbs
     Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)
@@ -377,22 +375,7 @@ def get_channel_version():
 ####################################################################################################
 @route(PREFIX + '/validateprefs')
 def ValidatePrefs():
-    """Set the sorting options for displaying all lists"""
-
-    # load prefs into dict for use later
-    if Prefs['sort_opt'] == 'Alphabetical':
-        Dict['s_opt'] = ''
-    elif Prefs['sort_opt'] == 'Popularity':
-        Dict['s_opt'] = '/MostPopular'
-    elif Prefs['sort_opt'] == 'Latest Update':
-        Dict['s_opt'] = '/LatestUpdate'
-    elif Prefs['sort_opt'] == 'Newest':
-        Dict['s_opt'] = '/Newest'
-
-    Logger('Dict[\'s_opt\'] = {}'.format(Dict['s_opt']), kind='Info', force=True)
-
-    # Update the Dict to latest prefs
-    Dict.Save()
+    """check prefs, placeholder for now"""
 
 ####################################################################################################
 @route(PREFIX + '/bookmarks', status=dict)
@@ -629,7 +612,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     elif pname == '/LatestUpdate' or pname == '/Newest' or pname == '/MostPopular':
         item_url = base_url + '/{}List{}?page={}'.format(type_title, pname, page)
     # Sort order 'A-Z'
-    elif Dict['s_opt'] == None:
+    elif SORT_OPT[Prefs['sort_opt']] is None:
         if ('Genre' in pname or 'Country' in pname
             or 'Ongoing' in pname or 'Completed' in pname):
             # Genre, Country, Ongoing, or Completed Specific
@@ -644,16 +627,15 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     elif ('Genre' in pname or 'Country' in pname
         or 'Ongoing' in pname or 'Completed' in pname):
         # Specific with Prefs
-        item_url = base_url + '{}{}?page={}'.format(pname, Dict['s_opt'], page)
+        item_url = base_url + '{}{}?page={}'.format(pname, SORT_OPT[Prefs['sort_opt']], page)
     elif "All" in pname:
-        Logger('dict s_opt = {}'.format(Dict['s_opt']))
-        item_url = base_url + '/{}List{}?page={}'.format(type_title, Dict['s_opt'], page)
+        item_url = base_url + '/{}List{}?page={}'.format(type_title, SORT_OPT[Prefs['sort_opt']], page)
     else:
         # No Genre with Prefs
-        item_url = base_url + '/{}List{}?c={}&page={}'.format(type_title, Dict['s_opt'], pname, page)
+        item_url = base_url + '/{}List{}?c={}&page={}'.format(type_title, SORT_OPT[Prefs['sort_opt']], pname, page)
 
-    Logger('Sorting Option = {}'.format(Dict['s_opt']))  # Log Pref being used
-    Logger('Category= {} | URL= {}'.format(pname, item_url))
+    Logger(u"Sorting Option = '{}'".format(SORT_OPT[Prefs['sort_opt']]))  # Log Pref being used
+    Logger(u"Category = '{}' | URL = '{}'".format(pname, item_url))
 
     html = RHTML.ElementFromURL(item_url)
 
