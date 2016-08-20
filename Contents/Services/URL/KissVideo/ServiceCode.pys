@@ -24,15 +24,14 @@ def MetadataObjectForURL(url):
     will be synthesised based on the URL.
     """
 
-    Log.Debug('*' * 80)
-    Log.Debug('* MetadataObjectForURL url = {}'.format(url))
+    Log('*' * 80)
+    Log(u'* MetadataObjectForURL url = {}'.format(url))
     url = Common.CorrectURL(url)
 
     video_id = int(url.split('=')[-1])
     show_url = url.rsplit('/', 1)[0]
 
     html = ElementFromURL(show_url)
-    Log.Debug('*' * 80)
 
     genres, genres_list = Metadata.GetGenres(html)
     date_added = Metadata.GetDateAdded(html, url)
@@ -41,8 +40,7 @@ def MetadataObjectForURL(url):
 
     # Setup MovieObject for Moives
     if 'Movie' in genres:
-        Log.Debug('* This is a Movie')
-        Log.Debug('*' * 80)
+        Log('* -----Movie-----')
 
         # remove 'Movie' from genre list
         genre_list = [g for g in genres if not g == 'Movie']
@@ -63,7 +61,7 @@ def MetadataObjectForURL(url):
             )
     # Setup EpisodeObject for all shows that are not Movies
     else:
-        Log.Debug('* This is a TV Show')
+        Log('* -----TV Show-----')
 
         si = Metadata.GetBaseShowInfo(html, url)
         summary = unicode(Common.StringCode(string=si['summary'], code='decode')) if si['summary'] else None
