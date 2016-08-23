@@ -88,7 +88,7 @@ class KissHeaders(object):
                 date = int(r_cf_clearance.group(1))
                 expire = date + int(r_cf_clearance.group(2))
             else:
-                expire = Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364))
+                expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364)))
                 Log.Warn(u'* set_header Error: Cannot calculate expire time for {}.'.format(base_url))
 
             return {
@@ -153,7 +153,7 @@ class KissHeaders(object):
                 Log.Debug('* New Cookies saved for {} Header'.format(base_url))
             elif expire:
                 current_datetime = Datetime.FromTimestamp(current_timestamp)
-                expire_datetime = Datetime.FromTimestamp(int(expire))
+                expire_datetime = Datetime.FromTimestamp(expire)
                 deltatime = str(expire_datetime - current_datetime)
                 Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
             else:
@@ -188,7 +188,7 @@ class KissHeaders(object):
                 else:
                     if 'expire' in self.header_data[type_title].keys():
                         current_datetime = Datetime.FromTimestamp(current_timestamp)
-                        expire_datetime = Datetime.FromTimestamp(int(expire))
+                        expire_datetime = Datetime.FromTimestamp(expire)
                         deltatime = str(expire_datetime - current_datetime)
                         Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
                     else:
