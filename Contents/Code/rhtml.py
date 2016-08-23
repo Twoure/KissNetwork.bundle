@@ -76,20 +76,18 @@ def get_element_from_url(url, name, count=0):
                 else:
                     Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
                 return HTML.ElementFromString(page.text)
-            except Exception, e:
+            except:
                 if (int(page.status_code) == 522):
-                    Log.Error('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
+                    Log.Exception('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
                 elif (int(page.status_code) == 524):
-                    Log.Error('* get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
+                    Log.Exception('* get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
                     if count < 1:
                         Log.Debug('* ReTrying \'{}\''.format(page.url))
                         count += 1
                         return get_element_from_url(url, name, count)
                 else:
-                    Log.Error('* get_element_from_url Error: Unknown Site Error, check output below.')
-                Log.Error(u'* {}'.format(e))
-    except Exception as e:
-        Log.Error('* get_element_from_url Error: Cannot load {}'.format(url))
-        Log.Error(u'* get_element_from_url Error: {}'.format(e))
+                    Log.Exception('* get_element_from_url Error: Unknown Site Error, check output below.')
+    except:
+        Log.Exception('* get_element_from_url Error: Failed to load {}'.format(url))
 
     return HTML.Element('head', 'Error')
