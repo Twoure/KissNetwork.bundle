@@ -2,6 +2,237 @@ CFTest = SharedCodeService.kissheaders.CFTest
 import shutil
 import json
 
+class BookmarksToolkit(object):
+    def __init__(self):
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui', self.gui_tools)
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui/reset', self.gui_reset)
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui/backup/tools', self.gui_backup_tools)
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui/backup/create', self.gui_backup_create)
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui/backup/remove', self.gui_backup_remove)
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui/backup/load', self.gui_backup_load)
+        Route.Connect(PREFIX + '/devtools/bookmarks/gui/backup/list/{item}', self.gui_backup_list)
+        self.context = dict()
+        self.context_reset = list()
+        self.context_backup = dict()
+        self.context_backup_list = list()
+        self.context_list = list()
+
+    def gui_tools(self):
+        oc = ObjectContainer(title2='Bookmark Tools', header=self.context.get('header', None), message=self.context.get('message', None), no_cache=True)
+        self.context.clear()
+        oc.add(DirectoryObject(key=Callback(self.gui_backup_tools),
+            title="Backup Tools", summary="Manage bookmark backups."))
+        for name in ['All'] + sorted(Common.TypeTitleList()):
+            name2 = '\"' + name + '\"'
+            if name == 'All':
+                name2 = ''
+            self.context_reset.append({'item': name})
+            oc.add(DirectoryObject(key=Callback(self.gui_reset, item=name),
+                title='Reset \"{}\" Bookmarks'.format(name),
+                summary='Delete Entire {} Bookmark Section. Same as \"Clear {} Bookmarks\".'.format(name2, name)))
+        return oc
+
+    def gui_reset(self, item):
+        if not self.reset(item):
+            Log("* Unable to reset '{}'".format(item))
+        return self.gui_tools()
+
+    def reset(self, item):
+        header = 'BookmarkTools'
+        if not self.context_reset:
+            Log("* Unable to reset Bookmark '{}', because the context does not exists".format(item))
+            return False
+
+        if not Dict['Bookmarks']:
+            Log("* No Bookmarks Dict Yet. Skipping Reset '{}'".format(item))
+            return False
+
+        for i, c in enumerate(self.context_reset):
+            if item in c.values() and Dict['Bookmarks']:
+                Log("* Removing '{}' Bookmarks".format(item))
+                if item == 'All':
+                    del Dict['Bookmarks']
+                    message = 'Bookmarks Section Cleaned.'
+                elif item in Dict['Bookmarks']:
+                    del Dict['Bookmarks'][item]
+                    message = '{} Bookmark Section Cleaned.'.format(item)
+                Dict.Save()
+                self.context.update({'header': header, 'message': message})
+                self.context_reset.pop(i)
+                return True
+        Log("* Unable to reset Bookmark '{}', because it does not exists".format(item))
+        return False
+
+    def gui_backup_tools(self):
+        """
+        Tools to Manage Bookmark backups
+        Create, Delete (from list), Load (from list)
+        """
+        self.backup_saved = False
+        oc = ObjectContainer(title2='Backup Tools', header=self.context_backup.get('header', None), message=self.context_backup.get('message', None), no_cache=True)
+        self.context_backup.clear()
+        oc.add(DirectoryObject(key=Callback(self.gui_backup_create),
+            title='Backup Bookmarks',
+            summary='Create a Backup file of all bookmarks'))
+        oc.add(DirectoryObject(key=Callback(self.gui_backup_list, item='remove'),
+            title='Delete Backups',
+            summary='Open menu to Delete old bookmark backups'))
+        oc.add(DirectoryObject(key=Callback(self.gui_backup_list, item='load'),
+            title='Load Bookmarks from Backup',
+            summary='Open menu to Load bookmarks from previously created backup file'))
+        return oc
+
+    def gui_backup_create(self):
+        if not self.backup_save():
+            Log("* Cannot backup current bookmarks")
+        return self.gui_backup_tools()
+
+    def backup_save(self, basename=None, silent=False):
+        """Create bookmark backup from current bookmarks"""
+        if self.backup_saved:
+            self.context_backup.clear()
+            return True
+
+        timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+        basename = basename + '_' if basename else ''
+        folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
+        Core.storage.ensure_dirs(folder)
+        bkup_filename = u'{}bookmark_backup_{}.json'.format(basename, timestamp)
+        bkup_file = Core.storage.join_path(folder, bkup_filename)
+
+        if Dict['Bookmarks']:
+            with open(bkup_file, 'wb') as f:
+                json.dump(Dict['Bookmarks'], f, indent=4, sort_keys=True, separators=(',', ': '))
+            self.backup_saved = True
+            message = "New Backup Created '{}'".format(bkup_filename)
+            Log('* '+message)
+            if not silent:
+                self.context_backup.update({'header': 'Backup Tools', 'message': message})
+            return True
+
+        Log.Warn(u"* Failed to create backup for '{}'".format(bkup_filename))
+        return False
+
+    def gui_backup_list(self, item):
+        """List backups to remove/load"""
+
+        header = "{} Backup".format(item.title())
+        if not self.backup_list:
+            message = "No backups to list"
+            Log(message)
+            self.context_backup.update({'header': header, 'message': message})
+            return self.gui_backup_tools()
+
+        oc = ObjectContainer(title2=header, no_cache=True)
+        func = self.gui_backup_remove if item == 'remove' else self.gui_backup_load
+        for n, fn in reversed(sorted(self.backup_list)):
+            oc.add(DirectoryObject(key=Callback(func, item=fn),
+                title=n, summary=u"{} '{}'".format(item.title(), n)
+                ))
+        return oc
+
+    @property
+    def backup_list(self):
+        backup_list = list()
+        self.context_backup_list = list()
+        self.context_backup_dict = list()
+        folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
+        Core.storage.ensure_dirs(folder)
+        files = [f for f in Core.storage.list_dir(folder) if not Core.storage.dir_exists(Core.storage.join_path(folder, f))]
+        for filename in files:
+            bmb = Regex(r'(?:\w+\_)?bookmark\_backup\_(\d+)\.json').search(filename)
+            abmb = Regex(r'\w+\_bookmark\_backup_(\d+)\.json').search(filename)
+            if bmb:
+                timestamp = Datetime.FromTimestamp(int(bmb.group(1)))
+                backup_list.append(('{}Backup {}'.format('Auto-' if abmb else '', timestamp), filename))
+                self.context_backup_list.append(filename)
+            if abmb:
+                self.context_backup_dict.append({'filename': filename, 'datetime': Datetime.FromTimestamp(int(abmb.group(1)))})
+        return backup_list
+
+    def gui_backup_remove(self, item):
+        if not self.backup_remove(item):
+            Log(u"* Cannot remove backup for '{}'".format(item))
+        return self.gui_backup_tools()
+
+    def backup_remove(self, item):
+        if item not in self.context_backup_list:
+            self.context_backup.clear()
+            return False
+
+        filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, item))
+        if Core.storage.file_exists(filepath):
+            Core.storage.remove(filepath)
+            self.context_backup_list.remove(item)
+            message = u'Removed {} Bookmark Backup'.format(item)
+            self.context_backup.update({'header': 'Removed Backup', 'message': message})
+            Log('* '+message)
+        else:
+            Log("* Not removing. Backup '{}' no longer exists.".format(item))
+        return True
+
+    def gui_backup_load(self, item):
+        if not self.backup_load(item):
+            Log("* Unable to load backup for '{}'".format(item))
+        return self.gui_backup_tools()
+
+    def backup_load(self, item):
+        if item not in self.context_backup_list:
+            self.context_backup.clear()
+            return False
+
+        if not self.load(item):
+            Log(u"* Cannot load '{}'".format(item))
+            return False
+
+        if Dict['Bookmarks']:
+            del Dict['Bookmarks']
+        Dict['Bookmarks'] = self.backup_data
+        Dict.Save()
+
+        self.context_backup_list.remove(item)
+        message = u'Replaced Current Bookmarks with {} backup file'.format(item)
+        self.context_backup.update({'header': 'Loaded Bookmakrs', 'message': message})
+        Log('* '+message)
+        return True
+
+    def load(self, item):
+        self.backup_data = dict()
+        filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, item))
+        if item and Core.storage.file_exists(filepath) and (Core.storage.file_size(filepath) != 0):
+            with open(filepath, 'rb') as datafile:
+                self.backup_data = json.load(datafile)
+        return bool(self.backup_data)
+
+    def auto_backup(self):
+        """
+        Create backup of bookmarks everytime channel starts
+        Only keep last 5 Auto backups
+        """
+        auto_backup_limit = 5
+        Log("* Managing Auto Bookmark Backups")
+        Log("* Keeping latest {} Auto Backups".format(auto_backup_limit))
+        self.backup_saved = False
+        if not self.backup_save('auto', True):
+            Log("* Cannot auto backup current bookmarks")
+            return
+
+        if not self.backup_list:
+            Log("* No backups to manage")
+            return
+        elif not self.context_backup_dict:
+            Log("* No context dict list to manage")
+            return
+
+        Util.SortListByKey(self.context_backup_dict, 'datetime')
+        count = 0
+        while (len(self.context_backup_dict) > auto_backup_limit) and (count < 10):
+            count += 1
+            self.backup_remove(self.context_backup_dict[0]['filename'])
+            self.context_backup_dict.pop(0)
+        return
+
+BookmarkTools = BookmarksToolkit()
 ####################################################################################################
 def add_dev_tools(oc):
     oc.add(DirectoryObject(key=Callback(DevTools),
@@ -61,7 +292,7 @@ def DevTools(file_to_reset=None, header=None, message=None):
             message = 'Restarting channel'
         return DevTools(header=header, message=message, file_to_reset=None)
 
-    oc.add(DirectoryObject(key=Callback(DevToolsBM),
+    oc.add(DirectoryObject(key=Callback(BookmarkTools.gui_tools),
         title='Bookmark Tools',
         summary='Tools to Clean dirty bookmarks dictionary, and Toggle "Clear Bookmarks".'))
     oc.add(DirectoryObject(key=Callback(DevToolsC),
@@ -189,154 +420,6 @@ def DevToolsC(title=None, header=None, message=None):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/devtools-bookmarks')
-def DevToolsBM(title=None, header=None, message=None):
-    """Tools to Delete all or certain sections of Bookmarks Dict"""
-
-    oc = ObjectContainer(title2='Bookmark Tools', header=header, message=message)
-
-    if title:
-        if title == 'All' and Dict['Bookmarks']:
-            Log('\n----------Deleting Bookmark section from Channel Dict----------')
-            del Dict['Bookmarks']
-            Dict.Save()
-            message = 'Bookmarks Section Cleaned.'
-        elif title and title in Dict['Bookmarks'].keys():
-            Log('\n----------Deleting {} Bookmark section from Channel Dict----------'.format(title))
-            del Dict['Bookmarks'][title]
-            Dict.Save()
-            message = '{} Bookmark Section Cleaned.'.format(title)
-        elif not Dict['Bookmarks']:
-            Log('\n----------Bookmarks Section Alread Removed----------')
-            message = 'Bookmarks Section Already Cleaned.'
-        elif not title in Dict['Bookmarks'].keys():
-            Log('\n----------{} Bookmark Section Already Removed----------'.format(title))
-            message = '{} Bookmark Section Already Cleaned.'.format(title)
-        return DevToolsBM(header='BookmarkTools', message=message, title=None)
-
-    oc.add(DirectoryObject(key=Callback(DevToolsBMB),
-        title='Backup Tools',
-        summary='Manage bookmark backups.'))
-    for name in ['All'] + sorted(Common.TypeTitleList()):
-        name2 = '\"' + name + '\"'
-        if name == 'All':
-            name2 = ''
-        oc.add(DirectoryObject(key=Callback(DevToolsBM, title=name),
-            title='Reset \"{}\" Bookmarks'.format(name),
-            summary='Delete Entire {} Bookmark Section. Same as \"Clear {} Bookmarks\".'.format(name2, name)))
-
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/devtools-bookmarks/backup')
-def DevToolsBMB(title=None, header=None, message=None):
-    """Tools to Manage Bookmark backups"""
-
-    oc = ObjectContainer(title2='Bookmark Backup Tools', header=header, message=message)
-
-    if title:
-        if title == 'create_backup':
-            Log('\n----------Creating Bookmark Backup from Current Bookmarks----------')
-            cbmb = CreateBMBackup()
-            if cbmb:
-                message = 'Bookmark Backup Created'
-            else:
-                message = 'No Bookmarks to Backup yet'
-        return DevToolsBMB(header='BookmarkTools', message=message, title=None)
-
-    oc.add(DirectoryObject(key=Callback(DevToolsBMB, title='create_backup'),
-        title='Backup Bookmarks',
-        summary='Create a Backup file of all bookmarks'))
-    oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title='delete_backup'),
-        title='Delete Backups',
-        summary='Open menu to Delete old bookmark backups'))
-    oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title='load_backup'),
-        title='Load Bookmarks from Backup',
-        summary='Open menu to Load bookmarks from previously created backup file'))
-
-    return oc
-
-####################################################################################################
-@route(PREFIX + '/devtools-bookmarks/backup/list')
-def DevToolsBMBList(title=None, file_name=None, header=None, message=None):
-    """Load/Delete list"""
-
-    oc = ObjectContainer(title2='Load/Delete Backup List', header=header, message=message, no_cache=True)
-
-    if title and file_name:
-        if title == 'delete_backup':
-            Log('\n----------Remove Bookmark Backup----------')
-            filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, file_name))
-            if Core.storage.file_exists(filepath):
-                Core.storage.remove(filepath)
-                message = u'Removed {} Bookmark Backup'.format(file_name)
-            else:
-                message = u'{} file already removed, not removing again'.format(file_name)
-        elif title == 'load_backup':
-            Log('\n----------Loading Bookmarks from Backup----------')
-            new_bookmarks = LoadBMBackup(file_name)
-            if new_bookmarks:
-                if Dict['Bookmarks']:
-                    del Dict['Bookmarks']
-                Dict['Bookmarks'] = new_bookmarks
-                Dict.Save()
-                message = u'Replaced Current Bookmarks with {} backup file'.format(file_name)
-            else:
-                message = u'Error: {} file does not exist'.format(file_name)
-        return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
-
-    bmb_list = list()
-    folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
-    Core.storage.ensure_dirs(folder)
-    files = [f for f in Core.storage.list_dir(folder) if not Core.storage.dir_exists(Core.storage.join_path(folder, f))]
-    for filename in files:
-        # filter out default files
-        bmb = Regex(r'bookmark_backup_(\d+)\.json').search(filename)
-        if bmb:
-            timestamp = Datetime.FromTimestamp(int(bmb.group(1)))
-            bmb_list.append(('Backup {}'.format(str(timestamp)), bmb.group(0)))
-
-    for n, fn in reversed(sorted(bmb_list)):
-        oc.add(DirectoryObject(key=Callback(DevToolsBMBList, title=title, file_name=fn),
-            title=n,
-            summary="{} {}".format(title.split('_')[0].title(), n)
-            ))
-
-    if len(oc) > 0:
-        return oc
-    else:
-        message = 'No Bookmark Backups Yet'
-        return DevToolsBMB(header='Bookmark Backup Tools', message=message, title=None)
-
-####################################################################################################
-def CreateBMBackup():
-    """Create bookmark backup from current bookmarks"""
-
-    timestamp = Datetime.TimestampFromDatetime(Datetime.Now())
-    folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
-    Core.storage.ensure_dirs(folder)
-    bm_bkup_file = Core.storage.join_path(folder, u'bookmark_backup_{}.json'.format(int(timestamp)))
-
-    if Dict['Bookmarks']:
-        with open(bm_bkup_file, 'wb') as f:
-            json.dump(Dict['Bookmarks'], f, indent=4, sort_keys=True, separators=(',', ': '))
-        return True
-
-    Log.Warn('* No Bookmarks to backup yet')
-    return False
-
-####################################################################################################
-def LoadBMBackup(filename):
-    """load bookmark backup into json format string"""
-
-    filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, filename))
-    if filename and Core.storage.file_exists(filepath) and (Core.storage.file_size(filepath) != 0):
-        with open(filepath, 'rb') as datafile:
-            data = json.load(datafile)
-        return data
-    return False
-
-####################################################################################################
 def MoveOldBookmarks():
     """move old bookmarks into new directory"""
 
@@ -352,16 +435,16 @@ def MoveOldBookmarks():
         if not Core.storage.file_exists(new_filepath):
             Core.storage.copy(old_filepath, new_filepath)
         else:
-            Log.Debug(u'* Skipped moving \'{}\' because it already exists within \'{}\''.format(filename, BOOKMARK_CACHE_DIR))
+            Log(u"* Skipped moving '{}' because it already exists within '{}'".format(filename, BOOKMARK_CACHE_DIR))
 
         if Core.storage.file_exists(new_filepath) and (Core.storage.file_size(new_filepath) != 0):
             count += 1
             Core.storage.remove(old_filepath)
 
     if count == 0:
-        Log.Debug('* No Old Bookmarks to Migrate')
+        Log('* No Old Bookmarks to Migrate')
     else:
-        Log.Debug(u'* Finished Migrating \'{}\' Old Bookmarks to \'{}\''.format(count, new_dir))
+        Log(u"* Finished Migrating '{}' Old Bookmarks to '{}'".format(count, new_dir))
     return
 
 ####################################################################################################

@@ -42,7 +42,7 @@ import rhtml as RHTML
 from AuthTools import CheckAdmin
 from DumbTools import DumbKeyboard, DumbPrefs
 from pluginupdateservice import PluginUpdateService
-from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache
+from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache, BookmarkTools
 
 # more global variables
 SORT_OPT = {'Alphabetical': '', 'Popularity': '/MostPopular', 'Latest Update': '/LatestUpdate', 'Newest': '/Newest'}
@@ -109,6 +109,9 @@ def Start():
 
     # setup test for cfscrape
     SetUpCFTest(CFTest_KEY)
+
+    # setup auto-managed bookmark backups
+    BookmarkTools.auto_backup()
 
     # Clear Old Cached URLs & Cover Thumbs
     Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)
@@ -315,13 +318,11 @@ def StatusList(type_title, url, art):
     """
 
     oc = ObjectContainer(title2=type_title, art=R(art))
-    s_list = ['Ongoing', 'Completed']
-    for s in s_list:
+    for s in ['Ongoing', 'Completed']:
         oc.add(DirectoryObject(
             key=Callback(DirectoryList,
                 page=1, pname='/Status/{}'.format(s), category=s, base_url=url, type_title=type_title, art=art),
             title=s))
-
     return oc
 
 ####################################################################################################
@@ -333,14 +334,12 @@ def TopList(type_title, url, art):
     """
 
     oc = ObjectContainer(title2=type_title, art=R(art))
-    t_list = ['Top Day', 'Top Week', 'Top Month']
-    for t in t_list:
+    for t in ['Top Day', 'Top Week', 'Top Month']:
         tab = t.split('Top')[1].strip().lower()
         oc.add(DirectoryObject(
             key=Callback(HomePageList,
                 tab=tab, category=t, base_url=url, type_title=type_title, art=art),
             title=t))
-
     return oc
 
 ####################################################################################################
@@ -573,7 +572,6 @@ def CountryList(url, title, art):
     """Create Country Directory for KissAsian"""
 
     country_url = url + '/DramaList'  # setup url for finding current Country list
-
     html = RHTML.ElementFromURL(country_url)
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
@@ -784,8 +782,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     if len(oc) > 0:
         Dict.Save()
         return oc
-    else:
-        return MC.message_container(type_title, '{} list is empty'.format(category))
+    return MC.message_container(type_title, '{} list is empty'.format(category))
 
 ####################################################################################################
 @route(PREFIX + '/homedirectorylist')
@@ -1004,15 +1001,15 @@ def RelatedList(r_list, title, art):
 
     if len(r_list) == 1:
         return ItemPage(r_list[0])
-    else:
-        oc = ObjectContainer(title2=unicode(title) + u' / Related', art=R(art))
-        for r_info in r_list:
-            oc.add(DirectoryObject(
-                key=Callback(ItemPage, item_info=r_info),
-                title=unicode(Common.StringCode(string=r_info['item_title'], code='decode')),
-                art=R(art)
-                ))
-        return oc
+
+    oc = ObjectContainer(title2=unicode(title) + u' / Related', art=R(art))
+    for r_info in r_list:
+        oc.add(DirectoryObject(
+            key=Callback(ItemPage, item_info=r_info),
+            title=unicode(Common.StringCode(string=r_info['item_title'], code='decode')),
+            art=R(art)
+            ))
+    return oc
 
 ####################################################################################################
 def GetItemList(html, url, item_title, type_title):
@@ -1025,35 +1022,35 @@ def GetItemList(html, url, item_title, type_title):
     # if no shows, then none have been added yet
     if not episode_list:
         return 'Not Yet Aired'
-    else:
-        a = []
-        b = []
-        c = []
 
-        for media in episode_list:
-            if media.xpath('./a'):
-                node = media.xpath('./a')
+    a = []
+    b = []
+    c = []
 
-                # url for Video/Chapter
-                media_page_url = url + '/' + node[0].get('href').rsplit('/')[-1]
+    for media in episode_list:
+        if media.xpath('./a'):
+            node = media.xpath('./a')
 
-                # title for Video/Chapter, cleaned
-                raw_title = Regex(r'[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
-                if ('Manga' in type_title) or ('Comic' in type_title):
-                    media_title = raw_title.replace('Read Online', '').strip()
-                else:
-                    media_title = raw_title.replace('Watch Online', '').strip()
+            # url for Video/Chapter
+            media_page_url = url + '/' + node[0].get('href').rsplit('/')[-1]
 
-                a.append((media_page_url, media_title))
+            # title for Video/Chapter, cleaned
+            raw_title = Regex(r'[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
+            if ('Manga' in type_title) or ('Comic' in type_title):
+                media_title = raw_title.replace('Read Online', '').strip()
             else:
-                # date Video/Chapter added
-                date = media.text.strip()
-                b.append(date)
+                media_title = raw_title.replace('Watch Online', '').strip()
 
-        for x, y in reversed(map(None, a, b)):
-            c.append({'title':x[1], 'date': y, 'url': x[0]})
+            a.append((media_page_url, media_title))
+        else:
+            # date Video/Chapter added
+            date = media.text.strip()
+            b.append(date)
 
-        return c
+    for x, y in reversed(map(None, a, b)):
+        c.append({'title':x[1], 'date': y, 'url': x[0]})
+
+    return c
 
 ####################################################################################################
 @route(PREFIX + '/movie-sub-page', item_info=dict, movie_info=dict)
@@ -1070,22 +1067,22 @@ def MovieSubPage(item_info, movie_info):
     movie_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if movie_list == 'Not Yet Aired':
         return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
-    else:
-        summary = unicode(Common.StringCode(string=item_info['summary'], code='decode')) if item_info['summary'] else None
-        cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
-        genres, genres_list = Metadata.GetGenres(html)
-        for movie in movie_list:
-            oc.add(MovieObject(
-                title='{} | {}'.format(movie['title'], movie['date']),
-                source_title=movie_info['source_title'],
-                summary=summary,
-                year=int(movie_info['year']) if movie_info['year'] else None,
-                genres=genres if genres else [],
-                originally_available_at=Datetime.ParseDate(movie['date']) if movie['date'] else None,
-                thumb=cover,
-                art=R(item_info['art']),
-                url=movie['url']
-                ))
+
+    summary = unicode(Common.StringCode(string=item_info['summary'], code='decode')) if item_info['summary'] else None
+    cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+    genres, genres_list = Metadata.GetGenres(html)
+    for movie in movie_list:
+        oc.add(MovieObject(
+            title='{} | {}'.format(movie['title'], movie['date']),
+            source_title=movie_info['source_title'],
+            summary=summary,
+            year=int(movie_info['year']) if movie_info['year'] else None,
+            genres=genres if genres else [],
+            originally_available_at=Datetime.ParseDate(movie['date']) if movie['date'] else None,
+            thumb=cover,
+            art=R(item_info['art']),
+            url=movie['url']
+            ))
 
     return oc
 
@@ -1104,20 +1101,20 @@ def MangaSubPage(item_info, manga_info):
     cp_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if cp_list == 'Not Yet Aired':
         return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
-    else:
-        cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
-        for cp in reversed(cp_list):
-            oc.add(PhotoAlbumObject(
-                key=Callback(GetPhotoAlbum,
-                    url=cp['url'], source_title=manga_info['source_title'], title=cp['title'],
-                    art=item_info['art']),
-                rating_key=cp['url'],
-                title='{} | {}'.format(cp['title'], cp['date']),
-                source_title=manga_info['source_title'],
-                originally_available_at=Datetime.ParseDate(cp['date']) if cp['date'] else None,
-                thumb=cover,
-                art=R(item_info['art'])
-                ))
+
+    cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
+    for cp in reversed(cp_list):
+        oc.add(PhotoAlbumObject(
+            key=Callback(GetPhotoAlbum,
+                url=cp['url'], source_title=manga_info['source_title'], title=cp['title'],
+                art=item_info['art']),
+            rating_key=cp['url'],
+            title='{} | {}'.format(cp['title'], cp['date']),
+            source_title=manga_info['source_title'],
+            originally_available_at=Datetime.ParseDate(cp['date']) if cp['date'] else None,
+            thumb=cover,
+            art=R(item_info['art'])
+            ))
 
     return oc
 
@@ -1131,34 +1128,16 @@ def GetPhotoAlbum(url, source_title, title, art):
 
     oc = ObjectContainer(title2=title, art=R(art))
 
-    # get relevant javascript block
-    html = RHTML.ElementFromURL(url)
+    page = HTML.StringFromElement(RHTML.ElementFromURL(url))
+    images = Regex(r'lstImages\.push\([\'\"](http[^\'\"]+)[\'\"]').findall(page)
+    for image in images:
+        name = image.rsplit('/')[-1].rsplit('.', 1)[0]
+        if "proxy" in name:
+            name = name.rsplit('%')[-1].rsplit('2f')[1]
 
-    for java in html.xpath('//script[@type="text/javascript"]'):
-        javatext = java.text
-        if javatext:
-            if "lstImages" in javatext:
-                # then do a regex search to pull out relevant text
-                m = Regex(r'(?s)lstImages\.push\(\"([\S].*)\"\);').search(javatext).group(0)
-                break
-
-    # then split the string by the ';' to get each relevant line in an array
-    image_lines = m.rsplit(';')
-
-    # now iterate over each line and pull out the image url
-    for item in image_lines:
-        m = Regex(r'lstImages\.push\(\"([\S].*?)\"\)').search(item)
-
-        if m:  # test for empty results
-            image = m.group(1)
-            image_title = image.rsplit('/')[-1].rsplit('.', 1)[0]
-
-            if "proxy" in image_title:
-                image_title = image_title.rsplit('%')[-1].rsplit('2f')[1]
-
-            oc.add(CreatePhotoObject(
-                url=image, source_title=source_title, art=art, title=image_title
-                ))
+        oc.add(CreatePhotoObject(
+            url=image, source_title=source_title, art=art, title=name
+            ))
 
     return oc
 
