@@ -1,12 +1,23 @@
 # ChangeLog
 
+##### 1.2.7
+- _08/xx/2016_
+  - Fixes:
+    - `kissheaders` reload header file when cookie expire
+    - `kissheaders` expire time for error cookies
+  - Updates:
+    - New Bookmark Auto-Backup feature
+    - New custom bookmark backup path
+    - Simplified PhotoAlbum code
+    - `rhtml.py` improved error logging
+
 ##### 1.2.6
 - _08/19/2016_
   - Fixes:
     - Typo, was preventing non-kiss thumbs from displaying
     - Datetime resolution comparison at startup.  Removed ms
     - Expire time comparison.  Ensure comparing int()
-  - Updateds:
+  - Updates:
     - Removed old cache cover icon
     - Removed ValidatePrefs, no-longer needed
 

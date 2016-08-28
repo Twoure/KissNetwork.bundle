@@ -16,6 +16,8 @@ KissNetwork
     - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
     - [Preferred Video Server](#preferred-video-server)
     - [Hide "Clear Bookmarks"](#hide-clear-bookmarks)
+    - [Use "Custom Bookmarks Backup Path"](#use-custom-bookmarks-backup-path)
+    - [Custom Bookmarks Backup Path](#custom-bookmarks-backup-path)
     - [Force Redirect Fix (disables remote play)](#force-redirect-disables-remote-play)
     - [Force Transcoding (enables remote play)](#force-transcoding-enables-remote-play)
     - [Allow Adult Content](#allow-adult-content)
@@ -70,16 +72,16 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Plex Media Server:
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 1.1.0
+  - Ubuntu 14.04 LTS: PMS version 1.1.2
   - Windows 7: PMS version 0.9.16.6
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
   - OpenPHT (Ubuntu 14.04 LTS, v1.6.2)
-  - Android (4.4.2) (Plex Client App, v4.30.1.170)
+  - Android (4.4.2) (Plex Client App, v4.31.2.310)
   - Plex Media Player (1.1.4)
-  - Plex/Web (2.7.8)
+  - Plex/Web (2.7.10)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
@@ -116,6 +118,14 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 ##### Hide "Clear Bookmarks"
 - **Enabled:** Hide the _Clear Bookmarks_ function within Main Bookmarks menu and sub-menus
 - **Disabled(_default_):** Allow the _Clear Bookmarks_ function within Main Bookmarks menu and sub-menus
+
+##### Use "Custom Bookmarks Backup Path"
+- **Enabled:** Use [Custom Bookmarks Backup Path](#custom-bookmarks-backup-path) to store bookmark backup json files
+- **Disabled(_default_):** Use default path, located within the channel's support directory
+
+##### Custom Bookmarks Backup Path
+- Custom user path to save bookmark backup json files
+- Plex must have read/write permissions to use an external directory, otherwise backup path will fallback to default location
 
 ##### Force Redirect (disables remote play)
 - **Enabled:** Turns On URL Redirect Function, making PMS follow the URL Redirect.
@@ -237,9 +247,6 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - Change Itempage to TVShowObject, so have Bookmark function within TVShowObject.
 
 ##### Bookmarks
-- Add option for user to add custom bookmark backup path
-- Improve bookmark backup functions, may setup rotating file style
-- Add option to add all seasons at once for a show
 - Group seasons into one show
 - Might create separate directories for TV and Movies
 - Might move bookmarks to own file like I did with Header_Dict
