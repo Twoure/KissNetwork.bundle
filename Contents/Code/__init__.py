@@ -14,6 +14,8 @@ KData                       = SharedCodeService.data.Data
 if not Dict['init_run']:
     Log('* KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
     Dict['init_run'] = Datetime.UTCNow().replace(microsecond=0)
+    Log("* Sending request to initialize headers")
+    Thread.Create(Headers.init_headers, init=True)
 Log(u"* Dict['init_run'] = '{}'".format(Dict['init_run']))
 
 # Check Info.plist for changes, file modified time should only change with updates or install
