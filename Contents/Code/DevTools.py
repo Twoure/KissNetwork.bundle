@@ -16,8 +16,71 @@ class BookmarksToolkit(object):
         self.context_backup = dict()
         self.context_backup_list = list()
         self.context_list = list()
+        self.data_item_path = Core.storage.join_path(Core.storage.data_path, 'DataItems')
+        self.old_user_backup_dir = Dict['old_user_bookmark_backup_dir'] if 'old_user_bookmark_backup_dir' in Dict else self.data_item_path
+
+    @property
+    def check_user_path(self):
+        if Prefs['use_custom_boomark_backup_dir'] and Prefs['bookmark_backup_dir']:
+            user_dir = Core.storage.abs_path(Prefs['bookmark_backup_dir'])
+            header = "Validate User Bookmark Backup Directory"
+            try:
+                if Core.storage.file_exists(user_dir):
+                    ufolder = Core.storage.join_path(user_dir, BOOKMARK_CACHE_DIR)
+                    Core.storage.ensure_dirs(ufolder)
+                    self.user_backup_dir = ufolder
+                    return True
+                else:
+                    message = u"User directory '{}' does not exists. Using defaults instead.".format(user_dir)
+                    self.context.update({'header': header, 'message': message})
+                    Log.Error("* "+message)
+            except:
+                message = u"User directory '{}' does not have correct permissions. Using defaults instead.".format(user_dir)
+                self.context.update({'header': header, 'message': message})
+                Log.Exception("* "+message)
+        return False
+
+    def migrate_backups(self, path):
+        """migrate backups from old_user_path to new directory"""
+        src = Core.storage.join_path(self.old_user_backup_dir, BOOKMARK_CACHE_DIR)
+        dst = Core.storage.join_path(path, BOOKMARK_CACHE_DIR)
+        files = [f for f in Core.storage.list_dir(src) if not Core.storage.dir_exists(Core.storage.join_path(src, f))]
+        src_is_default = self.data_item_path == self.old_user_backup_dir
+        passed = list()
+        for filename in files:
+            src_path = Core.storage.join_path(src, filename)
+            dst_path = Core.storage.join_path(dst, filename)
+            try:
+                if src_is_default:
+                    # Keep local copy within the default directory
+                    Core.storage.copy(src_path, dst_path)
+                else:
+                    # Move bookmarks form src to dst
+                    Core.storage.rename(src_path, dst_path)
+                passed.append(True)
+            except Exception, e:
+                Log.Error(u"* Error: Cannot handle '{}' >>> {}".format(filename, e))
+        if len(passed) == len([t for t in passed if t == True]):
+            Log(u"* Bookmark Backup Directory migrated from '{}' to '{}'".format(src, dst))
+            self.old_user_backup_dir = path
+            Dict['old_user_bookmark_backup_dir'] = path
+            Dict.Save()
+
+    @property
+    def backup_dir(self):
+        """setup default path for user backups"""
+        folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
+        Core.storage.ensure_dirs(folder)
+        if self.check_user_path:
+            if self.old_user_backup_dir != Core.storage.abs_path(Prefs['bookmark_backup_dir']):
+                self.migrate_backups(Core.storage.abs_path(Prefs['bookmark_backup_dir']))
+            return self.user_backup_dir
+        elif self.old_user_backup_dir != self.data_item_path:
+            self.migrate_backups(self.data_item_path)
+        return folder
 
     def gui_tools(self):
+        check = self.check_user_path
         oc = ObjectContainer(title2='Bookmark Tools', header=self.context.get('header', None), message=self.context.get('message', None), no_cache=True)
         self.context.clear()
         oc.add(DirectoryObject(key=Callback(self.gui_backup_tools),
@@ -87,7 +150,7 @@ class BookmarksToolkit(object):
             Log("* Cannot backup current bookmarks")
         return self.gui_backup_tools()
 
-    def backup_save(self, basename=None, silent=False):
+    def backup_save(self, basename=None, silent=False, auto=False):
         """Create bookmark backup from current bookmarks"""
         if self.backup_saved:
             self.context_backup.clear()
@@ -95,10 +158,8 @@ class BookmarksToolkit(object):
 
         timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
         basename = basename + '_' if basename else ''
-        folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
-        Core.storage.ensure_dirs(folder)
         bkup_filename = u'{}bookmark_backup_{}.json'.format(basename, timestamp)
-        bkup_file = Core.storage.join_path(folder, bkup_filename)
+        bkup_file = Core.storage.join_path(self.backup_dir, bkup_filename)
 
         if Dict['Bookmarks']:
             with open(bkup_file, 'wb') as f:
@@ -136,8 +197,7 @@ class BookmarksToolkit(object):
         backup_list = list()
         self.context_backup_list = list()
         self.context_backup_dict = list()
-        folder = Core.storage.data_item_path(BOOKMARK_CACHE_DIR)
-        Core.storage.ensure_dirs(folder)
+        folder = self.backup_dir
         files = [f for f in Core.storage.list_dir(folder) if not Core.storage.dir_exists(Core.storage.join_path(folder, f))]
         for filename in files:
             bmb = Regex(r'(?:\w+\_)?bookmark\_backup\_(\d+)\.json').search(filename)
@@ -155,17 +215,18 @@ class BookmarksToolkit(object):
             Log(u"* Cannot remove backup for '{}'".format(item))
         return self.gui_backup_tools()
 
-    def backup_remove(self, item):
+    def backup_remove(self, item, silent=False):
         if item not in self.context_backup_list:
             self.context_backup.clear()
             return False
 
-        filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, item))
+        filepath = Core.storage.join_path(self.backup_dir, item)
         if Core.storage.file_exists(filepath):
             Core.storage.remove(filepath)
             self.context_backup_list.remove(item)
             message = u'Removed {} Bookmark Backup'.format(item)
-            self.context_backup.update({'header': 'Removed Backup', 'message': message})
+            if not silent:
+                self.context_backup.update({'header': 'Removed Backup', 'message': message})
             Log('* '+message)
         else:
             Log("* Not removing. Backup '{}' no longer exists.".format(item))
@@ -198,7 +259,7 @@ class BookmarksToolkit(object):
 
     def load(self, item):
         self.backup_data = dict()
-        filepath = Core.storage.data_item_path(Core.storage.join_path(BOOKMARK_CACHE_DIR, item))
+        filepath = Core.storage.join_path(self.backup_dir, item)
         if item and Core.storage.file_exists(filepath) and (Core.storage.file_size(filepath) != 0):
             with open(filepath, 'rb') as datafile:
                 self.backup_data = json.load(datafile)
@@ -228,7 +289,7 @@ class BookmarksToolkit(object):
         count = 0
         while (len(self.context_backup_dict) > auto_backup_limit) and (count < 10):
             count += 1
-            self.backup_remove(self.context_backup_dict[0]['filename'])
+            self.backup_remove(self.context_backup_dict[0]['filename'], True)
             self.context_backup_dict.pop(0)
         return
 

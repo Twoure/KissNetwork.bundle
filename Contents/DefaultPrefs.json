@@ -56,6 +56,18 @@
     "default": "False"
   },
   {
+    "id": "use_custom_boomark_backup_dir",
+    "label": "Use \"Custom Bookmarks Backup Path\"",
+    "type": "bool",
+    "default": "False"
+  },
+  {
+    "id": "bookmark_backup_dir",
+    "label": "Custom Bookmarks Backup Path",
+    "type": "text",
+    "default": ""
+  },
+  {
     "id": "force_redirect",
     "label": "Force Redirect (disables remote play)",
     "type": "bool",
