@@ -147,7 +147,8 @@ def PlayVideo(url, m, **kwargs):
         r = NRequest(req_url, raw=True)
         headers = Headers.get_headers_for_url(url)
         dc = headers['cookie']
-        headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
+        if 'k_token' in r.cookies:
+            headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
         page_text = r.text
     else:
         headers = None

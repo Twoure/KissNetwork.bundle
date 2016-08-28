@@ -5,11 +5,13 @@
   - Fixes:
     - `kissheaders` reload header file when cookie expire
     - `kissheaders` expire time for error cookies
+    - initial install header initialization
   - Updates:
     - New Bookmark Auto-Backup feature
     - New custom bookmark backup path
     - Simplified PhotoAlbum code
     - `rhtml.py` improved error logging
+    - `ServiceCode` added test for `token`
 
 ##### 1.2.6
 - _08/19/2016_
