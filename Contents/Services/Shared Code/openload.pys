@@ -7,20 +7,16 @@ from png import Reader as PNGReader
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 
 def decode_hiddenUrl(x):
-    s = list()
+    s = ""
     try:
         for i in list(x):
             j = ord(i)
             if (j >= 33) and (j <= 126):
-                s.append(chr(33 + ((j + 14) % 94)))
-            else:
-                s.append(chr(j))
+                j = 33 + ((j + 14) % 94)
+            s += chr(j)
     except:
         Log.Exception(u'* Cannot decode {}'.format(x))
-
-    if s:
-        return ''.join(s)
-    return False
+    return s[:-1] + chr(ord(s[-1]) + 1) if s else False
 
 def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
