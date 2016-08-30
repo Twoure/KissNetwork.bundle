@@ -32,7 +32,7 @@ def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
         http_headers = {'User-Agnet': USER_AGENT, 'Referer': url}
 
-    base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)(\/.+)?').search(url)
+    base = Regex(r'(https?:\/\/\w+\.\w+)\/\w+\/([^\/]+)(\/.+)?').search(url)
     eurl = base.group(1) + '/embed/' + base.group(2) + (base.group(3) if base.group(3) else '')
 
     try:
