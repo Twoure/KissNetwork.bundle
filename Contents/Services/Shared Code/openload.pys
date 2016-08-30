@@ -1,13 +1,15 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
 # and modified for use with Plex Media Server by Twoure
 
-from png import Reader as PNGReader
+from aadecode import aadecode
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 
-def decode_hiddenUrl(x):
+def decode_hiddenUrl(x, aalist):
     s = ""
+    tmp = ""
     try:
         for i in list(x):
             j = ord(i)
@@ -16,97 +18,40 @@ def decode_hiddenUrl(x):
             s += chr(j)
     except:
         Log.Exception(u'* Cannot decode {}'.format(x))
-    return s[:-1] + chr(ord(s[-1]) + 1) if s else False
+
+    for item in aalist:
+        try:
+            tmp += aadecode(item)
+        except:
+            Log.Exception("* Cannot decode item >>>")
+
+    num = Regex(r'(?i)CodeAt\(0\)\s*\+\s*([0-9]+?)[^0-9]').search(tmp)
+    return s[:-1] + chr(ord(s[-1]) + int(num.group(1))) if s and num else False
 
 def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
         http_headers = {'User-Agnet': USER_AGENT, 'Referer': url}
 
-    html = HTML.ElementFromURL(url, headers=http_headers, cacheTime=CACHE_1MINUTE)
+    base = Regex(r'(https?:\/\/openload\.\w+)\/\w+\/([^\/]+)(\/.+)?').search(url)
+    eurl = base.group(1) + '/embed/' + base.group(2) + (base.group(3) if base.group(3) else '')
+
+    try:
+        page = HTTP.Request(eurl, encoding=('utf-8'), headers=http_headers, cacheTime=CACHE_1MINUTE).content
+    except:
+        Log.Exception(u"* Cannot Open Openload URL '{}' >>>".format(eurl))
+        return False
+
+    html = HTML.ElementFromString(page)
     hiddenUrl = html.xpath('//span[@id="hiddenurl"]/text()')
+    aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
+
     if hiddenUrl:
-        hurl = decode_hiddenUrl(hiddenUrl[0])
+        hurl = decode_hiddenUrl(hiddenUrl[0], aadata_list)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
-            Log.Error(u'* Cannot directly decode hiddenUrl. Try to build videoUrl instead.')
+            Log.Error(u'* Cannot directly decode hiddenUrl.')
     else:
-        Log.Warn(u'* No hiddenUrl to decode. Try to build videoUrl instead.')
+        Log.Warn(u'* No hiddenUrl to decode.')
 
-    imageData = html.xpath('//img[@id="linkimg"]/@src')
-    imageData = String.Base64Decode(imageData[0].split('base64,')[-1]) if imageData else None
-    if not imageData:
-        return "error: cannot parse image data"
-
-    x, y, pixel, meta = PNGReader(bytes=imageData).read()
-    imageData = None
-    imageStr = ''
-    try:
-        for item in pixel:
-            for p in item:
-                imageStr += chr(p)
-    except Exception, e:
-        Log.Error(str(d))
-        return False
-
-    # split image data
-    imageTabs = []
-    i = -1
-    for idx in range(len(imageStr)):
-        if imageStr[idx] == '\0':
-            break
-        if 0 == (idx % (12 * 20)):
-            imageTabs.append([])
-            i += 1
-            j = -1
-        if 0 == (idx % (20)):
-            imageTabs[i].append([])
-            j += 1
-        imageTabs[i][j].append(imageStr[idx])
-
-    # get signature data
-    data = HTTP.Request('https://openload.co/assets/js/obfuscator/n.js', headers=http_headers, cacheTime=CACHE_1HOUR).content
-    signStr = Regex(r'(?i)[\'\"]([^\"\']+?)[\'\"]').search(data)
-    if not signStr:
-        Log.Error('* cannot find signitures')
-        return False
-
-    signStr = signStr.group(1)
-
-    # split signature data
-    signTabs = []
-    i = -1
-    for idx in range(len(signStr)):
-        if signStr[idx] == '\0':
-            break
-        if 0 == (idx % (11 * 26)):
-            signTabs.append([])
-            i += 1
-            j = -1
-        if 0 == (idx % (26)):
-            signTabs[i].append([])
-            j += 1
-        signTabs[i][j].append(signStr[idx])
-
-    # get link data
-    linkData = {}
-    for i in [2, 3, 5, 7]:
-        linkData[i] = []
-        tmp = ord('c')
-        for j in range(len(signTabs[i])):
-            for k  in range(len(signTabs[i][j])):
-                if tmp > 122:
-                    tmp = ord('b')
-                if signTabs[i][j][k] == chr(int(Util.Floor(tmp))):
-                    if len(linkData[i]) > j:
-                        continue
-                    tmp += 2.5;
-                    if k < len(imageTabs[i][j]):
-                        linkData[i].append(imageTabs[i][j][k])
-    res = []
-    for idx in linkData:
-        res.append(''.join(linkData[idx]).replace(',', ''))
-
-    res = res[3] + '~' + res[1] + '~' + res[2] + '~' + res[0]
-    videoUrl = 'https://openload.co/stream/{0}?mime=true'.format(res)
-    return videoUrl
+    return False

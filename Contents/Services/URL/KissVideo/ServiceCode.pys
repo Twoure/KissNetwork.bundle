@@ -357,10 +357,9 @@ def get_openload_url(url):
     if ourl:
         rourl = get_url_redirect_v2(ourl, http_headers)
         return rourl
-    else:
-        Log.Error(u'* OpenloadStreamFromURL: cannot parse for stream \'{}\''.format(url))
 
-    return url
+    Log.Error(u"* OpenloadStreamFromURL: cannot parse for stream '{}'".format(url))
+    return False
 
 ####################################################################################################
 def get_streammoe_url(moe_url):
@@ -395,9 +394,9 @@ def get_url_redirect_v2(input_url, http_headers=None):
         return r.headers['location']
     elif 'Location' in r.headers.keys():
         return r.headers['Location']
-    else:
-        Log.Debug(u'* URL Redirect: No Redirect URL for \"{}\"'.format(input_url))
-        Log.Debug(u'* URL Redirect: Headers = {}'.format(r.headers))
+
+    Log.Debug(u'* URL Redirect: No Redirect URL for \"{}\"'.format(input_url))
+    Log.Debug(u'* URL Redirect: Headers = {}'.format(r.headers))
     return input_url
 
 ####################################################################################################
