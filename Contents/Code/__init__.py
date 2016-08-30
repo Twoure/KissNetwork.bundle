@@ -122,13 +122,13 @@ def Start():
     # remove/clear old style of caching prior to v1.2.5
     if Dict['current_ch_version']:
         if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 6):
-            Log(u"Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
+            Log(u"* Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
             from DevTools import ClearOldCache, MoveOldBookmarks
             Thread.Create(MoveOldBookmarks)
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.storage.data_path, 'DataItems'))
         elif Common.ParseVersion(Dict['current_ch_version']) < Common.ParseVersion(version):
-            Log(u"Channel updated from {} to {}".format(Dict['current_ch_version'], version))
+            Log(u"* Channel updated from {} to {}".format(Dict['current_ch_version'], version))
 
     # setup current channel version
     Dict['current_ch_version'] = version
@@ -446,7 +446,7 @@ def BookmarksSub(type_title, art):
             '{} Bookmarks list is dirty. Use About/Help > Dev Tools > Bookmark Tools > Reset {} Bookmarks'.format(type_title, type_title))
 
     oc = ObjectContainer(title2='My Bookmarks | {}'.format(type_title), art=R(art))
-    Logger('category '.format(type_title))
+    Logger('* category '.format(type_title))
 
     # Fill in DirectoryObject information from the bookmark list
     # create empty list for testing covers
@@ -536,7 +536,7 @@ def AlphabetList(url, title, art):
                 page=1, pname=pname.lower() if not pname == '#' else '0',
                 category=pname, base_url=url, type_title=title, art=art),
             title=pname))
-    Logger('Built #, A-Z... Directories')
+    Logger('* Built #, A-Z... Directories')
     return oc
 
 ####################################################################################################
@@ -603,7 +603,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     # Define url based on genre, abc, or search
     if "Search" in pname:
         item_url = base_url
-        Logger('Searching for \"{}\"'.format(category))
+        Logger('* Searching for \"{}\"'.format(category))
         pass
     # New & Hot list is only on Anime site, but made it uniform just in case
     elif pname == '/NewAndHot':
@@ -634,8 +634,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         # No Genre with Prefs
         item_url = base_url + '/{}List{}?c={}&page={}'.format(type_title, SORT_OPT[Prefs['sort_opt']], pname, page)
 
-    Logger(u"Sorting Option = '{}'".format(SORT_OPT[Prefs['sort_opt']]))  # Log Pref being used
-    Logger(u"Category = '{}' | URL = '{}'".format(pname, item_url))
+    Logger(u"* Sorting Option = '{}'".format(SORT_OPT[Prefs['sort_opt']]))  # Log Pref being used
+    Logger(u"* Category = '{}' | URL = '{}'".format(pname, item_url))
 
     html = RHTML.ElementFromURL(item_url)
 
@@ -647,7 +647,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         # The Search result page returnes a long list with no 'next page' option
         # set url back to base url
         base_url = Common.GetBaseURL(item_url)
-        Logger("Searching for {}".format(category))  # check to make sure its searching
+        Logger("* Searching for {}".format(category))  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
         for node in html.xpath('///div[@class="pagination pagination-left"]//li/a'):
@@ -681,7 +681,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         drama_test = False
     listing_count = len(listing)
     allowed_count = 200
-    Logger('{} items in Directory List.'.format(listing_count), kind='Info')
+    Logger('* {} items in Directory List.'.format(listing_count), kind='Info')
     if listing_count > allowed_count and 'Search' in pname:
         return MC.message_container('Error',
             '{} found.  Directory can only list up to {} items.  Please narrow your Search Criteria.'.format(listing_count, allowed_count))
@@ -698,9 +698,9 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             else:
                 thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
             if not 'http' in thumb:
-                Log.Debug('thumb missing valid url. | {}'.format(thumb))
-                Log.Debug('thumb xpath = {}'.format(title_html.xpath('//img/@src')))
-                Log.Debug('item name | {} | {}'.format(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
+                Log.Debug('* thumb missing valid url. | {}'.format(thumb))
+                Log.Debug('* thumb xpath = {}'.format(title_html.xpath('//img/@src')))
+                Log.Debug('* item name | {} | {}'.format(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
                 thumb = None
                 cover_file = None
             else:

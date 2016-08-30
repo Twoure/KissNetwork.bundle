@@ -8,7 +8,6 @@ import metadata as Metadata
 from kissheaders import Headers
 from openload import OpenloadStreamFromURL
 from kissdecrypt import KissDecrypt
-from preferences import Prefs
 from data import Data
 from io import open
 import requests

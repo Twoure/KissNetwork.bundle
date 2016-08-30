@@ -10,9 +10,8 @@ import os
 from io import open
 import json
 from threading import Thread, Event
-import domain as Domain
+import domain as Domain  # domain imports shared lib path
 import common as Common
-from preferences import Prefs
 
 # Import Shared Library Modules
 import requests
@@ -212,10 +211,14 @@ class KissHeaders(object):
             Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
             Log('* Finished initializing Headers')
             return True
-        elif hasattr(self, 'que_thread'):
+        elif hasattr(self, 'que_thread') and self.que_thread.is_alive():
             Log('* {}'.format(self.que_thread))
             Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
             Log('* Headers are initializing')
+        elif hasattr(self, 'que_thread') and not self.que_thread.is_alive():
+            Log('* {}'.format(self.que_thread))
+            Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
+            Log.Critical('* KissHeaders unexpected Error.  Please contact Twoure with issue.')
         else:
             Log('* Headers initialization Skipping.')
             return True
