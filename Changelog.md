@@ -6,6 +6,7 @@
     - `kissheaders` reload header file when cookie expire
     - `kissheaders` expire time for error cookies
     - initial install header initialization
+    - Openload - fixed for now, will see if keeps changing
   - Updates:
     - New Bookmark Auto-Backup feature
     - New custom bookmark backup path

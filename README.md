@@ -142,7 +142,7 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Allow Adult Content
 - **Enabled:** Allows Adult Content to be viewed
-- **Disabled(_default_):** Checks against contents _Genre_ list for adult themed genres. Current [block list](Contents/Code/__init__.py#L48).
+- **Disabled(_default_):** Checks against contents _Genre_ list for adult themed genres. Current [block list](Contents/Code/__init__.py#L51).
   - Will provide a popup whenever an Adult themed video/comic/manga is accessed providing feedback as to why the content is blocked
   - Fails with KissCartoon because it does not have Adult themed _Genres_ but does have Adult content
 

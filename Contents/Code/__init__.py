@@ -11,21 +11,21 @@ Metadata                    = SharedCodeService.metadata
 KData                       = SharedCodeService.data.Data
 
 # setup initial run status
+INIT_DATETIME = Common.item_last_modified(Core.plist_path, utc=True)
 if not Dict['init_run']:
     Log('* KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
     Dict['init_run'] = Datetime.UTCNow().replace(microsecond=0)
     Log("* Sending request to initialize headers")
     Thread.Create(Headers.init_headers, init=True)
-Log(u"* Dict['init_run'] = '{}'".format(Dict['init_run']))
-
 # Check Info.plist for changes, file modified time should only change with updates or install
-Log(u"Info.plist last modified datetime.utc = '{}'".format(Common.item_last_modified(Core.plist_path, utc=True)))
-if Dict['init_run'] < Common.item_last_modified(Core.plist_path, utc=True):
-    init_datetime = Common.item_last_modified(Core.plist_path, utc=True)
-    Log(u"* Updating old init time {} to {}".format(Dict['init_run'], init_datetime))
-    Dict['init_run'] = init_datetime
+elif Dict['init_run'] < INIT_DATETIME:
+    Log(u"* Updating old init time {} to {}".format(Dict['init_run'], INIT_DATETIME))
+    Dict['init_run'] = INIT_DATETIME
     Log("* Sending request to re-check headers")
     Thread.Create(Headers.init_headers, init=True)
+else:
+    Log(u"* Dict['init_run'] = '{}'".format(Dict['init_run']))
+    Log(u"* Info.plist last modified datetime.utc = '{}'".format(INIT_DATETIME))
 
 # set global variables needed for imported packages
 TITLE                       = Common.TITLE
