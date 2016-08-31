@@ -446,7 +446,6 @@ def BookmarksSub(type_title, art):
             '{} Bookmarks list is dirty. Use About/Help > Dev Tools > Bookmark Tools > Reset {} Bookmarks'.format(type_title, type_title))
 
     oc = ObjectContainer(title2='My Bookmarks | {}'.format(type_title), art=R(art))
-    Logger('* category '.format(type_title))
 
     # Fill in DirectoryObject information from the bookmark list
     # create empty list for testing covers
@@ -604,7 +603,6 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     if "Search" in pname:
         item_url = base_url
         Logger('* Searching for \"{}\"'.format(category))
-        pass
     # New & Hot list is only on Anime site, but made it uniform just in case
     elif pname == '/NewAndHot':
         item_url = base_url + '/{}List{}'.format(type_title, pname)
@@ -675,10 +673,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     listing = html.xpath('//table[@class="listing"]//td[@title]')
     if not listing:
         listing = html.xpath('//div[@class="item"]')
-    if type_title == 'Drama' and ('Search' not in pname):
-        drama_test = True
-    else:
-        drama_test = False
+
+    drama_test = type_title == 'Drama' and ('Search' not in pname)
     listing_count = len(listing)
     allowed_count = 200
     Logger('* {} items in Directory List.'.format(listing_count), kind='Info')
@@ -1249,7 +1245,6 @@ def SeasonSubPage(season_info):
     thumb = Callback(GetThumb, cover_url=season_info['cover_url'], cover_file=season_info['cover_file'])
     summary = unicode(Metadata.GetSummary(html))
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
-    season_dict = None
     ips = int(season_info['ips'])
     cp = Client.Product
 
@@ -1457,7 +1452,6 @@ def AddBookmark(item_info):
     type_title = item_info['type_title']
     cover_url = item_info['cover_url']
     page_url = item_info['page_url']
-    base_url = item_info['base_url']
 
     # decode title string
     item_title_decode = Common.StringCode(string=item_title, code='decode')
@@ -1602,7 +1596,7 @@ def ClearBookmarks(type_title):
         )
     oc.add(PopupDirectoryObject(
         key=Callback(ClearBookmarksCheck, tt=type_title),
-        title='OK?'.format(type_title),
+        title='OK?',
         summary='Sure you want to Delete all \'{}\' bookmarks? If NOT then navigate back or away from this page.'.format(type_title),
         thumb=R(BOOKMARK_CLEAR_ICON), art=R(art)
         ))

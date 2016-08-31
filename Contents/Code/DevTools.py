@@ -80,7 +80,7 @@ class BookmarksToolkit(object):
         return folder
 
     def gui_tools(self):
-        check = self.check_user_path
+        self.check_user_path
         oc = ObjectContainer(title2='Bookmark Tools', header=self.context.get('header', None), message=self.context.get('message', None), no_cache=True)
         self.context.clear()
         oc.add(DirectoryObject(key=Callback(self.gui_backup_tools),

@@ -1,17 +1,12 @@
 #!/usr/bin/env python
 
-import os
-import requests
 import common as Common
 
 ########################################################################################
 def FindPartElement(array=list, string=str):
     """fileter elements in array by sting, allows for loose matches"""
 
-    if filter(lambda element: string in element, array):
-        return True
-    else:
-        return False
+    return bool(filter(lambda element: string in element, array))
 
 ########################################################################################
 def GetSummary(html):
@@ -317,7 +312,7 @@ def GetSeasonNumber(title, show_name_raw, tags=list, summary=str):
                     elif 'forth season' in summary_test or FindPartElement(array=tags_test, string='forth season'):
                         season_number = int(4)
                     elif FindPartElement(array=tags_test, string='short') or FindPartElement(array=tags_test, string='special'):
-                        season_nubmer = int(0)
+                        season_number = int(0)
                     # if no season number found then set season to 1
                     else:
                         season_number = int(1)

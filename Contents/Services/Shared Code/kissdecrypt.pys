@@ -3,10 +3,10 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       08/05/2016
+Date:       08/31/2016
 """
 
-from binascii import a2b_hex, b2a_hex, a2b_base64
+from binascii import a2b_hex, a2b_base64
 from crypto.cipher.aes_cbc import AES_CBC
 import requests
 import common as Common

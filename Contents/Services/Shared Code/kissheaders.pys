@@ -13,8 +13,6 @@ from threading import Thread, Event
 import domain as Domain  # domain imports shared lib path
 import common as Common
 
-# Import Shared Library Modules
-import requests
 try:
     import cfscrape
 except ImportError, e:
@@ -102,8 +100,8 @@ class KissHeaders(object):
 
     def create_dict(self):
         Log.Debug('* Creating New Header Dict')
-        for (type_title, base_url) in Common.BaseURLListTuple():
-            self.header_data.update(self.set_header(base_url))
+        for item in Common.BaseURLListTuple():
+            self.header_data.update(self.set_header(item[1]))
         if not self.save_dict():
             Log.Error('* failed to save new header dict')
             return False
