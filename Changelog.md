@@ -1,10 +1,10 @@
 # ChangeLog
 
 ##### 1.2.7
-- _08/xx/2016_
+- _08/31/2016_
   - Fixes:
-    - `kissheaders` reload header file when cookie expire
-    - `kissheaders` expire time for error cookies
+    - `kissheaders` - reload header file when cookie expire
+    - `kissheaders` - expire time for error cookies
     - initial install header initialization
     - Openload - fixed for now, will see if keeps changing
   - Updates:
@@ -12,8 +12,8 @@
     - New custom bookmark backup path
     - Simplified PhotoAlbum code
     - Simplified loading preferences
-    - `rhtml.py` improved error logging
-    - `ServiceCode` added test for `token`
+    - `rhtml.py` - improved error logging
+    - `ServiceCode` - added test for `token`
 
 ##### 1.2.6
 - _08/19/2016_

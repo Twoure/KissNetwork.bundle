@@ -55,7 +55,7 @@ class BookmarksToolkit(object):
                     # Keep local copy within the default directory
                     Core.storage.copy(src_path, dst_path)
                 else:
-                    # Move bookmarks form src to dst
+                    # Move bookmarks from src to dst
                     Core.storage.rename(src_path, dst_path)
                 passed.append(True)
             except Exception, e:
