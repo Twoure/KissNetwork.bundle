@@ -1,6 +1,8 @@
 KissNetwork
 ===========
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1f692a812bc44cdc807346b4dad08e0d)](https://www.codacy.com/app/twoure/KissNetwork-bundle?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Twoure/KissNetwork.bundle&amp;utm_campaign=Badge_Grade) [![GitHub issues](https://img.shields.io/github/issues/Twoure/KissNetwork.bundle.svg?style=flat)](https://github.com/Twoure/KissNetwork.bundle/issues) [![](https://img.shields.io/github/release/Twoure/KissNetwork.bundle.svg?style=flat)](https://github.com/Twoure/KissNetwork.bundle/releases)
+
 ## Table of Contents
 - [Introduction](#introduction)
   - [Features](#features)

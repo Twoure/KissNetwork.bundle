@@ -121,7 +121,7 @@ def Start():
 
     # remove/clear old style of caching prior to v1.2.5
     if Dict['current_ch_version']:
-        if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 6):
+        if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 7):
             Log(u"* Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
             from DevTools import ClearOldCache, MoveOldBookmarks
             Thread.Create(MoveOldBookmarks)
@@ -148,7 +148,7 @@ def MainMenu():
     if not Dict['cfscrape_test']:
         return MC.message_container('Error',
             'CloudFlare bypass failed. Please report Error to Twoure with channel Log files.')
-    if not Headers.init_headers():
+    elif not Headers.init_headers():
         return MC.message_container('Warning', 'Please wait while channel caches headers.  Exit channel and try again later.')
 
     admin = CheckAdmin()

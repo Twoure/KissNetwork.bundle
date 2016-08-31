@@ -11,6 +11,7 @@
     - New Bookmark Auto-Backup feature
     - New custom bookmark backup path
     - Simplified PhotoAlbum code
+    - Simplified loading preferences
     - `rhtml.py` improved error logging
     - `ServiceCode` added test for `token`
 
