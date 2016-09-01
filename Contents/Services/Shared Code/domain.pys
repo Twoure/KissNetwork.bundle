@@ -61,9 +61,8 @@ def SetDomainURL(string, fresh=False):
 
     try:
         r = requests.head(test, headers={'user-agent': USER_AGENT})
-    except Exception as e:
-        Log.Error('* SetDomainURL Error: Unable to handle URL \"{}\"'.format(test))
-        Log.Error('* SetDomainURL Error: {}'.format(e))
+    except:
+        Log.Exception('* SetDomainURL Error: Unable to handle URL \"{}\"'.format(test))
         return test
 
     status = int(r.status_code)
@@ -75,9 +74,8 @@ def SetDomainURL(string, fresh=False):
             r_domain = r_domain[:-1] if r_domain.endswith('/') else r_domain
             Log.Debug('* Current Domain \"{}\" different from test \"{}\"'.format(r_domain, test))
             return r_domain
-        except Exception as e:
-            Log.Error('* SetDomainURL Error: Unable to process headers for \"{}\"'.format(test))
-            Log.Error('* SetDomainURL Error: {}'.format(e))
+        except:
+            Log.Exception('* SetDomainURL Error: Unable to process headers for \"{}\"'.format(test))
     elif status == 503 or status == 200:
         url = r.url[:-1] if r.url.endswith('/') else r.url
         if url == test:
