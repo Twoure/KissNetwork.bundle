@@ -51,7 +51,8 @@ def get_element_from_url(url, name, count=0):
                             Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
                         return HTML.ElementFromString(page.text)
                     else:
-                        Log.Warn('* get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
+                        Log.Warn('* get_element_from_url Error: HTTP {} Error. Refreshing {} Domain'.format(page.status_code, type_title))
+                        Log.Warn('* get_element_from_url Error: req_base_url | base_url = {} | {}'.format(page.url, url))
                         Log.Warn('* get_element_from_url Error: page history {} | {}'.format(url, page.history))
                         Domain.UpdateDomain(type_title, True)
                         url = Common.CorrectURL(url)
