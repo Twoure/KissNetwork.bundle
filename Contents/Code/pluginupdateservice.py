@@ -413,6 +413,33 @@ class PluginUpdateService(object):
         Log(u"Failed to restart {} because of missing Info.plist file.".format(self.identifier))
         return False
 
+    def item_last_modified(self, path, utc=False):
+        if Core.storage.file_exists(path):
+            ts = Core.storage.last_modified(path)
+            if utc:
+                return self.datetime_to_utc(Datetime.FromTimestamp(ts)).replace(microsecond=0)
+            return Datetime.FromTimestamp(ts).replace(microsecond=0)
+        return False
+
+    @property
+    def initial_run(self):
+        """setup initial run status"""
+        self.init_datetime = self.item_last_modified(Core.plist_path, utc=True)
+        if not Dict['init_run']:
+            Log('{} initial run. Logging datetime into Dict[\'init_run\']'.format(self.name))
+            Dict['init_run'] = Datetime.UTCNow().replace(microsecond=0)
+            Dict.Save()
+            return False
+        # Check Info.plist for changes, file modified time should only change with updates or install
+        elif Dict['init_run'] < self.init_datetime:
+            Log(u"* Updating old init time {} to {}".format(Dict['init_run'], self.init_datetime))
+            Dict['init_run'] = self.init_datetime
+            return False
+        else:
+            Log(u"* Dict['init_run'] = '{}'".format(Dict['init_run']))
+            Log(u"* Info.plist last modified datetime.utc = '{}'".format(self.init_datetime))
+            return True
+
     def gui_update(self, prefix, oc, repo, branch='master', tag=None, list_view_clients=list):
         """
         Create route for updater, and check for the latest release or commit depending on branch or tag inputs.

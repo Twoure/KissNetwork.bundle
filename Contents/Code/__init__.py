@@ -10,23 +10,6 @@ Common                      = SharedCodeService.common
 Metadata                    = SharedCodeService.metadata
 KData                       = SharedCodeService.data.Data
 
-# setup initial run status
-INIT_DATETIME = Common.item_last_modified(Core.plist_path, utc=True)
-if not Dict['init_run']:
-    Log('* KissNetwork initial run. Logging datetime into Dict[\'init_run\']')
-    Dict['init_run'] = Datetime.UTCNow().replace(microsecond=0)
-    Log("* Sending request to initialize headers")
-    Thread.Create(Headers.init_headers, init=True)
-# Check Info.plist for changes, file modified time should only change with updates or install
-elif Dict['init_run'] < INIT_DATETIME:
-    Log(u"* Updating old init time {} to {}".format(Dict['init_run'], INIT_DATETIME))
-    Dict['init_run'] = INIT_DATETIME
-    Log("* Sending request to re-check headers")
-    Thread.Create(Headers.init_headers, init=True)
-else:
-    Log(u"* Dict['init_run'] = '{}'".format(Dict['init_run']))
-    Log(u"* Info.plist last modified datetime.utc = '{}'".format(INIT_DATETIME))
-
 # set global variables needed for imported packages
 TITLE                       = Common.TITLE
 PREFIX                      = Common.PREFIX
@@ -36,6 +19,13 @@ URL_CACHE_DIR               = 'DataHTTP'
 THUMB_CACHE_DIR             = 'DataCovers'
 BOOKMARK_CACHE_DIR          = 'DataBookmarks'
 
+# setup Updater and update headers if Dict['init_run'] updates
+from pluginupdateservice import PluginUpdateService
+Updater = PluginUpdateService()
+if not Updater.initial_run:
+    Log("* Sending request to initialize headers")
+    Thread.Create(Headers.init_headers, init=True)
+
 # import local and remote packages
 import messages
 import requests
@@ -43,7 +33,6 @@ from io import open
 import rhtml as RHTML
 from AuthTools import CheckAdmin
 from DumbTools import DumbKeyboard, DumbPrefs
-from pluginupdateservice import PluginUpdateService
 from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache, BookmarkTools
 
 # more global variables
@@ -84,7 +73,6 @@ CACHE_COVER_ICON            = 'icon-cache-cover.png'
 ABOUT_ICON                  = 'icon-about.png'
 
 MC = messages.NewMessageContainer(PREFIX, TITLE)
-Updater = PluginUpdateService()
 
 ####################################################################################################
 def Start():
