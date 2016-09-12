@@ -3,8 +3,9 @@
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
 # and modified for use with Plex Media Server by Twoure
 
-from aadecode import aadecode
+#from aadecode import aadecode
 from jjdecode import JJDecoder
+from unpacker import unpack as Unpack
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 
@@ -12,7 +13,12 @@ def code_at(text):
     r = Regex(r'(?i)CodeAt\(0\)\s*\+\s*(\d+)').search(text)
     return int(r.group(1)) if r else False
 
-def decode_hiddenUrl(x, aalist, jjlist):
+def pre_packer(c, z):
+    if (90 if c <= "Z" else 122) >= ord(c)+z:
+        return chr(ord(c)+z)
+    return chr(ord(c)+z-26)
+
+def decode_hiddenUrl(x, pkdlist):
     s = ""
     tmp = ""
     try:
@@ -24,18 +30,19 @@ def decode_hiddenUrl(x, aalist, jjlist):
     except:
         Log.Exception(u'* Cannot decode {}'.format(x))
 
-    for item in aalist:
+    for item in pkdlist:
         try:
-            tmp += aadecode(item)
+            p = item.replace('eval (function', 'eval(function')
+            rp = Regex(r'(function\(z\).+?a\=\"([^\"]+).+?\;\}\((\d+)\))').search(p)
+            a = rp.group(2)
+            z = int(rp.group(3))
+            packed = p.replace(rp.group(0), "'"+String.Unquote(Regex(r'[a-zA-Z]').sub(lambda c: pre_packer(c.group(0), z), a), True)+"'")
+            tmp += JJDecoder(Unpack(packed)).decode()
         except:
-            Log.Exception("* Cannot decode item >>>")
+            Log.Exception("* Error decoding with unpacker, then jjdecode >>>")
 
     num = code_at(tmp)
-    if not num:
-        tmp = ""
-        for item in jjlist:
-            tmp += JJDecoder(item).decode()
-    num = code_at(tmp)
+
     return s[:-1] + chr(ord(s[-1]) + num) if s and num else False
 
 def OpenloadStreamFromURL(url, http_headers=None):
@@ -53,11 +60,13 @@ def OpenloadStreamFromURL(url, http_headers=None):
 
     html = HTML.ElementFromString(page)
     hiddenUrl = html.xpath('//span[@id="hiddenurl"]/text()')
-    aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
-    jjdata_list = Regex(r'(?s)<script type="text/javascript">(j=.*?\(\)\)\(\);)').findall(page)
+    pckd_list = Regex(r"(eval\s*?\(function\(p,a,c,k,e,.+\.split\(.+\).*?\)\))").findall(page)
+    #aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
+    #jjdata_list = Regex(r'(?s)<script type="text/javascript">(j=.*?\(\)\)\(\);)').findall(page)
 
     if hiddenUrl:
-        hurl = decode_hiddenUrl(hiddenUrl[0], aadata_list, jjdata_list)
+        #hurl = decode_hiddenUrl(hiddenUrl[0], aadata_list, jjdata_list, pckd_list)
+        hurl = decode_hiddenUrl(hiddenUrl[0], pckd_list)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
