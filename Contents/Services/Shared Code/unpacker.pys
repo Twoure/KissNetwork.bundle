@@ -56,11 +56,9 @@ def filterargs(source):
         if args:
             a = args.groups()
             try:
-                a3 = a[3]
-                if '+' in a3:
-                    t = a3.split('+')
-                    a3 = ''.join([b.strip("'") for b in t])
-                return a[0], a3.split(a[4]), 36 if a[1] == '[]' else int(a[1]), int(a[2])
+                a1 = 36 if a[1] == '[]' else int(a[1])
+                a3 = ''.join([b.strip("'") for b in a[3].split('+')]) if '+' in a[3] else a[3]
+                return a[0], a3.split(a[4]), a1, int(a[2])
             except ValueError:
                 raise UnpackingError('Corrupted p.a.c.k.e.r. data.')
 
