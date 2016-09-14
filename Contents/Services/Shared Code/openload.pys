@@ -9,6 +9,10 @@ from unpacker import unpack as Unpack
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 
+def find_sid(text):
+    r = Regex(r'var\s*?\w+\s*?\=\s*?\$\([\'\"]\#(.+?)[\'\"]\)\.text\(').search(text)
+    return r.group(1) if r else False
+
 def code_at(text):
     r = Regex(r'(?i)CodeAt\(0\)\s*\+\s*(\d+)').search(text)
     return int(r.group(1)) if r else False
@@ -18,17 +22,9 @@ def pre_packer(c, z):
         return chr(ord(c)+z)
     return chr(ord(c)+z-26)
 
-def decode_hiddenUrl(x, pkdlist):
+def decode_hiddenUrl(hurls, pkdlist):
     s = ""
     tmp = ""
-    try:
-        for i in list(x):
-            j = ord(i)
-            if (j >= 33) and (j <= 126):
-                j = 33 + ((j + 14) % 94)
-            s += chr(j)
-    except:
-        Log.Exception(u'* Cannot decode {}'.format(x))
 
     for item in pkdlist:
         try:
@@ -42,8 +38,21 @@ def decode_hiddenUrl(x, pkdlist):
             Log.Exception("* Error decoding with unpacker, then jjdecode >>>")
 
     num = code_at(tmp)
+    sid = find_sid(tmp)
 
-    return s[:-1] + chr(ord(s[-1]) + num) if s and num else False
+    for hid, t in hurls:
+        if hid == sid:
+            try:
+                for i in list(t):
+                    j = ord(i)
+                    if (j >= 33) and (j <= 126):
+                        j = 33 + ((j + 14) % 94)
+                    s += chr(j)
+            except:
+                Log.Exception(u'* Cannot decode {}'.format(t))
+
+            return s[:-1] + chr(ord(s[-1]) + num) if s and num else False
+    return False
 
 def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
@@ -59,14 +68,18 @@ def OpenloadStreamFromURL(url, http_headers=None):
         return False
 
     html = HTML.ElementFromString(page)
-    hiddenUrl = html.xpath('//span[@id="hiddenurl"]/text()')
+    hiddenUrls = html.xpath('//span[@id]')
+    hurls = list()
+    for h in hiddenUrls:
+        hurls.append((h.get('id'), h.text))
+
     pckd_list = Regex(r"(eval\s*?\(function\(p,a,c,k,e,.+\.split\(.+\).*?\)\))").findall(page)
     #aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
     #jjdata_list = Regex(r'(?s)<script type="text/javascript">(j=.*?\(\)\)\(\);)').findall(page)
 
-    if hiddenUrl:
+    if hurls:
         #hurl = decode_hiddenUrl(hiddenUrl[0], aadata_list, jjdata_list, pckd_list)
-        hurl = decode_hiddenUrl(hiddenUrl[0], pckd_list)
+        hurl = decode_hiddenUrl(hurls, pckd_list)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
