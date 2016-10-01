@@ -62,8 +62,13 @@ def OpenloadStreamFromURL(url, http_headers=None):
 
     try:
         page = HTTP.Request(eurl, encoding=('utf-8'), headers=http_headers, cacheTime=CACHE_1MINUTE).content
+    except UnicodeDecodeError, ude:
+        Log.Warn(u"* Warning: Content removed by Openload for '{0}'".format(eurl))
+        Log(str(ude))
+        return False
     except:
-        Log.Exception(u"* Cannot Open Openload URL '{}' >>>".format(eurl))
+        Log(u"* Error handling '{0}' >>>".format(eurl))
+        Log.Exception(u"* Error: Cannot Open/Decode Openload page >>>")
         return False
 
     html = HTML.ElementFromString(page)
