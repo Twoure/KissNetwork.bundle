@@ -14,14 +14,18 @@ import requests
 import shutil
 import js2py
 
+RE_URL_OD = Regex(r'src\=["\'](https?://onedrive\.live\.com/prev\?.+?)["\']')
+RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
+RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
+RE_ENC_TEST = Regex(r'/Scripts/(kissenc\.min\.j[^"\']+)')
+RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
+RE_WINDOW2 = Regex(r'(.+window[^\=]+[^\;]+)')
+RE_ITAG = Regex(r'itag\=(\d+)')
+RE_ATOB = Regex(r'contents *?\= *?atob\(["\']([^"\']+)')
+RE_URL_BASE = Regex(r'(https?://(?:www\.)?\w+\.\w+)')
+
 ########################################################################################
 def MetadataObjectForURL(url):
-    """
-    This function should create and return a metadata object (for example, a
-    VideoClipObject) and populate it with metadata from the given URL.
-    Only the metadata should be added here, the object's key and rating_key properties
-    will be synthesised based on the URL.
-    """
 
     Log('*' * 80)
     Log(u'* MetadataObjectForURL url = {}'.format(url))
@@ -86,91 +90,84 @@ def MetadataObjectForURL(url):
 
 ########################################################################################
 def MediaObjectsForURL(url):
-    """
-    This function should create and return a list of media objects
-    and part objects representing the media available at the given URL.
-    Callbacks may be used if obtaining the final media location requires
-    additional computation.
-    """
 
     Log.Debug('*' * 80)
-    mo = list()
-    fmt_list = [('1080p', 'm37', 5000), ('720p', 'm22', 2500), ('480p', 'm59', 1125), ('360p', 'm18', 650)]
+    fmt_list = [('1080', 'm37', 5000), ('720', 'm22', 2500), ('480', 'm59', 1125), ('360', 'm18', 650)]
     url = Common.CorrectURL(url)
 
     # create media objects for each video quality
     if Prefs['force_transcode']:
         Log.Debug('* Force Transcoding ON')
-        for fmt, m, b in fmt_list:
-            mo.append(MediaObject(
-                parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
-                bitrate=b,
-                video_resolution=fmt[:-1],
+        return [
+            MediaObject(
                 audio_channels=2,
-                optimized_for_streaming=False
-                ))
+                video_resolution=res,
+                optimized_for_streaming=False,
+                parts=[
+                    PartObject(key=Callback(PlayVideo, url=url, m=m))
+                    ],
+                ) for res, m, b in fmt_list
+            ]
     else:
         Log.Debug('* Force Trascoding OFF')
-        for fmt, m, b in fmt_list:
-            mo.append(MediaObject(
-                parts=[PartObject(key=Callback(PlayVideo, url=url, m=m))],
+        return [
+            MediaObject(
                 bitrate=b,
-                video_resolution=fmt[:-1],
+                video_resolution=res,
                 container=Container.MP4,
                 video_codec=VideoCodec.H264,
                 audio_codec=AudioCodec.AAC,
                 audio_channels=2,
-                optimized_for_streaming=True
-                ))
-
-    return mo
+                optimized_for_streaming=True,
+                parts=[
+                    PartObject(key=Callback(PlayVideo, url=url, m=m))
+                    ],
+                ) for res, m, b in fmt_list
+            ]
 
 ########################################################################################
 @indirect
 def PlayVideo(url, m, **kwargs):
     """
     Get Video URL
-    Currently available host: GoogleVideo, OneDrive, and OpenLoad
+    Currently available host: GoogleVideo, Openload, Stream.moe
     GoogleVideo links have the potential for multiple resolutions links
-    OneDrive & OpenLoad give only one link (the highest), so no optional resolutions
+    Site used to include OneDrive links, so have left the code for them for now.
+    OneDrive, Openload, and Stream.moe give only one link (the highest), so no optional resolutions
+
+    Video URL fallback system.
+    Order as follows:
+    * Preferred Server = KissNetwork
+        KissNetwork --> Openload --> Stream.moe
+    * Preferred Server = Openload
+        Openload --> Stream.moe --> KissNetwork
+    * Preferred Server = Stream
+        Stream.moe --> KissNetwork
     """
 
     Log.Debug('*' * 80)
     Log.Debug('* Client.Product     = {}'.format(Client.Product))
     Log.Debug('* Client.Platform    = {}'.format(Client.Platform))
     Log.Debug('* Client.Version     = {}'.format(Client.Version))
+    Log.Debug('* Channel.Server     = {}'.format(Prefs['server']))
 
-    req_url = url + ('&s={}'.format(Prefs['server']) if Prefs['server'] != 'KissNetwork' else '')
+    req_url = url + ('&s={}'.format(Prefs['server'].lower()) if Prefs['server'] != 'KissNetwork' else '')
+    vurl = get_video_url(url, m, *setup_video_page(req_url))
 
-    if not 'Anime' in Common.GetTypeTitle(url):
-        r = NRequest(req_url, raw=True)
-        headers = Headers.get_headers_for_url(url)
-        dc = headers['cookie']
-        if 'k_token' in r.cookies:
-            headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
-        page_text = r.text
-    else:
-        headers = None
-        page_text = NRequest(req_url)
+    if (not vurl) and (Prefs['server'] == 'KissNetwork'):
+        Log.Warn("* GoogleVideo URL offline, falling back to Openload")
+        req_url = url + '&s=openload'
+        vurl = get_video_url(url, m, *setup_video_page(req_url))
 
-    gtest = True if Regex(r'id\=[\"\'](selectQuality)').search(page_text) else False
-    if (gtest == False) and (Prefs['server'] == 'KissNetwork'):
-        page_text = NRequest(req_url + '&s=openload')
+    if (not vurl) and (req_url.endswith('openload')):
+        Log.Warn("* Openload URL offline, falling back to Stream.moe")
+        req_url = url + '&s=stream'
+        vurl = get_video_url(url, m, *setup_video_page(req_url))
 
-    onedrive = Regex(r'src\=[\"\'](https?\:\/\/onedrive\.live\.com\/prev\?.+?)[\"\']').search(page_text)
-    openload = Regex(r'src\=[\"\'](https?\:\/\/o(?:pen)?load.+?)[\"\']').search(page_text)
-    streammoe = Regex(r'src\=[\"\'](https?\:\/\/stream\.moe\/embed.+?)[\"\']').search(page_text)
-    if onedrive:
-        Log.Debug('* OneDrive URL       = {}'.format(onedrive.group(1)))
-        vurl = get_onedrive_url(onedrive.group(1))
-    elif openload:
-        Log.Debug('* OpenLoad URL       = {}'.format(openload.group(1)))
-        vurl = get_openload_url(openload.group(1))
-    elif streammoe:
-        Log.Debug('* StreamMoe URL      = {}'.format(streammoe.group(1)))
-        vurl = get_streammoe_url(streammoe.group(1))
-    else:
-        vurl = get_googlevideo_url(page_text, url, m, headers)
+    if (not vurl) and (req_url.endswith('stream')) and (Prefs['server'] != 'KissNetwork'):
+        Log.Warn("* Stream.moe URL offline, falling back to KissNetwork")
+        vurl = get_video_url(url, m, *setup_video_page(url))
+
     Log.Debug('* PlayVideo URL      = {}'.format(vurl))
 
     if Prefs['force_redirect'] and (Prefs['force_transcode'] == False) and (Prefs['server'] == 'KissNetwork'):
@@ -194,8 +191,40 @@ def PlayVideo(url, m, **kwargs):
 
     raise Ex.MediaNotAvailable
 
+########################################################################################
+def setup_video_page(url):
+    if not 'Anime' in Common.GetTypeTitle(url):
+        r = NRequest(url, raw=True)
+        headers = Headers.get_headers_for_url(url)
+        dc = headers['cookie']
+        if 'k_token' in r.cookies:
+            headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
+        page = r.text
+    else:
+        headers = None
+        page = NRequest(url)
+    return headers, page
+
+########################################################################################
+def get_video_url(url, m, headers, page):
+    od = RE_URL_OD.search(page)
+    ol = RE_URL_OL.search(page)
+    st = RE_URL_SM.search(page)
+    if od:
+        Log.Debug('* OneDrive URL       = {}'.format(od.group(1)))
+        vurl = get_onedrive_url(od.group(1))
+    elif ol:
+        Log.Debug('* OpenLoad URL       = {}'.format(ol.group(1)))
+        vurl = get_openload_url(ol.group(1))
+    elif st:
+        Log.Debug('* StreamMoe URL      = {}'.format(st.group(1)))
+        vurl = get_streammoe_url(st.group(1))
+    else:
+        vurl = get_googlevideo_url(page, url, m, headers)
+    return vurl
+
 ####################################################################################################
-def get_googlevideo_url(page_text, url, m, headers):
+def get_googlevideo_url(page, url, m, headers):
     """
     Get GoogleVideo URLs
     Returns the Hights stream playable depending on the previous Stream Selections
@@ -206,7 +235,7 @@ def get_googlevideo_url(page_text, url, m, headers):
     If 1080p was previously chosen, then 720p will be used
     """
 
-    html = HTML.ElementFromString(page_text)
+    html = HTML.ElementFromString(page)
     olist = html.xpath('//select[@id="selectQuality"]/option')
     type_title = Common.GetTypeTitle(url)
     type_title_lower = type_title.lower()
@@ -219,17 +248,17 @@ def get_googlevideo_url(page_text, url, m, headers):
     # format info taken from here:
     # https://github.com/rg3/youtube-dl/blob/fd050249afce1bcc9e7f4a127069375467007b55/youtube_dl/extractor/youtube.py#L281
     # mp4 {format: resolution} dictionary
-    fmt_dict = {'37': '1080', '22': '720', '59': '480', '78': '480', '18': '360'}
+    fmt_dict = {'37': 1080, '22': 720, '59': 480, '78': 480, '18': 360}
     if Prefs['force_transcode']:
         # When force transcoding, then provide support for webm and flv video resolutions
         # webm {format: resolution} dictionary
-        fmt_dict.update({'43': '360', '44': '480', '45': '720', '46': '1080'})
+        fmt_dict.update({'43': 360, '44': 480, '45': 720, '46': 1080})
         # flv {format: resolution} dictionary
-        fmt_dict.update({'35': '480', '34': '360'})
+        fmt_dict.update({'35': 480, '34': 360})
     # reversed mp4 format dictionary, paired values with resolutin selection in MediaObjectsForURL()
-    rfmt_dict = {'1080': '37', '720': '22', '480': '59', '360': '18'}
+    rfmt_dict = {'1080': 37, '720': 22, '480': 59, '360': 18}
 
-    enc_test = Regex(r'\/Scripts\/(kissenc\.min\.j[^\'\"]+)').search(page_text)
+    enc_test = RE_ENC_TEST.search(page)
     if enc_test:
         Log.Debug('* {}'.format(enc_test.group(1)))
 
@@ -237,9 +266,9 @@ def get_googlevideo_url(page_text, url, m, headers):
         if enc_test:
             post_data = None
             try:
-                js = Regex(r'(?s)type\=[\"\']text\/javascript[\"\']\>(.*?(window\[[^\=]+).*?)\<\/script\>').search(page_text)
+                js = RE_WINDOW1.search(page)
                 if js and (js.group(2) != 'window.location.href'):
-                    ra = Regex(r'(.+window[^\=]+[^\;]+)').findall(js.group(1))
+                    ra = RE_WINDOW2.findall(js.group(1))
                     for s in ra:
                         jsc = js2py.EvalJs()
                         jsc.execute('var window = {};' + s)
@@ -258,15 +287,16 @@ def get_googlevideo_url(page_text, url, m, headers):
                 vurls.append((vurl_old, fmt_dict[itag]))
             except:
                 itag = 'No itag Found!'
-                itag_test = Regex(r'itag\=(\d+)').search(vurl_old)
+                itag_test = RE_ITAG.search(vurl_old)
                 if itag_test:
                     itag = str(itag_test.group(1))
                     if itag in fmt_dict.keys():
                         vurls.append((vurl_old, fmt_dict[itag]))
         else:
             try:
-                itag = rfmt_dict[node.text.strip()[:-1]]
-                vurls.append((vurl_old, node.text.strip()[:-1]))
+                res = node.text.strip()[:-1]
+                itag = rfmt_dict[res]
+                vurls.append((vurl_old, int(res)))
             except Exception as e:
                 itag = u'No itag Found: {}'.format(e)
 
@@ -275,13 +305,13 @@ def get_googlevideo_url(page_text, url, m, headers):
 
     if vurls:
         Log.Debug('* pre resolution selected = {}'.format(m))
-        for item, mm in sorted(vurls, key=lambda tup: int(tup[1])):
+        for item, mm in Util.ListSortedByKey(vurls, 1):
             vurl = item
-            nm = rfmt_dict[mm]
-            if str(nm) == m[1:]:
+            nm = rfmt_dict[str(mm)]
+            if nm == int(m[1:]):
                 #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
-            elif int(mm) > int(fmt_dict[m[1:]]):
+            elif mm > fmt_dict[m[1:]]:
                 #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
         Log.Debug('* Selecting {}p stream'.format(mm))
@@ -304,16 +334,16 @@ def get_onedrive_url(onedrive_url):
 
     # Pull out the GetItemsLoaderConfing and store info in data dictionary
     for node in html.xpath('//script[@type="text/javascript"]'):
-        match = Regex(r'(?s)GetItemsLoaderConfig\ \=\ (\{.*?\})\;').search(node.text_content())
+        match = Regex(r'(?s)GetItemsLoaderConfig \= (\{.*?\})\;').search(node.text_content())
         if match:
             test = match.group(1).replace('\n\r', '').strip()
             for i, s in enumerate(['cid', 'skyApiDomain', 'mkt', 'appId', 'canary', 'oauthToken', 'authKey', 'ticket', 'gb', 'rset']):
                 if i == 0:
-                    data = {s: Regex(r'{}\:\ \'(.*)\'\,'.format(s)).search(test).group(1)}
+                    data = {s: Regex(r"{}\: '(.*)'\,".format(s)).search(test).group(1)}
                 elif not s == 'rset':
-                    data.update({s: Regex(r'{}\:\ \'(.*)\'\,'.format(s)).search(test).group(1)})
+                    data.update({s: Regex(r"{}\: '(.*)'\,".format(s)).search(test).group(1)})
                 else:
-                    data.update({s: Regex(r'{}\:\ \'(.*?)\''.format(s)).search(test).group(1)})
+                    data.update({s: Regex(r"{}\: '(.*?)'".format(s)).search(test).group(1)})
             break
 
     # parse parameters in URL
@@ -370,7 +400,7 @@ def get_streammoe_url(moe_url):
         Log.Exception('* StreamMoe Error: >>>')
         return False
 
-    r = Regex(r'contents\s*?\=\s*?atob\([\'\"]([^\'\"]+)').search(page)
+    r = RE_ATOB.search(page)
     if r:
         html_text = String.Base64Decode(r.group(1))
         html = HTML.ElementFromString(html_text)
@@ -394,9 +424,24 @@ def get_url_redirect_v2(input_url, http_headers=None):
     elif 'Location' in r.headers.keys():
         return r.headers['Location']
 
-    Log.Debug(u'* URL Redirect: No Redirect URL for \"{}\"'.format(input_url))
+    Log.Debug(u"* URL Redirect: No Redirect URL for '{}'".format(input_url))
     Log.Debug(u'* URL Redirect: Headers = {}'.format(r.headers))
     return input_url
+
+####################################################################################################
+def html_from_error(page, name, resp):
+    error = {'unavailable': False, 'human': False}
+    if Regex(r'(^The service is unavailable.$)').search(page.text):
+        Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
+        error['unavailable'] = True
+    elif Regex(r'/recaptcha/api\.js').search(page.text):
+        Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
+        Log.Warn(str(page.text))
+        error['human'] = True
+        return False if resp else HTML.Element('head', 'Error'), error
+    else:
+        Data.Save(Data.HTTP(name), page.text, resp)
+    return page if resp else HTML.ElementFromString(page.text), error
 
 ####################################################################################################
 def get_element_from_url(url, name, count=0, resp=False):
@@ -409,59 +454,49 @@ def get_element_from_url(url, name, count=0, resp=False):
                 count += 1
                 if len(page.history) > 0:
                     type_title = Common.GetTypeTitle(url)
-                    req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
-                    base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
+                    req_base_url = RE_URL_BASE.search(page.url).group(1)
+                    base_url = RE_URL_BASE.search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=Headers.get_headers_for_url(req_base_url))
-                        if Regex(r'(^The service is unavailable.$)').search(page.text):
-                            Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-                        elif Regex(r'\/recaptcha\/api\.js').search(page.text):
-                            Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
-                            Log.Warn(str(page.text))
-                            return False if resp else HTML.Element('head', 'Error')
-                        else:
-                            Data.Save(Data.HTTP(name), page.text, resp)
-                        return page if resp else HTML.ElementFromString(page.text)
+                        html = html_from_error(page, name, resp)
+                        return html[0]
                     else:
-                        Log.Warn('* ServiceCode, get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
-                        Log.Warn('* ServiceCode, get_element_from_url Error: page history {} | {}'.format(url, page.history))
+                        Log.Warn('* <ServiceCode>, get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
+                        Log.Warn('* <ServiceCode>, get_element_from_url Error: page history {} | {}'.format(url, page.history))
                         Domain.UpdateDomain(type_title, True)
                         url = Common.CorrectURL(url)
                 else:
-                    Log.Warn('* ServiceCode, get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
-                    Headers.get_headers_for_url(url, update=True)
+                    error = html_from_error(page, name, resp)
+                    if error[1]['unavailable']:
+                        Log.Warn("* <ServiceCode>, URL unavailable. Trying again for '{}'".format(page.url))
+                    else:
+                        Log.Warn('* <ServiceCode>, HTTP 503 Error: Refreshing site cookies')
+                        Headers.get_headers_for_url(url, update=True)
                 return get_element_from_url(url, name, count, resp)
             else:
-                Log.Error('* ServiceCode, get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
+                Log.Error('* <ServiceCode>, get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
                 if Data.Exists(Data.HTTP(name)):
-                    Log.Warn('* Using old cached page')
+                    Log.Warn('* Using bad page')
                     return page if resp else HTML.ElementFromString(page.text)
         else:
             try:
                 page.raise_for_status()
-                if Regex(r'(^The service is unavailable.$)').search(page.text):
-                    Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-                elif Regex(r'\/recaptcha\/api\.js').search(page.text):
-                    Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
-                    Log.Warn(str(page.text))
-                    return False if resp else HTML.Element('head', 'Error')
-                else:
-                    Data.Save(Data.HTTP(name), page.text, resp)
-                return page if resp else HTML.ElementFromString(page.text)
+                html = html_from_error(page, name, resp)
+                return html[0]
             except Exception, e:
                 if (int(page.status_code) == 522):
-                    Log.Error('* ServiceCode, get_element_from_url Error: HTTP 522 Site Error, site is currently offline')
+                    Log.Error('* <ServiceCode>, get_element_from_url Error: HTTP 522 Site Error, site is currently offline')
                 elif (int(page.status_code) == 524):
-                    Log.Error('* ServiceCode, get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
+                    Log.Error('* <ServiceCode>, get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
                     if count < 1:
-                        Log.Debug('* ReTrying \'{}\''.format(page.url))
+                        Log.Debug("* ReTrying '{}'".format(page.url))
                         count += 1
                         return get_element_from_url(url, name, count, resp)
                 else:
-                    Log.Error('* ServiceCode, get_element_from_url Error: Unknown Site Error, check output below.')
+                    Log.Error('* <ServiceCode>, get_element_from_url Error: Unknown Site Error, check output below.')
                 Log.Error(u'* {}'.format(e))
     except:
-        Log.Exception(u'* ServiceCode, get_element_from_url Error: Cannot load {}'.format(url))
+        Log.Exception(u'* <ServiceCode>, get_element_from_url Error: Cannot load {}'.format(url))
 
     return False if resp else HTML.Element('head', 'Error')
 
@@ -479,16 +514,16 @@ def ElementFromURL(url):
         if filename == name:
             match = True
             if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
-                Log.Debug('* Re-Caching \'{}\' to DataHTTP'.format(url))
+                Log.Debug("* Re-Caching '{}' to DataHTTP".format(url))
                 html = get_element_from_url(url, name)
                 break
             else:
-                Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
+                Log.Debug("* Fetching '{}' from DataHTTP".format(url))
                 html = HTML.ElementFromString(Data.Load(Data.HTTP(filename)))
                 break
 
     if not match:
-        Log.Debug('* Caching \'{}\' to DataHTTP'.format(url))
+        Log.Debug("* Caching '{}' to DataHTTP".format(url))
         html = get_element_from_url(url, name)
 
     return html
@@ -507,16 +542,16 @@ def NRequest(url, raw=False):
         if filename == name:
             match = True
             if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
-                Log.Debug('* Fetching fresh data for \'{}\''.format(url))
+                Log.Debug("* Fetching fresh data for '{}'".format(url))
                 r = get_element_from_url(url, name, resp=raw)
                 break
             else:
-                Log.Debug('* Fetching \'{}\' from DataHTTP'.format(url))
+                Log.Debug("* Fetching '{}' from DataHTTP".format(url))
                 r = Data.Load(Data.HTTP(filename), raw)
                 break
 
     if not match:
-        Log.Debug('* URL Not in Cache, Fetching fresh data from \'{}\''.format(url))
+        Log.Debug("* URL Not in Cache, Fetching fresh data from '{}'".format(url))
         r = requests.get(url, headers=Headers.get_headers_for_url(url))
         r = r if raw else r.text
         Data.Save(Data.HTTP(name), r, raw)

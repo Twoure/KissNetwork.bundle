@@ -542,9 +542,10 @@ def SaveCoverImage(image_url, count=0, page_url=None):
         elif r.status_code == 503 and count < 3:
             count += 1
             timer = float(Util.RandomInt(5,10)) + Util.Random()
-            Log.Warn('* 503 Error Code.')
-            Log.Warn('* Polling site too fast. Waiting {} sec then try again, try up to 3 times. Try {}.'.format(timer, count))
-            Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
+            Log.Warn('* HTTP 503 Error: Either cookies need to be refreshed or site is offline.')
+            return None
+            #Log.Warn('* Polling site too fast. Waiting {} sec then try again, try up to 3 times. Try {}.'.format(timer, count))
+            #Thread.CreateTimer(interval=timer, f=SaveCoverImage, image_url=content_url, count=count)
         elif (r.status_code == 403) and (count < 1):
             Log.Warn('* 403 Error Code.')
             Log.Warn('* Image Offline {}'.format(content_url))

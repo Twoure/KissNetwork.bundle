@@ -27,6 +27,21 @@ def ElementFromURL(url):
     return html
 
 ####################################################################################################
+def html_from_error(page, name):
+    error = {'unavailable': False, 'human': False}
+    if Regex(r'(^The service is unavailable.$)').search(page.text):
+        Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
+        error['unavailable'] = True
+    elif Regex(r'\/recaptcha\/api\.js').search(page.text):
+        Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
+        Log.Warn(str(page.text))
+        error['human'] = True
+        return HTML.Element('head', 'Error'), error
+    else:
+        Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
+    return HTML.ElementFromString(page.text), error
+
+####################################################################################################
 def get_element_from_url(url, name, count=0):
     """error handling for URL requests"""
 
@@ -41,54 +56,45 @@ def get_element_from_url(url, name, count=0):
                     base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=Headers.get_headers_for_url(req_base_url))
-                        if Regex(r'(^The service is unavailable.$)').search(page.text):
-                            Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-                        elif Regex(r'\/recaptcha\/api\.js').search(page.text):
-                            Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
-                            Log.Warn(str(page.text))
-                            return HTML.Element('head', 'Error')
-                        else:
-                            Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
-                        return HTML.ElementFromString(page.text)
+                        html = html_from_error(page, name)
+                        return html[0]
                     else:
-                        Log.Warn('* get_element_from_url Error: HTTP {} Error. Refreshing {} Domain'.format(page.status_code, type_title))
-                        Log.Warn('* get_element_from_url Error: req_base_url | base_url = {} | {}'.format(page.url, url))
-                        Log.Warn('* get_element_from_url Error: page history {} | {}'.format(url, page.history))
+                        Log.Warn('* HTTP {} Error: Refreshing {} Domain'.format(page.status_code, type_title))
+                        Log.Warn('* Error: req_base_url | base_url = {} | {}'.format(page.url, url))
+                        Log.Warn('* Error: page history {} | {}'.format(url, page.history))
                         Domain.UpdateDomain(type_title, True)
                         url = Common.CorrectURL(url)
                 else:
-                    Log.Warn('* get_element_from_url Error: HTTP 503 Site Error. Refreshing site cookies')
-                    Headers.get_headers_for_url(url, update=True)
+                    Log.Warn('* HTTP 503 Error: checking page for source of error')
+                    error = html_from_error(page, name)
+                    if error[1]['unavailable']:
+                        Log.Warn('* Sie Unavailable, trying again')
+                    else:
+                        Log.Warn('* HTTP 503 Error: Refreshing site cookies')
+                        Headers.get_headers_for_url(url, update=True)
                 return get_element_from_url(url, name, count)
             else:
-                Log.Error('* get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
+                Log.Error('* HTTP 503 Error: tried refreshing cookies but that did not fix the issue')
                 if Data.Exists(Core.storage.join_path(URL_CACHE_DIR, name)):
-                    Log.Warn('* Using old cached page')
+                    Log.Warn('* Using bad page')
                     return HTML.ElementFromString(page.text)
         else:
             try:
                 page.raise_for_status()
-                if Regex(r'(^The service is unavailable.$)').search(page.text):
-                    Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-                elif Regex(r'\/recaptcha\/api\.js').search(page.text):
-                    Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
-                    Log.Warn(str(page.text))
-                    return HTML.Element('head', 'Error')
-                else:
-                    Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
-                return HTML.ElementFromString(page.text)
+                html = html_from_error(page, name)
+                return html[0]
             except:
                 if (int(page.status_code) == 522):
-                    Log.Exception('* get_element_from_url Error: HTTP 522 Site error, site is currently offline')
+                    Log.Exception('* HTTP 522 Error: site is currently offline')
                 elif (int(page.status_code) == 524):
-                    Log.Exception('* get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
+                    Log.Exception('* HTTP 524 Error: A timeout occurred')
                     if count < 1:
-                        Log.Debug('* ReTrying \'{}\''.format(page.url))
+                        Log.Debug("* ReTrying '{}'".format(page.url))
                         count += 1
                         return get_element_from_url(url, name, count)
                 else:
-                    Log.Exception('* get_element_from_url Error: Unknown Site Error, check output below.')
+                    Log.Exception('* Unknown Error: check output >>>')
     except:
-        Log.Exception('* get_element_from_url Error: Failed to load {}'.format(url))
+        Log.Exception('* Error: Failed to load {}'.format(url))
 
     return HTML.Element('head', 'Error')
