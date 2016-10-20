@@ -3,13 +3,14 @@
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
 # and modified for use with Plex Media Server by Twoure
 
+from aadecode import aadecode
 from jjdecode import JJDecoder
 from unpacker import unpack as Unpack
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 
 def find_sid(text):
-    r = Regex(r'var *?\w+ *?\= *?\$\(["\']\#(.+?)["\']\)\.text\(').findall(text)
+    r = Regex(r'(?s)var *?\w+ *?\= *?\$\(["\']\#(.+?)["\']\)\.text\(').findall(text)
     return sorted(r, key=len)[0] if r else False
 
 def code_at(text):
@@ -21,9 +22,10 @@ def pre_packer(c, z):
         return chr(ord(c)+z)
     return chr(ord(c)+z-26)
 
-def decode_hiddenUrl(hurls, pkdlist):
+def decode_hiddenUrl(hurls, pkdlist, aadata_list):
     s = ""
     tmp = ""
+    tmp2 = ""
 
     for item in pkdlist:
         try:
@@ -36,14 +38,25 @@ def decode_hiddenUrl(hurls, pkdlist):
         except:
             Log.Exception("* Error decoding with unpacker, then jjdecode >>>")
 
-    num = code_at(tmp)
-    sid = find_sid(tmp)
+    for item in aadata_list:
+        try:
+            tmp2 += aadecode(item)
+        except:
+            Log.Exception("* Error decoding with aadecode >>>")
+
+    num = code_at(tmp+tmp2)
+    sid = find_sid(tmp+tmp2)
 
     for hid, t in hurls:
         if hid == sid:
             try:
+                m = ord(t[-1])
                 for i in list(t):
                     j = ord(i)
+                    if j == m:
+                        j = j - 1
+                    elif j == (m - 1):
+                        j = j + 1
                     if (j >= 33) and (j <= 126):
                         j = 33 + ((j + 14) % 94)
                     s += chr(j)
@@ -78,8 +91,9 @@ def OpenloadStreamFromURL(url, http_headers=None):
         hurls.append((h.get('id'), h.text))
 
     pckd_list = Regex(r"(eval *?\(function\(p,a,c,k,e,.+\.split\(.+\).*?\)\))").findall(page)
+    aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
     if hurls:
-        hurl = decode_hiddenUrl(hurls, pckd_list)
+        hurl = decode_hiddenUrl(hurls, pckd_list, aadata_list)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:

@@ -15,7 +15,8 @@ def aadecode(aastring):
     aastring = aastring.replace("((ﾟｰﾟ) + (ﾟｰﾟ) + (ﾟΘﾟ))", "9")
     aastring = aastring.replace("((ﾟｰﾟ) + (ﾟｰﾟ))", "8")
     aastring = aastring.replace("((ﾟｰﾟ) + (o^_^o))", "7")
-    aastring = aastring.replace("((o^_^o) +(o^_^o))", "6")
+    #aastring = aastring.replace("((o^_^o) +(o^_^o))", "6")
+    aastring = aastring.replace("((c^_^o)-(c^_^o))", "0")
     aastring = aastring.replace("((ﾟｰﾟ) + (ﾟΘﾟ))", "5")
     aastring = aastring.replace("(ﾟｰﾟ)", "4")
     aastring = aastring.replace("((o^_^o) - (ﾟΘﾟ))", "2")
@@ -34,6 +35,13 @@ def aadecode(aastring):
     aastring = aastring.replace("(-~1)", "2")
     aastring = aastring.replace("(-~3)", "4")
     aastring = aastring.replace("(0-0)", "0")
+
+    aastring = aastring.replace("(ﾟДﾟ).ﾟωﾟﾉ","10")
+    aastring = aastring.replace("(ﾟДﾟ).ﾟΘﾟﾉ","11")
+    aastring = aastring.replace("(ﾟДﾟ)[\'c\']","12")
+    aastring = aastring.replace("(ﾟДﾟ).ﾟｰﾟﾉ","13")
+    aastring = aastring.replace("(ﾟДﾟ).ﾟДﾟﾉ","14")
+    aastring = aastring.replace("(ﾟДﾟ)[ﾟΘﾟ]","15")
 
     decodestring = Regex(r"(?si)\\\+([^(]+)").search(aastring).group(1)
     decodestring = "\\+" + decodestring
@@ -62,9 +70,16 @@ def url_from_aastring(decodestring):
     return videourl
 
 def decode(encoded):
-    for octc in (c for c in Regex(r'\\(\d{2,3})').findall(encoded)):
-        encoded = encoded.replace(r'\%s' % octc, chr(int(octc, 8)))
-    return encoded.decode('utf8')
+    #for octc in (c for c in Regex(r'\\(\d{2,3})').findall(encoded)):
+        #encoded = encoded.replace(r'\%s' % octc, chr(int(octc, 8)))
+    #return encoded.decode('utf8')
+    tab = encoded.split('\\')
+    ret = ''
+    for item in tab:
+        try: ret += chr(int(item, 8))
+        except Exception:
+            ret += item
+    return ret
 
 def base10toN(num, n):
     num_rep = {
