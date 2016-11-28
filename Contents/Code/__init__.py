@@ -1340,8 +1340,12 @@ def Search(query=''):
                 Logger('* Search url = {}'.format(search_url_filled))
                 Logger('* type title = {}'.format(type_title))
 
-                html = RHTML.ElementFromURL(search_url_filled)
-                if html.xpath('//table[@class="listing"]'):
+                listing = True
+                if Prefs['search_all']:
+                    html = RHTML.ElementFromURL(search_url_filled)
+                    listing = bool(html.xpath('//table[@class="listing"]'))
+
+                if listing:
                     oc.add(DirectoryObject(
                         key=Callback(SearchPage, type_title=type_title, search_url=search_url_filled, art=art),
                         title=type_title, thumb=R(thumb)

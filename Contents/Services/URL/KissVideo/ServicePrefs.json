@@ -20,6 +20,12 @@
     "default": "KissNetwork"
   },
   {
+    "id": "search_all",
+    "label": "Search all sites together",
+    "type": "bool",
+    "default": "False"
+  },
+  {
     "id": "kissanime",
     "label": "View Anime (Kissanime.to)",
     "type": "bool",
