@@ -28,14 +28,18 @@ def ElementFromURL(url):
 
 ####################################################################################################
 def html_from_error(page, name):
-    error = {'unavailable': False, 'human': False}
-    if Regex(r'(^The service is unavailable.$)').search(page.text):
+    error = {'closed': False, 'unavailable': False, 'human': False}
+    if Regex(r'(^[Tt]he service is unavailable.$)').search(page.text):
         Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
         error['unavailable'] = True
-    elif Regex(r'\/recaptcha\/api\.js').search(page.text):
+    elif Regex(r'(\/recaptcha\/api\.js)').search(page.text):
         Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
-        Log.Warn(str(page.text))
+        Log.Warn(str(page.text.strip()))
         error['human'] = True
+        return HTML.Element('head', 'Error'), error
+    elif Regex(r'(closed to fix some serious issues)').search(page.text):
+        Log.Warn(str(page.text.strip()))
+        error['closed'] = True
         return HTML.Element('head', 'Error'), error
     else:
         Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)
@@ -52,8 +56,8 @@ def get_element_from_url(url, name, count=0):
                 count += 1
                 if len(page.history) > 0:
                     type_title = Common.GetTypeTitle(url)
-                    req_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(page.url).group(1)
-                    base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
+                    req_base_url = Regex(r'(https?://(?:www\.)?\w+\.\w+)').search(page.url).group(1)
+                    base_url = Regex(r'(https?://(?:www\.)?\w+\.\w+)').search(url).group(1)
                     if req_base_url == base_url:
                         page = requests.get(page.url, headers=Headers.get_headers_for_url(req_base_url))
                         html = html_from_error(page, name)
@@ -68,7 +72,11 @@ def get_element_from_url(url, name, count=0):
                     Log.Warn('* HTTP 503 Error: checking page for source of error')
                     error = html_from_error(page, name)
                     if error[1]['unavailable']:
-                        Log.Warn('* Sie Unavailable, trying again')
+                        Log.Warn('* Site Unavailable, trying again in 2 seconds')
+                        Thread.Sleep(2)
+                    if error[1]['closed']:
+                        Log.Warn('* Site Closed for Maintenance.')
+                        return error[0]
                     else:
                         Log.Warn('* HTTP 503 Error: Refreshing site cookies')
                         Headers.get_headers_for_url(url, update=True)

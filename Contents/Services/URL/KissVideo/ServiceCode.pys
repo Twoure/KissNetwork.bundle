@@ -9,6 +9,7 @@ from kissheaders import Headers
 from openload import OpenloadStreamFromURL
 from kissdecrypt import KissDecrypt
 from data import Data
+from time import sleep
 from io import open
 import requests
 import shutil
@@ -202,7 +203,8 @@ def setup_video_page(url):
         page = r.text
     else:
         headers = None
-        page = NRequest(url)
+        r = NRequest(url, raw=True)
+        page = r.text
     return headers, page
 
 ########################################################################################
@@ -281,7 +283,7 @@ def get_googlevideo_url(page, url, m, headers):
         else:
             vurl_old = String.Base64Decode(node.get('value'))
 
-        if 'googlevideo' in vurl_old:
+        if ('googlevideo' in vurl_old) or ('blogspot.com' in vurl_old):
             try:
                 itag = vurl_old.split('=m')[1]
                 vurls.append((vurl_old, fmt_dict[itag]))
@@ -295,7 +297,7 @@ def get_googlevideo_url(page, url, m, headers):
         else:
             try:
                 res = node.text.strip()[:-1]
-                itag = rfmt_dict[res]
+                itag = str(rfmt_dict[res])
                 vurls.append((vurl_old, int(res)))
             except Exception as e:
                 itag = u'No itag Found: {}'.format(e)
@@ -430,17 +432,22 @@ def get_url_redirect_v2(input_url, http_headers=None):
 
 ####################################################################################################
 def html_from_error(page, name, resp):
-    error = {'unavailable': False, 'human': False}
-    if Regex(r'(^The service is unavailable.$)').search(page.text):
-        Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
+    error = {'closed': False, 'unavailable': False, 'human': False}
+    if Regex(r'(^[Tt]he service is unavailable.$)').search(page.text):
+        Log.Warn('* <ServiceCode>, html_from_error: The service is unavailable. Not caching \'{}\''.format(page.url))
         error['unavailable'] = True
-    elif Regex(r'/recaptcha/api\.js').search(page.text):
-        Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
-        Log.Warn(str(page.text))
+    elif Regex(r'(/recaptcha/api\.js)').search(page.text):
+        Log.Error(u'* <ServiceCode>, html_from_error: Human Verification needed for \'{}\''.format(page.url))
+        Log.Warn(str(page.text.strip()))
         error['human'] = True
-        return False if resp else HTML.Element('head', 'Error'), error
+        return page if resp else HTML.Element('head', 'Error'), error
+    elif Regex(r'(closed to fix some serious issues)').search(page.text):
+        Log.Warn('* <ServiceCode>, html_from_error: ' + str(page.text.strip()))
+        error['closed'] = True
+        return page if resp else HTML.Element('head', 'Error'), error
     else:
-        Data.Save(Data.HTTP(name), page.text, resp)
+        #Data.Save(Data.HTTP(name), page.text, resp)
+        Data.Save(Data.HTTP(name), page if resp else page.text, resp)
     return page if resp else HTML.ElementFromString(page.text), error
 
 ####################################################################################################
@@ -469,6 +476,10 @@ def get_element_from_url(url, name, count=0, resp=False):
                     error = html_from_error(page, name, resp)
                     if error[1]['unavailable']:
                         Log.Warn("* <ServiceCode>, URL unavailable. Trying again for '{}'".format(page.url))
+                        sleep(2)
+                    elif error[1]['closed']:
+                        Log.Warn("* <ServiceCode>, Site Closed for Maintenance.")
+                        return error[0]
                     else:
                         Log.Warn('* <ServiceCode>, HTTP 503 Error: Refreshing site cookies')
                         Headers.get_headers_for_url(url, update=True)
@@ -552,10 +563,10 @@ def NRequest(url, raw=False):
 
     if not match:
         Log.Debug("* URL Not in Cache, Fetching fresh data from '{}'".format(url))
-        r = requests.get(url, headers=Headers.get_headers_for_url(url))
-        r = r if raw else r.text
-        Data.Save(Data.HTTP(name), r, raw)
+        r = get_element_from_url(url, name, resp=raw)
 
+    if not r:
+        raise Ex.MediaNotAvailable
     return r
 
 ########################################################################################
