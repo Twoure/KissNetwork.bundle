@@ -6,9 +6,9 @@
 import common as Common
 import metadata as Metadata
 from kissheaders import Headers
+from data import Data
 from openload import OpenloadStreamFromURL
 from kissdecrypt import KissDecrypt
-from data import Data
 from time import sleep
 from io import open
 import requests

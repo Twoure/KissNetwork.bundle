@@ -94,6 +94,13 @@ class DataItem(object):
                 os.remove(tempfile)
             raise
 
+    def Remove(self, itemname):
+        if self.Exists(itemname):
+            try:
+                os.remove(os.path.abspath(self.data_item_path(itemname)))
+            except:
+                Log.Exception('* Data.Remove() Error Removing file >>>')
+
     def data_object(self, itemname):
         img_data = self.Load(itemname)
         if not img_data:

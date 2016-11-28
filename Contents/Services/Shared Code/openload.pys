@@ -1,89 +1,91 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# and modified for use with Plex Media Server by Twoure
+# and modified for use with Plex Media Server by Twoure (11/27/16)
 
 from aadecode import aadecode
-from jjdecode import JJDecoder
-from unpacker import unpack as Unpack
-from __builtin__ import eval
+from __builtin__ import execfile
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
+RE_SID = Regex(r'(?s)var *?(\w+) *?\= *?\$\(["\']\#(.+?)["\']\)\.text\(')
+RE_VAR = Regex(r'(\w+)\.length\;')
+RE_FUNCTIONS = Regex(r'function\s+([^\(]+?)\s*\(\)')
 
-def extract_js(text):
+def openload_substring(tmp, *args):
+    if 2 == len(args):
+        return tmp[args[0]:args[1]]
+    elif 1 == len(args):
+        return tmp[args[0]:]
+    return False
+
+def openload_slice(tmp, *args):
+    if 2 == len(args):
+        return ord(tmp[args[0]:args[1]][0])
+    elif 1 == len(args):
+        return ord(tmp[args[0]:][0])
+    return False
+
+def extract_js(fullAlgoCode, outFunNum, res):
+    filename = 'openload_extract_js_temp.py'
+    Data.Save(filename, fullAlgoCode)
+    num = ''
     try:
-        num = int(eval(text))
+        vGlobals = {"__builtins__": None, 'substring':openload_substring, 'slice':openload_slice, 'chr':chr, 'len':len}
+        vLocals = { outFunNum: None }
+        execfile( Data.data_item_path(filename), vGlobals, vLocals )
+        num = vLocals[outFunNum](res)
     except:
-        Log.Exception('* <extract_js> error: exec code EXCEPTION >>>')
-        num = False
+        Log.Exception('extract_js exec code EXCEPTION >>>')
+    Data.Remove(filename)
     return num
 
-def find_sid(text):
-    r = Regex(r'(?s)var *?\w+ *?\= *?\$\(["\']\#(.+?)["\']\)\.text\(').findall(text)
-    return sorted(r, key=len)[0] if r else False
-
-def code_at(text):
-    r = Regex(r'(?i)CodeAt\(0\) *\+ *(\d+)').search(text)
-    if r:
-        return int(r.group(1))
-    r = Regex(r'(?i)CodeAt\(0\) *\+ *(\w+?)\(\)').search(text)
-    if not r:
-        Log.Error('* <code_at_num> error 1: Cannot parse for code_at_num')
-        return False
-    r2 = Regex(r'(?s)function {}(.+)\;'.format(r.group(1).strip())).search(text)
-    if not r2:
-        Log.Error('* <code_at_num> error 2: Cannot finde function code')
-        return False
-    return extract_js(r2.group(1).split('return')[1].strip())
-
-def pre_packer(c, z):
-    if (90 if c <= "Z" else 122) >= ord(c)+z:
-        return chr(ord(c)+z)
-    return chr(ord(c)+z-26)
-
-def decode_hiddenUrl(hurls, pkdlist, aadata_list):
+def decode_hiddenUrl(hurls, aadata_list):
     s = ""
     tmp = ""
-    tmp2 = ""
-
-    for item in pkdlist:
-        try:
-            p = item.replace('eval (function', 'eval(function')
-            rp = Regex(r'(function\(z\).+?a\="([^"]+).+?\;\}\((\d+)\))').search(p)
-            a = rp.group(2)
-            z = int(rp.group(3))
-            packed = p.replace(rp.group(0), "'"+String.Unquote(Regex(r'[a-zA-Z]').sub(lambda c: pre_packer(c.group(0), z), a), True)+"'")
-            tmp += JJDecoder(Unpack(packed)).decode()
-        except:
-            Log.Exception("* <decode_hiddenUrl> error decoding with unpacker, then jjdecode >>>")
 
     for item in aadata_list:
         try:
-            tmp2 += aadecode(item)
+            tmp += aadecode(item)
         except:
             Log.Exception("* <decode_hiddenUrl> error decoding with aadecode >>>")
 
-    num = code_at(tmp+tmp2)
-    sid = find_sid(tmp+tmp2)
-
     for hid, t in hurls:
-        if hid == sid:
-            try:
-                m = ord(t[-1])
-                for i in list(t):
-                    j = ord(i)
-                    if j == m:
-                        j = j - 1
-                    elif j == (m - 1):
-                        j = j + 1
-                    if (j >= 33) and (j <= 126):
-                        j = 33 + ((j + 14) % 94)
-                    s += chr(j)
-            except:
-                Log.Exception(u'* <decode_hiddenUrl> error: Cannot decode {}'.format(t))
+        for var, sid in RE_SID.findall(tmp):
+            if (hid == sid) and (RE_VAR.search(tmp).group(1) == var):
+                try:
+                    for i in list(t):
+                        j = ord(i)
+                        if (j >= 33) and (j <= 126):
+                            j = 33 + ((j + 14) % 94)
+                        s += chr(j)
+                except:
+                    Log.Exception(u'* <decode_hiddenUrl> error: Cannot decode {}'.format(t))
 
-            return s[:-1] + chr(ord(s[-1]) + num) if s and num else False
-    return False
+    pyCode = ''
+    fntab = RE_FUNCTIONS.findall(tmp)
+    for item in fntab:
+        fnbody = Regex('(?s)function %s.+}' %item.strip()).search(tmp)
+        fnbody = Regex(r'return(.+?)\;').search(fnbody.group())
+
+        pyCode += '\ndef %s():\n' % item
+        pyCode += '\treturn ' + fnbody.group(1).strip()
+
+    num = Regex(r'(?i)var *?str *?\=([^;]+?)\;').search(tmp).group(1).strip()
+    num = num.replace('String.fromCharCode', 'chr')
+    num = num.replace('.charCodeAt(0)', '')
+    num = num.replace('tmp.slice(', 'slice(tmp,')
+    num = num.replace('tmp.length', 'len(tmp)')
+    num = num.replace('tmp.substring(', 'substring(tmp, ')
+
+    algoLines = pyCode.split('\n')
+    for i in range(len(algoLines)):
+        algoLines[i] = '\t' + algoLines[i]
+    fullAlgoCode  = 'def openload_get_num(tmp):'
+    fullAlgoCode += '\n'.join(algoLines)
+    fullAlgoCode += '\n\treturn %s' % num
+
+    res = extract_js(fullAlgoCode, 'openload_get_num', s)
+    return res if res else False
 
 def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
@@ -109,10 +111,9 @@ def OpenloadStreamFromURL(url, http_headers=None):
     for h in hiddenUrls:
         hurls.append((h.get('id'), h.text))
 
-    pckd_list = Regex(r"(eval *?\(function\(p,a,c,k,e,.+\.split\(.+\).*?\)\))").findall(page)
     aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
     if hurls:
-        hurl = decode_hiddenUrl(hurls, pckd_list, aadata_list)
+        hurl = decode_hiddenUrl(hurls, aadata_list)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
