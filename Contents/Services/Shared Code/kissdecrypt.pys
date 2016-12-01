@@ -3,7 +3,7 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       08/31/2016
+Date:       11/30/2016
 """
 
 from binascii import a2b_hex, a2b_base64
@@ -27,7 +27,6 @@ class KissDecryptkit(object):
 
     def decrypt(self, f, kind, url=None, headers=None, post_data=None):
         """decrypt video URL input depending on what site it came from"""
-
         headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
         if post_data:
             r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
@@ -37,14 +36,11 @@ class KissDecryptkit(object):
         derived_key = Hash.SHA256(str(r.text), True)
         if kind == 'drama':
             return self.decrypt_input(f, derived_key, self.derived_drama_iv)
-
         return self.decrypt_input(f, derived_key, self.derived_cartoon_iv)
 
     def decrypt_input(self, f, key, iv):
         """decrypt video URL"""
-
-        etb = a2b_base64(f)
         cipher = AES_CBC(key=key, keySize=32)
-        return self.ensure_unicode(cipher.decrypt(etb, iv))
+        return self.ensure_unicode(cipher.decrypt(a2b_base64(f), iv))
 
 KissDecrypt = KissDecryptkit()

@@ -276,6 +276,8 @@ def get_googlevideo_url(page, url, m, headers):
                         jsc.execute('var window = {};' + s)
                         if 'krsk' in jsc.window.to_dict():
                             post_data = jsc.window.to_dict()
+                            post_data = [{d: post_data[d]} for d in post_data.keys() if not Regex(r'(\d+)').search(d)]
+                            post_data = post_data[0] if len(post_data) == 1 else ""
                             break
             except:
                 Log.Exception('* get_googlevideo_url Error: >>>')
