@@ -981,7 +981,7 @@ def ItemPage(item_info):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/item/related', r_list=list)
+@route(PREFIX + '/item-related', r_list=list)
 def RelatedList(r_list, title, art):
     """Setup Related shows list"""
 
@@ -1218,7 +1218,7 @@ def ShowSubPage(item_info, show_info):
         return oc
 
 ####################################################################################################
-@route(PREFIX + '/season/sub-page', season_info=dict)
+@route(PREFIX + '/season-sub-page', season_info=dict)
 def SeasonSubPage(season_info):
     """Setup Episodes for Season"""
 
@@ -1595,7 +1595,7 @@ def ClearBookmarks(type_title):
     return oc
 
 ####################################################################################################
-@route(PREFIX + '/clearbookmarks/yes')
+@route(PREFIX + '/clearbookmarks-yes')
 def ClearBookmarksCheck(tt):
     """Remove 'Bookmarks' Section(s) from Dict. Note: This removes all bookmarks in list"""
 
