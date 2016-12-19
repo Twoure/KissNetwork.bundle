@@ -115,29 +115,19 @@ def GetCountries(html):
 def list_to_string(l=list):
     """Covert List into String"""
 
-    s_list = None
-    if l:
-        s_list = ' '.join([g.replace(' ', '_') for g in l])
-
-    return s_list
+    return ' '.join([g.replace(' ', '_') for g in l]) if l else None
 
 ########################################################################################
 def string_to_list(s=str):
     """Covert String into List"""
 
-    l = []
-    if s:
-        l = [g.replace('_', ' ') for g in s.split()]
-
-    return l
+    return [g.replace('_', ' ') for g in s.split()] if s else list()
 
 ########################################################################################
 def GetOtherNames(html):
     """Get Other Names from HTML"""
 
-    other_names = html.xpath('//p[span[@class="info"]="Other name:"]/a/text()')
-
-    return other_names
+    return html.xpath('//p[span[@class="info"]="Other name:"]/a/text()')
 
 ########################################################################################
 def GetDateAired(html):
@@ -375,7 +365,7 @@ def GetSourceTitle(url):
     """Get Source Title"""
 
     if 'kiss' in url:
-        source_title = 'Kiss' + Regex(r'^https?\:\/\/kiss(\w+)\.[^\/]+').search(url).group(1).title()
+        source_title = 'Kiss' + Regex(r'^https?://(?:www\.)?kiss(\w+)\.[^/]+').search(url).group(1).title()
     else:
         source_title = 'KissComic'
 
