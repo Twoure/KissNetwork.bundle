@@ -117,8 +117,14 @@ class KissHeaders(object):
                 return {}
 
         base_url = Common.GetBaseURL(url)
-        current_timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
+        if not type_title:
+            Log(u"* '{}' is NOT a Kiss URL.  Returning default headers.".format(base_url))
+            return {
+                'user-agent': Common.USER_AGENT,
+                'referer': base_url
+                }
 
+        current_timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
         if len(self.header_data) >= 1:
             def check_update_instance(tt, cts, up1=False, up2=False):
                 expire = None

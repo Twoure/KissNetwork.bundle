@@ -29,17 +29,21 @@ def ElementFromURL(url):
 ####################################################################################################
 def html_from_error(page, name):
     error = {'closed': False, 'unavailable': False, 'human': False}
-    if Regex(r'(^[Tt]he service is unavailable.$)').search(page.text):
-        Log.Warn('* The service is unavailable. Not caching \'{}\''.format(page.url))
-        error['unavailable'] = True
-    elif Regex(r'(\/recaptcha\/api\.js)').search(page.text):
+    for err in Common.ERROR_LIST:
+        if Regex(r'(?i)(^%s$)' %err).search(page.text):
+            if err.lower() == "the service is unavailable.":
+                Log.Warn(u"* {} Not Caching '{}'".format(err, page.url))
+                error['unavailable'] = True
+                break
+            else:
+                Log.Warn(str(page.text.strip()))
+                error['closed'] = True
+                return HTML.Element('head', 'Error'), error
+
+    if Regex(r'(\/recaptcha\/api\.js)').search(page.text):
         Log.Error(u'* Human Verification needed for \'{}\''.format(page.url))
         Log.Warn(str(page.text.strip()))
         error['human'] = True
-        return HTML.Element('head', 'Error'), error
-    elif Regex(r'(closed to fix some serious issues)').search(page.text):
-        Log.Warn(str(page.text.strip()))
-        error['closed'] = True
         return HTML.Element('head', 'Error'), error
     else:
         Data.Save(Core.storage.join_path(URL_CACHE_DIR, name), page.text)

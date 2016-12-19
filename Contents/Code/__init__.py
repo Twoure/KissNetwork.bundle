@@ -40,6 +40,8 @@ SORT_OPT = {'Alphabetical': '', 'Popularity': '/MostPopular', 'Latest Update': '
 ADULT_LIST = set(['Adult', 'Smut', 'Ecchi', 'Lolicon', 'Mature', 'Yaoi', 'Yuri'])
 CP_DATE = ['Plex for Android', 'Plex for iOS', 'Plex Home Theater', 'OpenPHT']
 CFTest_KEY                  = 'Manga'
+RE_TITLE_CLEAN              = Regex(r'[^a-zA-Z0-9 \n]')
+RE_TITLE_CLEAN_DOT          = Regex(r'[^a-zA-Z0-9 \n\.]')
 
 # Set background art and icon defaults
 # KissAnime
@@ -437,7 +439,6 @@ def BookmarksSub(type_title, art):
 
     # Fill in DirectoryObject information from the bookmark list
     # create empty list for testing covers
-    #for bookmark in sorted(Dict['Bookmarks'][type_title], key=lambda k: k[type_title]):
     for bookmark in Util.ListSortedByKey(Dict['Bookmarks'][type_title], type_title):
         item_title = bookmark['item_title']
         summary = bookmark['summary']
@@ -463,25 +464,32 @@ def BookmarksSub(type_title, art):
 
         # get genre info, provide legacy support for older Bookmarks
         #   by updating
+        force_update_cover = False
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
             update = False
             if cover_url and Common.is_kiss_url(cover_url):
                 cover_type_title = Common.GetTypeTitle(cover_url)
-                cover_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(bookmark['cover_url']).group(1)
-                if (cover_type_title, cover_base_url) not in Common.BaseURLListTuple():
+                cover_base_url = Common.RE_BASE_URL.search(bookmark['cover_url']).group(1)
+                if 'date_added' not in bookmark.keys():
+                    Log.Debug("* Bookmark 'date_added' missing. Updating Bookmark Metadata.")
+                    update = True
+                    force_update_cover = cover_type_title == 'Anime'
+                elif (cover_type_title, cover_base_url) not in Common.BaseURLListTuple():
                     Log.Debug('* Bookmark Cover URL Domain changed. Updating Bookmark Metadata.')
                     update = True
             else:
-                page_base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(bookmark['page_url']).group(1)
+                page_base_url = Common.RE_BASE_URL.search(bookmark['page_url']).group(1)
                 if (type_title, page_base_url) not in Common.BaseURLListTuple():
                     Log.Debug('* Bookmark Page URL Domain changed. Updating Bookmark Metadata.')
                     update = True
             if update:
                 bm_info = item_info.copy()
-                bm_info.update({'type_title': type_title})
+                bm_info.update({'type_title': type_title, 'genres': bookmark['genres']})
+                if 'date_added' in bookmark.keys():
+                    bm_info.update({'date_added': bookmark['date_added']})
                 ftimer = float(Util.RandomInt(0,30)) + Util.Random()
-                Thread.CreateTimer(interval=ftimer, f=UpdateLegacyBookmark, bm_info=bm_info)
+                Thread.CreateTimer(interval=ftimer, f=UpdateLegacyBookmark, bm_info=bm_info, new_cover=force_update_cover)
         else:
             bm_info = item_info.copy()
             bm_info.update({'type_title': type_title})
@@ -493,8 +501,6 @@ def BookmarksSub(type_title, art):
             matching_list = set(genres) & ADULT_LIST
             if len(matching_list) > 0:
                 continue
-            else:
-                pass
 
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
@@ -540,11 +546,8 @@ def GenreList(url, title, art):
     for genre in html.xpath('//div[@class="barContent"]//a'):
         genre_href = genre.get('href')
         if 'Genre' in genre_href and not 'Movie' in genre_href:
-            if not Prefs['adult']:
-                if genre_href.replace('/Genre/', '') in ADULT_LIST:
-                    continue
-                else:
-                    pass
+            if (Prefs['adult'] == False) and (genre_href.replace('/Genre/', '') in ADULT_LIST):
+                continue
             # name used for title2
             category = html.xpath('//div[@class="barContent"]//a[@href="{}"]/text()'.format(genre_href))[0].replace('\n', '').strip()
 
@@ -719,7 +722,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         if 'Movie' in pname:
             title2 = item_title
         else:
-            item_title_cleaned = Regex(r'[^a-zA-Z0-9 \n]').sub('', item_title)
+            item_title_cleaned = RE_TITLE_CLEAN.sub('', item_title)
 
             if not drama_test:
                 latest = item.xpath('./following-sibling::td')[0].text_content().strip().replace(item_title_cleaned, '')
@@ -846,7 +849,6 @@ def ItemPage(item_info):
     genres, genres_list = Metadata.GetGenres(html)
 
     if not Prefs['adult']:
-
         # Check for Adult content, block if Prefs set.
         genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
         Logger('* genres = {}'.format(genres))
@@ -1003,7 +1005,7 @@ def GetItemList(html, url, item_title, type_title):
 
     episode_list = html.xpath('//table[@class="listing"]/tr/td')
     item_title_decode = Common.StringCode(string=item_title, code='decode')
-    item_title_regex = Regex(r'[^a-zA-Z0-9 \n\.]').sub('', item_title_decode)
+    item_title_regex = RE_TITLE_CLEAN_DOT.sub('', item_title_decode)
 
     # if no shows, then none have been added yet
     if not episode_list:
@@ -1021,7 +1023,7 @@ def GetItemList(html, url, item_title, type_title):
             media_page_url = url + '/' + node[0].get('href').rsplit('/')[-1]
 
             # title for Video/Chapter, cleaned
-            raw_title = Regex(r'[^a-zA-Z0-9 \n\.]').sub('', node[0].text).replace(item_title_regex, '')
+            raw_title = RE_TITLE_CLEAN_DOT.sub('', node[0].text).replace(item_title_regex, '')
             if ('Manga' in type_title) or ('Comic' in type_title):
                 media_title = raw_title.replace('Read Online', '').strip()
             else:
@@ -1115,7 +1117,7 @@ def GetPhotoAlbum(url, source_title, title, art):
     oc = ObjectContainer(title2=title, art=R(art))
 
     page = HTML.StringFromElement(RHTML.ElementFromURL(url))
-    images = Regex(r'lstImages\.push\([\'\"](http[^\'\"]+)[\'\"]').findall(page)
+    images = Regex(r'lstImages\.push\(["\'](http[^"\']+)["\']').findall(page)
     for image in images:
         name = image.rsplit('/')[-1].rsplit('.', 1)[0]
         if "proxy" in name:
@@ -1166,7 +1168,6 @@ def ShowSubPage(item_info, show_info):
 
             if 'episode' in title_lower and 'uncensored' not in title_lower:
                 season_number = Metadata.GetSeasonNumber(ep['title'], show_name_raw, tags, summary)
-                pass
             else:
                 season_number = '0'
 
@@ -1376,7 +1377,7 @@ def SearchPage(type_title, search_url, art):
     if html.xpath('//table[@class="listing"]'):
         # Test for "exact" match, if True then send to 'ItemPage'
         node = html.xpath('//div[@id="headnav"]/script/text()')[0]
-        search_match = Regex(r'var\ path\ =\ (\'Search\')').search(node)
+        search_match = Regex(r"var\ path\ =\ ('Search')").search(node)
         if not search_match:
             # Send url to 'ItemPage'
             base_url = Common.GetBaseURL(search_url)
@@ -1482,7 +1483,9 @@ def AddBookmark(item_info):
     # setup new bookmark json data to add to Dict
     new_bookmark = {
         type_title: item_sys_name, 'item_title': item_title, 'cover_file': image_file,
-        'cover_url': cover_url, 'summary': summary, 'genres': genres, 'page_url': page_url}
+        'cover_url': cover_url, 'summary': summary, 'genres': genres, 'page_url': page_url,
+        'date_added': str(Datetime.UTCNow())
+        }
 
     Logger('* new bookmark to add >>')
     Logger(u'* {}'.format(new_bookmark))
@@ -1626,7 +1629,7 @@ def ClearBookmarksCheck(tt):
     return BookmarksMain(title='My Bookmarks', status=status)
 
 ####################################################################################################
-def UpdateLegacyBookmark(bm_info=dict):
+def UpdateLegacyBookmark(bm_info=dict, new_cover=False):
     """
     Update Old Bookmark to new Style of bookmarks.
     Update includes "Genres" for now, will add more here later if need be
@@ -1640,11 +1643,13 @@ def UpdateLegacyBookmark(bm_info=dict):
 
     html = RHTML.ElementFromURL(page_url)
 
+    cover_url = None
     if bm_info['cover_url'] and (Common.is_kiss_url(bm_info['cover_url']) == False):
         cover_url = bm_info['cover_url']
     elif bm_info['cover_url'] and (base_url in bm_info['cover_url']):
         cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
-    else:
+
+    if new_cover or (not cover_url):
         try:
             cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
             if not 'http' in cover_url:
@@ -1658,11 +1663,15 @@ def UpdateLegacyBookmark(bm_info=dict):
             genres = ' '.join([g.replace(' ', '_') for g in genres])
         else:
             genres = ''
+    else:
+        genres = bm_info['genres']
 
     new_bookmark = {
         type_title: bm_info['item_sys_name'], 'item_title': item_title,
         'cover_file': bm_info['cover_file'], 'cover_url': cover_url,
-        'summary': bm_info['short_summary'], 'genres': genres, 'page_url': page_url}
+        'summary': bm_info['short_summary'], 'genres': genres, 'page_url': page_url,
+        'date_added': bm_info['date_added'] if 'date_added' in bm_info.keys() else str(Datetime.UTCNow()),
+        }
 
     bm = Dict['Bookmarks'][type_title]
     for i in xrange(len(bm)):

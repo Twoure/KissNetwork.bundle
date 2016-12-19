@@ -21,6 +21,15 @@ TITLE = 'KissNetwork'
 TIMEOUT = Datetime.Delta(hours=1)
 USER_AGENT = Domain.USER_AGENT
 LIST_VIEW_CLIENTS = ['Android', 'iOS']
+ERROR_LIST = [
+    "This feature is under maintenance.", "closed to fix some serious issues",
+    "We will come back soon.", "The site is overload. Please come back later.",
+    ]
+
+# regex compile
+RE_BASE_URL = Regex(r'(https?://(?:www\.)?[^/]+\.\w+)')
+RE_TYPE_TITLE = Regex(r'^https?://(?:www\.)?(?:kiss|read)(comic|\w+)(?:online)?\.\w+')
+
 
 ####################################################################################################
 def ParseVersion(version):
@@ -104,7 +113,7 @@ def CorrectURL(url):
 def GetTypeTitle(url):
     """ Get type title from URL """
 
-    r = Regex(r'^https?\:\/\/(?:www\.)?(?:kiss|read)(comic|\w+)(?:online)?\.\w+').search(url)
+    r = RE_TYPE_TITLE.search(url)
     type_title = r.group(1).title() if r else None
 
     return 'Drama' if type_title == 'Asian' else type_title
@@ -114,7 +123,7 @@ def GetBaseURL(url):
     """ Get base url for headers """
 
     type_title = GetTypeTitle(url)
-    base_url = Regex(r'(https?\:\/\/(?:www\.)?\w+\.\w+)').search(url).group(1)
+    base_url = RE_BASE_URL.search(url).group(1)
     if not (type_title, base_url) in BaseURLListTuple():
         for node in BaseURLListTuple():
             if node[0] == type_title:
@@ -128,7 +137,7 @@ def GetBaseURL(url):
 
 ####################################################################################################
 def is_kiss_url(url):
-    return bool(Regex(r'^https?\:\/\/(?:www\.)?(readcomiconline|kiss\w+)\.\w+\/.+$').search(url))
+    return bool(RE_TYPE_TITLE.search(url))
 
 ####################################################################################################
 def CorrectCoverImage(string):
