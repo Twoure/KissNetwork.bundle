@@ -27,7 +27,7 @@
   },
   {
     "id": "kissanime",
-    "label": "View Anime (Kissanime.to)",
+    "label": "View Anime (Kissanime.ru)",
     "type": "bool",
     "default": "True"
   },
@@ -39,7 +39,7 @@
   },
   {
     "id": "kisscomic",
-    "label": "View Comic (ReadComicOnline.com)",
+    "label": "View Comic (ReadComicOnline.to)",
     "type": "bool",
     "default": "True"
   },
