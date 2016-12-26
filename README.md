@@ -17,6 +17,7 @@ KissNetwork
     - [Sort List by...](#sort-list-by)
     - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
     - [Preferred Video Server](#preferred-video-server)
+    - [Search all sites together](#search-all-sites-together)
     - [Hide "Clear Bookmarks"](#hide-clear-bookmarks)
     - [Use "Custom Bookmarks Backup Path"](#use-custom-bookmarks-backup-path)
     - [Custom Bookmarks Backup Path](#custom-bookmarks-backup-path)
@@ -48,7 +49,7 @@ KissNetwork
 
 ## Introduction
 
-This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.to](https://kissanime.to/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.com](http://readcomiconline.com/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
+This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.ru](https://kissanime.ru/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.to](http://readcomiconline.to/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
@@ -74,16 +75,16 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Plex Media Server:
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 1.1.3
+  - Ubuntu 14.04 LTS: PMS version 1.3.0
   - Windows 7: PMS version 0.9.16.6
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
   - OpenPHT (Ubuntu 14.04 LTS, v1.6.2)
-  - Android (4.4.2) (Plex Client App, v4.31.2.310)
+  - Android (4.4.2) (Plex Client App, v5.3.2.632)
   - Plex Media Player (1.1.4)
-  - Plex/Web (2.8.1)
+  - Plex/Web (2.12.6)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
@@ -94,7 +95,8 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - [Download](https://github.com/Twoure/KissNetwork.bundle/releases) the latest release and install _KissNetwork_ by following the Plex [instructions](https://support.plex.tv/hc/en-us/articles/201187656-How-do-I-manually-install-a-channel-) or the instructions below.
   - Unzip and rename the folder to **KissNetwork.bundle**
   - Copy **KissNetwork.bundle** into the PMS [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory
-  - Restart PMS
+  - Unix based platforms need to `chown plex:plex -R KissNetwork.bundle` after moving it into the [Plug-ins](https://support.plex.tv/hc/en-us/articles/201106098-How-do-I-find-the-Plug-Ins-folder-) directory _(`user:group` may differ by platform)_
+  - **Restart PMS**
 
 [Table of Contents](#table-of-contents)
 
@@ -116,6 +118,10 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 - Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), [Stream](https://stream.moe/)
   - Default behavior: Use GoogleVideo links when available, otherwise try using the provided links
   - If a server other than _KissNetwork_ is selected: Use selected video server, and default to GoogleVideo links when selected server fails.
+
+##### Search all sites together
+- **Enabled:** Check all sites before results are returned.  This will removed categories with empty results but will slow down search when sites preform a header refresh.
+- **Disabled(_default_):** Do not search all sites at once, instead check a site only when asked.
 
 ##### Hide "Clear Bookmarks"
 - **Enabled:** Hide the _Clear Bookmarks_ function within Main Bookmarks menu and sub-menus
