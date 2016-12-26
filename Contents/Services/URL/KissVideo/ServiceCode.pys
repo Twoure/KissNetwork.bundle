@@ -15,7 +15,6 @@ import requests
 import shutil
 import js2py
 
-RE_URL_OD = Regex(r'src\=["\'](https?://onedrive\.live\.com/prev\?.+?)["\']')
 RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
 RE_ENC_TEST = Regex(r'/Scripts/(kissenc\.min\.j[^"\']+)')
@@ -23,7 +22,6 @@ RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*
 RE_WINDOW2 = Regex(r'(.+window[^\=]+[^\;]+)')
 RE_ITAG = Regex(r'itag\=(\d+)')
 RE_ATOB = Regex(r'contents *?\= *?atob\(["\']([^"\']+)')
-#RE_URL_BASE = Regex(r'(https?://(?:www\.)?\w+\.\w+)')
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -131,10 +129,12 @@ def MediaObjectsForURL(url):
 def PlayVideo(url, m, **kwargs):
     """
     Get Video URL
-    Currently available host: GoogleVideo, Openload, Stream.moe
+    Currently available host: GoogleVideo, Openload
     GoogleVideo links have the potential for multiple resolutions links
-    Site used to include OneDrive links, so have left the code for them for now.
-    OneDrive, Openload, and Stream.moe give only one link (the highest), so no optional resolutions
+    Stream.moe:
+        - used to be supported, but host site is currently offline
+        - leaving code for now as it does not affect playback
+    Openload, and Stream.moe give only one link (the highest), so no optional resolutions
 
     Video URL fallback system.
     Order as follows:
@@ -209,13 +209,9 @@ def setup_video_page(url):
 
 ########################################################################################
 def get_video_url(url, m, headers, page):
-    od = RE_URL_OD.search(page)
     ol = RE_URL_OL.search(page)
     st = RE_URL_SM.search(page)
-    if od:
-        Log.Debug('* OneDrive URL       = {}'.format(od.group(1)))
-        vurl = get_onedrive_url(od.group(1))
-    elif ol:
+    if ol:
         Log.Debug('* OpenLoad URL       = {}'.format(ol.group(1)))
         vurl = get_openload_url(ol.group(1))
     elif st:
@@ -232,9 +228,9 @@ def get_googlevideo_url(page, url, m, headers):
     Returns the Hights stream playable depending on the previous Stream Selections
     If Stream not found, then try's to find next hightest.
     Example 1: format list = [1080p, 720p, 360p]
-    If 480p was previously chosen, then 720p will be used
+        If 480p was previously chosen, then 720p will be used
     Example 2: format list = [720p, 480p, 360p]
-    If 1080p was previously chosen, then 720p will be used
+        If 1080p was previously chosen, then 720p will be used
     """
 
     html = HTML.ElementFromString(page)
@@ -319,62 +315,6 @@ def get_googlevideo_url(page, url, m, headers):
                 #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
         Log.Debug('* Selecting {}p stream'.format(mm))
-
-    return vurl
-
-####################################################################################################
-def get_onedrive_url(onedrive_url):
-    """
-    Get OneDrive URLs
-    Made by Twoure :P
-    Code returns the download link for a OneDrive video
-    Example Start URL
-    https://onedrive.live.com/prev?cid=f90d37dd21022d17&id=F90D37DD21022D17%21108&authkey=%21AJZbMrbEbLJhvUk&parId=root&view=video&mode=interactiveEmbed
-    Note the Start URL needs the 'cid', 'id', and 'authkey'
-    No need to do the URL redirect, final video URL is NOT bound to local ip
-    """
-
-    html = HTML.ElementFromURL(onedrive_url)
-
-    # Pull out the GetItemsLoaderConfing and store info in data dictionary
-    for node in html.xpath('//script[@type="text/javascript"]'):
-        match = Regex(r'(?s)GetItemsLoaderConfig \= (\{.*?\})\;').search(node.text_content())
-        if match:
-            test = match.group(1).replace('\n\r', '').strip()
-            for i, s in enumerate(['cid', 'skyApiDomain', 'mkt', 'appId', 'canary', 'oauthToken', 'authKey', 'ticket', 'gb', 'rset']):
-                if i == 0:
-                    data = {s: Regex(r"{}\: '(.*)'\,".format(s)).search(test).group(1)}
-                elif not s == 'rset':
-                    data.update({s: Regex(r"{}\: '(.*)'\,".format(s)).search(test).group(1)})
-                else:
-                    data.update({s: Regex(r"{}\: '(.*?)'".format(s)).search(test).group(1)})
-            break
-
-    # parse parameters in URL
-    uris = onedrive_url.split('&')
-    for i, s in enumerate(uris):
-        if i == 0:
-            bs = s.split('?')[1]
-            ss = bs.split('=')
-            a = {ss[0]: ss[1]}
-        else:
-            ns = s.split('=')
-            a.update({ns[0]: ns[1]})
-
-    # create the request for the download url
-    dl_url = 'https://onedrive.live.com/GetDownloadUrl/?cid=' + a['cid'] + '&resid=' + a['id'] + '&authkey=' + data['authKey'].decode('unicode-escape') + '&canary='
-    # setup headers for request. Needs authKey and appId
-    h = {'X-Requested-With': 'XMLHttpRequest', 'InvitationToken': data['authKey'].decode('unicode-escape'), 'AppId': data['appId'], 'Accept': 'application/json'}
-
-    # open download request and parse json data
-    try:
-        # open download request and parse json data
-        dl_data = JSON.ObjectFromURL(dl_url, headers=h)
-        # remove the download info after .mp4, that way the video will play instead of force downloading
-        vurl = dl_data['DownloadUrl'].split('?')[0]
-    except:
-        Log.Exception(u'* OneDrive Error: Cannot access {}'.format(dl_url))
-        vurl = False
 
     return vurl
 
