@@ -690,11 +690,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                 Log.Debug('* item name | {} | {}'.format(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
                 thumb = None
                 cover_file = None
+            elif Common.is_kiss_url(thumb):
+                cover_file = thumb.rsplit('/')[-1]
             else:
-                if thumb:
-                    cover_file = thumb.rsplit('/')[-1]
-                else:
-                    cover_file = None
+                cover_file = thumb.split('/', 3)[3].replace('/', '_')
         except:
             thumb = None
             cover_file = None
@@ -799,8 +798,10 @@ def HomePageList(tab, category, base_url, type_title, art):
             if not 'http' in thumb:
                 thumb = None
                 cover_file = None
-            else:
+            elif Common.is_kiss_url(thumb):
                 cover_file = thumb.rsplit('/')[-1]
+            else:
+                cover_file = thumb.split('/', 3)[3].replace('/', '_')
         except:
             thumb = None
             cover_file = None
@@ -1372,6 +1373,8 @@ def SearchPage(type_title, search_url, art):
     """
 
     html = RHTML.ElementFromURL(search_url)
+    cover_url = None
+    cover_file = None
 
     # Check for results if none then give a pop up window saying so
     if html.xpath('//table[@class="listing"]'):
@@ -1388,16 +1391,12 @@ def SearchPage(type_title, search_url, art):
             item_title = node.text
             try:
                 cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
-                if not 'http' in cover_url:
-                    cover_url = None
-                    cover_file = None
-                elif Common.is_kiss_url(cover_url):
+                if ('http' in cover_url) and Common.is_kiss_url(cover_url):
                     cover_file = cover_url.rsplit('/')[-1]
-                else:
-                    cover_file = None
+                elif 'http' in cover_url:
+                    cover_file = cover_url.split('/', 3)[3].replace('/', '_')
             except:
-                cover_url = None
-                cover_file = None
+                Log.Warn("* Cannot find cover URL/File for '{}'".format(search_url))
 
             Logger('* item_title    = {}'.format(item_title))
             Logger('* item          = {}'.format(item_sys_name))
