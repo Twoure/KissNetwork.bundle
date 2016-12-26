@@ -1,5 +1,25 @@
 # ChangeLog
 
+##### 1.2.8
+- _12/26/2016_
+  - Fixes:
+    - `PluginUpdateService` - migrated `init_run` into code, and updated modified datetime
+    - Openload - fixed for now
+    - `__init__.py` - fixed cover thumb file path error
+    - `__init__.py` - removed extra `/` in path names
+    - Kissasian streams
+    - fixed genres and cover file errors in bookmarks
+    - fixed video fallback logic
+  - Updates:
+    - Added new `Search All` pref
+    - Added more error handling
+    - Added `date_added` to bookmarks
+    - Added header exception for non-kiss URLs
+    - Cleaned `metadata`, `domain`, `packer`, and `ServiceInfo` code
+    - `ServicePrefs` - updated URL names
+    - `cfscrape` - updated to `v1.6.8`
+    - `ServiceCode` - removed old Onedrive code
+
 ##### 1.2.7
 - _08/31/2016_
   - Fixes:

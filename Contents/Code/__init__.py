@@ -109,7 +109,7 @@ def Start():
     Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)
     Thread.Create(ClearCache, itemname=THUMB_CACHE_DIR, timeout=Datetime.Delta(weeks=4))
 
-    # remove/clear old style of caching prior to v1.2.5
+    # remove/clear old style of caching prior to v1.2.7
     if Dict['current_ch_version']:
         if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 7):
             Log(u"* Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
