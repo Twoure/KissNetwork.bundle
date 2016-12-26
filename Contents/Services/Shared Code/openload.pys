@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# and modified for use with Plex Media Server by Twoure (12/18/16)
+# and modified for use with Plex Media Server by Twoure (12/25/16)
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 RE_NORM = Regex(r'(https?://\w+\.\w+)/\w+/([^/]+)(/.+)?')
@@ -10,15 +10,16 @@ def decode_hiddenUrl(hurls):
     for (hid, enc) in hurls:
         dec = ""
         try:
-            a = a = int(enc[0:2])
+            a = int(enc[0:2])
             z = 2
             while z < len(enc):
                 dec += chr(int(enc[z:z+3]) - a * int(enc[z+3:z+3+2]))
                 z += 5
+            return dec if dec else False
         except:
-            Log.Exception("* <decode_hiddenUrl> error decoding with method 12/18/16 >>>")
+            Log.Exception("* <decode_hiddenUrl> error decoding with method 12/25/16 >>>")
             continue
-    return dec if dec else False
+    return False
 
 def OpenloadStreamFromURL(url, http_headers=None):
     if not http_headers:
