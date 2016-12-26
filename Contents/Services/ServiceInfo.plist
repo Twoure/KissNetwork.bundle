@@ -10,15 +10,9 @@
       <string>com.plexapp.plugins.kissnetwork</string>
       <key>URLPatterns</key>
       <array>
-        <string>^(?:http|https)://(?:www\.|)kissanime\.(?:[^/]+\/)?Anime/.+(?:\?id=\d+)$</string>
-        <string>^http://(?:www\.|)kissasian\.(?:[^/]+\/)?Drama/.+(?:\?id=\d+)$</string>
-        <string>^http://(?:www\.|)kisscartoon\.(?:[^/]+\/)?Cartoon/.+(?:\?id=\d+)$</string>
-      </array>
-      <key>TestURLs</key>
-      <array>
-        <string>https://kissanime.to/Anime/Naruto-Shippuuden/Episode-001?id=100311</string>
-        <string>http://kissasian.com/Drama/Death-Note-2015/Episode-1?id=7780</string>
-        <string>http://kisscartoon.me/Cartoon/Steven-Universe/Episode-000-Pilot?id=44288</string>
+        <string>^https?://(?:www\.)?kissanime\.\w+/Anime/.+(?:\?id=\d+)$</string>
+        <string>^https?://(?:www\.)?kissasian\.\w+/Drama/.+(?:\?id=\d+)$</string>
+        <string>^https?://(?:www\.)?kisscartoon\.\w+/Cartoon/.+(?:\?id=\d+)$</string>
       </array>
     </dict>
   </dict>
