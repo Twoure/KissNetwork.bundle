@@ -49,7 +49,7 @@ KissNetwork
 
 ## Introduction
 
-This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.ru](https://kissanime.ru/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.to](http://readcomiconline.to/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
+This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.ru](http://kissanime.ru/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.to](http://readcomiconline.to/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
@@ -115,7 +115,7 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Preferred Video Server
 - Select a Default Video Server from the drop-down list
-- Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), [Stream](https://stream.moe/)
+- Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), ~~[Stream](https://stream.moe/)~~
   - Default behavior: Use GoogleVideo links when available, otherwise try using the provided links
   - If a server other than _KissNetwork_ is selected: Use selected video server, and default to GoogleVideo links when selected server fails.
 
@@ -245,6 +245,9 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Openload, Stream
 - Openload/Stream.moe links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
+
+##### Openload, Stream
+- Stream.moe host is offline.  Left it's code alone for now, as it does not affect channel preformance.  Waiting to see if the site returns.
 
 [Table of Contents](#table-of-contents)
 
