@@ -41,6 +41,7 @@ KissNetwork
   - [Manga, Comic](#manga-comic)
   - [Plex Home Theater](#plex-home-theater)
   - [OpenLoad, Stream](#openload-stream)
+  - [Stream.moe](#stream-moe)
 - [Plans](#plans)
   - [General](#general-1)
   - [Bookmarks](#bookmarks)
@@ -246,7 +247,7 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 ##### Openload, Stream
 - Openload/Stream.moe links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.
 
-##### Openload, Stream
+##### Stream.moe
 - Stream.moe host is offline.  Left it's code alone for now, as it does not affect channel preformance.  Waiting to see if the site returns.
 
 [Table of Contents](#table-of-contents)
