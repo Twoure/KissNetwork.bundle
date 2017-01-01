@@ -41,7 +41,7 @@ KissNetwork
   - [Manga, Comic](#manga-comic)
   - [Plex Home Theater](#plex-home-theater)
   - [OpenLoad, Stream](#openload-stream)
-  - [Stream.moe](#stream-moe)
+  - [Stream.moe](#streammoe)
 - [Plans](#plans)
   - [General](#general-1)
   - [Bookmarks](#bookmarks)
