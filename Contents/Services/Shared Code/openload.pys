@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# and modified for use with Plex Media Server by Twoure (3/03/17)
+# and modified for use with Plex Media Server by Twoure (3/14/17)
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 RE_NORM = Regex(r'(https?://\w+\.\w+)/\w+/([^/]+)(/.+)?')
@@ -11,14 +11,33 @@ def decode_hiddenUrl(hurls):
         if " " in k:
             continue
         try:
-            d = max(2, ord(k[0]) - 55)
-            e = min(d, len(k) - 14)
-            t = k[e:e + 12]
-            g = [ int(t[h:h+2], 16) for h in range(0, len(t), 2) ]
-            v = k[0:e] + k[e+12:]
-            return "".join([ chr(int(v[h:h + 2], 16) ^ g[(h / 2) % 6]) for h in range(0, len(v), 2) ])
+            y = ord(k[0])
+            e = y - 0x32
+            d = max(2, e)
+            e = min(d, len(k) - 0x14 - 2)
+            t = k[e:e + 0x14]
+            h = 0
+            g = []
+            while h < len(t):
+                f = t[h:h+2]
+                g.append(int(f, 0x10))
+                h += 2
+            v = k[0:e] + k[e+0x14:]
+            p = []
+            h = 0
+            while h < len(v):
+                B = v[h:h + 3]
+                f = int(B, 0x10)
+                if (h / 3) % 3 == 0:
+                    f = int(B, 8)
+                A = g[(h / 3) % 0xa]
+                f = f ^ 0x2F;
+                f = f ^ A;
+                p.append( chr(f) )
+                h += 3
+            return "".join(p)
         except:
-            Log.Exception("* <decode_hiddenUrl> error decoding with method 3/03/17 >>>")
+            Log.Exception("* <decode_hiddenUrl> error decoding with method 3/14/17 >>>")
             continue
     return False
 
