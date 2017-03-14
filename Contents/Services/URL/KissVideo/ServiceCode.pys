@@ -234,7 +234,8 @@ def get_googlevideo_url(page, url, m, headers):
     """
 
     html = HTML.ElementFromString(page)
-    olist = html.xpath('//select[@id="selectQuality"]/option')
+    sQual = Regex(r'(id\="slcQualix")').search(page)
+    olist = html.xpath('//select[@id="%s"]/option' %("slcQualix" if sQual else "selectQuality"))
     type_title = Common.GetTypeTitle(url)
     type_title_lower = type_title.lower()
     if not olist:
