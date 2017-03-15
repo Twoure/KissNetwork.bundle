@@ -40,6 +40,7 @@ KissNetwork
   - [Cartoon](#cartoon)
   - [Manga, Comic](#manga-comic)
   - [Plex Home Theater](#plex-home-theater)
+  - [Plex Web Client](#plex-web-client)
   - [OpenLoad, Stream](#openload-stream)
   - [Stream.moe](#streammoe)
 - [Plans](#plans)
@@ -50,7 +51,7 @@ KissNetwork
 
 ## Introduction
 
-This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.ru](http://kissanime.ru/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.me](http://kisscartoon.me/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.to](http://readcomiconline.to/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
+This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (PMS) to view content from these websites: [Kissanime.ru](http://kissanime.ru/), [Kissasian.com](http://kissasian.com/), [Kisscartoon.se](http://kisscartoon.se/), [Kissmanga.com](http://kissmanga.com/), and [ReadComicOnline.to](http://readcomiconline.to/). It is currently under development and as such, should be considered alpha software and potentially unstable. If you try it and it works for you (or if not!) please let me know.
 
 > **Note:** the author of this plugin has no affiliation with the Kiss sites nor the owners of the content that they host.
 
@@ -76,16 +77,17 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Plex Media Server:
 - Tested Working:
-  - Ubuntu 14.04 LTS: PMS version 1.3.0
-  - Windows 7: PMS version 0.9.16.6
+  - Ubuntu 14.04 LTS: PMS version 1.4.2
+  - Windows 7: PMS version 0.9.16.6 _(untested since v1.2.1)_
 
 ##### Plex Clients:
 - Tested Working:
   - Plex Home Theater (Ubuntu 14.04 LTS, v1.4.1)
   - OpenPHT (Ubuntu 14.04 LTS, v1.6.2)
-  - Android (4.4.2) (Plex Client App, v5.3.2.632)
+  - Android (4.4.2) (Plex Client App, v5.6.1.505)
+  - Android (7.1.1) (Plex Client App, v5.6.1.505)
   - Plex Media Player (1.1.4)
-  - Plex/Web (2.12.6)
+  - Plex/Web (3.0.1) (Videos)
   - Chromecast (Videos & Pictures)
 
 [Table of Contents](#table-of-contents)
@@ -243,6 +245,10 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 ##### Plex Home Theater
 - Channel exits when adding/removing bookmarks.  Has to do with pop up messages.
   - Working to fix this.  Have new message.py but have yet to integrate with bookmarks fully
+
+##### Plex Web Client
+- Photos are currently cropped for photo channels, so the manga and comic sections will have issue in the most recent Web Clients.
+- https://forums.plex.tv/discussion/254030/bug-channel-photos-crop-to-a-square
 
 ##### Openload, Stream
 - Openload/Stream.moe links have a hash tied to your PMS IP.  To use these Servers outside your home network, enable [Force Transcoding](#force-transcoding-enables-remote-play).  Force transcoding will make video links compatible with all clients.

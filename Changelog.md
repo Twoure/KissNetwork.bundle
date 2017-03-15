@@ -1,5 +1,14 @@
 # ChangeLog
 
+##### 1.2.9
+- _03/14/2017_
+  - Fixes:
+    - `ServiceCode` - xpath changes
+    - Openload - fixed _again_ but changes every week or two _(use `dev` branch for latest openload patches)_
+  - Updates:
+    - readme - added Web Client issue, changed links
+    - `ServicePrefs` - domain names
+
 ##### 1.2.8
 - _12/26/2016_
   - Fixes:
