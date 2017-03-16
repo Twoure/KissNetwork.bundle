@@ -19,6 +19,9 @@ class KissDecryptkit(object):
         #kisscartoon
         ci = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
         self.derived_cartoon_iv = a2b_hex(ci)
+        #kissanime
+        ai = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
+        self.derived_anime_iv = a2b_hex(ai)
 
     def ensure_unicode(self, v):
         if isinstance(v, str):
@@ -27,16 +30,27 @@ class KissDecryptkit(object):
 
     def decrypt(self, f, kind, url=None, headers=None, post_data=None):
         """decrypt video URL input depending on what site it came from"""
-        headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
-        if post_data:
-            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
+        if kind == 'anime':
+            rsk = String.Base64Decode("X25oYXNhc2RiYXNkdGVuZTcyMzBhc2Jf")[1:-1]
         else:
-            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
+            try:
+                headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
+                if post_data:
+                    r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
+                else:
+                    r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
+                r.raise_for_status()
+                rsk = str(r.text)
+            except:
+                Log.Exception(u"* <kissdecrypt.decrypt> error: Failed to retrieve RSK POST resquest >>>")
+                return 'na'
 
-        derived_key = Hash.SHA256(str(r.text), True)
+        derived_key = Hash.SHA256(rsk, True)
         if kind == 'drama':
             return self.decrypt_input(f, derived_key, self.derived_drama_iv)
-        return self.decrypt_input(f, derived_key, self.derived_cartoon_iv)
+        elif kind == 'cartoon':
+            return self.decrypt_input(f, derived_key, self.derived_cartoon_iv)
+        return self.decrypt_input(f, derived_key, self.derived_anime_iv)
 
     def decrypt_input(self, f, key, iv):
         """decrypt video URL"""

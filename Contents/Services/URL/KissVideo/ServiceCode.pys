@@ -17,7 +17,7 @@ import js2py
 
 RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
-RE_ENC_TEST = Regex(r'/Scripts/(kissenc\.min\.j[^"\']+)')
+RE_ENC_TEST = Regex(r'/Scripts/(kissenc\.min\.j[^"\']+|vr\.j[^"\']+)')
 RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
 RE_WINDOW2 = Regex(r'(.+window[^\=]+[^\;]+)')
 RE_ITAG = Regex(r'itag\=(\d+)')
@@ -194,17 +194,17 @@ def PlayVideo(url, m, **kwargs):
 
 ########################################################################################
 def setup_video_page(url):
-    if not 'Anime' in Common.GetTypeTitle(url):
-        r = NRequest(url, raw=True)
-        headers = Headers.get_headers_for_url(url)
-        dc = headers['cookie']
-        if 'k_token' in r.cookies:
-            headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
-        page = r.text
-    else:
-        headers = None
-        r = NRequest(url, raw=True)
-        page = r.text
+    #if not 'Anime' in Common.GetTypeTitle(url):
+    r = NRequest(url, raw=True)
+    headers = Headers.get_headers_for_url(url)
+    dc = headers['cookie']
+    if 'k_token' in r.cookies:
+        headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
+    page = r.text
+    #else:
+    #    headers = None
+    #    r = NRequest(url, raw=True)
+    #    page = r.text
     return headers, page
 
 ########################################################################################
