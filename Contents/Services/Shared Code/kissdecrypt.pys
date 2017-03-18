@@ -3,7 +3,7 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       11/30/2016
+Date:       03/17/2017
 """
 
 from binascii import a2b_hex, a2b_base64
@@ -31,7 +31,8 @@ class KissDecryptkit(object):
     def decrypt(self, f, kind, url=None, headers=None, post_data=None):
         """decrypt video URL input depending on what site it came from"""
         if kind == 'anime':
-            rsk = String.Base64Decode("X25oYXNhc2RiYXNkdGVuZTcyMzBhc2Jf")[1:-1]
+            rsk = String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1]
+            rsk = rsk + String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
         else:
             try:
                 headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
