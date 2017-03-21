@@ -3,13 +3,11 @@
 """
 Kissasian and Kisscaroon decryption
 Created by: Twoure
-Date:       03/17/2017
+Date:       03/20/2017
 """
 
 from binascii import a2b_hex, a2b_base64
 from crypto.cipher.aes_cbc import AES_CBC
-import requests
-import common as Common
 
 class KissDecryptkit(object):
     def __init__(self):
@@ -22,40 +20,28 @@ class KissDecryptkit(object):
         #kissanime
         ai = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
         self.derived_anime_iv = a2b_hex(ai)
+        #kissmanga
+        mi = String.Base64Decode("X2E1ZThlMmU5YzI3MjFiZTBhODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
+        self.derived_manga_iv = a2b_hex(mi)
 
     def ensure_unicode(self, v):
         if isinstance(v, str):
             v = v.decode('utf8')
         return unicode(v)
 
-    def decrypt(self, f, kind, url=None, headers=None, post_data=None):
-        """decrypt video URL input depending on what site it came from"""
+    def decrypt(self, f, kind, key):
         if kind == 'anime':
-            rsk = String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1]
-            rsk = rsk + String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
-        else:
-            try:
-                headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
-                if post_data:
-                    r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
-                else:
-                    r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
-                r.raise_for_status()
-                rsk = str(r.text)
-            except:
-                Log.Exception(u"* <kissdecrypt.decrypt> error: Failed to retrieve RSK POST resquest >>>")
-                return 'na'
-
-        derived_key = Hash.SHA256(rsk, True)
-        if kind == 'drama':
-            return self.decrypt_input(f, derived_key, self.derived_drama_iv)
+            iv = self.derived_anime_iv
         elif kind == 'cartoon':
-            return self.decrypt_input(f, derived_key, self.derived_cartoon_iv)
-        return self.decrypt_input(f, derived_key, self.derived_anime_iv)
+            iv = self.derived_cartoon_iv
+        elif kind == 'drama':
+            iv = self.derived_drama_iv
+        elif kind == 'manga':
+            iv = self.derived_manga_iv
+        else:
+            return False
 
-    def decrypt_input(self, f, key, iv):
-        """decrypt video URL"""
-        cipher = AES_CBC(key=key, keySize=32)
+        cipher = AES_CBC(key=Hash.SHA256(key, True), keySize=32)
         return self.ensure_unicode(cipher.decrypt(a2b_base64(f), iv))
 
 KissDecrypt = KissDecryptkit()

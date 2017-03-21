@@ -17,7 +17,7 @@ import js2py
 
 RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
-RE_ENC_TEST = Regex(r'/Scripts/(kissenc\.min\.j[^"\']+|vr\.j[^"\']+)')
+RE_ENC_TEST = Regex(r'/Scripts/((?:kissenc|oran|subo)\.min\.j[^"\']+|vr\.j[^"\']+)')
 RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
 RE_WINDOW2 = Regex(r'(.+window[^\=]+[^\;]+)')
 RE_ITAG = Regex(r'itag\=(\d+)')
@@ -194,18 +194,12 @@ def PlayVideo(url, m, **kwargs):
 
 ########################################################################################
 def setup_video_page(url):
-    #if not 'Anime' in Common.GetTypeTitle(url):
     r = NRequest(url, raw=True)
     headers = Headers.get_headers_for_url(url)
     dc = headers['cookie']
     if 'k_token' in r.cookies:
         headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
-    page = r.text
-    #else:
-    #    headers = None
-    #    r = NRequest(url, raw=True)
-    #    page = r.text
-    return headers, page
+    return headers, r.text
 
 ########################################################################################
 def get_video_url(url, m, headers, page):
@@ -264,21 +258,15 @@ def get_googlevideo_url(page, url, m, headers):
     for node in olist:
         if enc_test:
             post_data = None
-            try:
-                js = RE_WINDOW1.search(page)
-                if js and (js.group(2) != 'window.location.href'):
-                    ra = RE_WINDOW2.findall(js.group(1))
-                    for s in ra:
-                        jsc = js2py.EvalJs()
-                        jsc.execute('var window = {};' + s)
-                        if 'krsk' in jsc.window.to_dict():
-                            post_data = jsc.window.to_dict()
-                            post_data = [{d: post_data[d]} for d in post_data.keys() if not Regex(r'(\d+)').search(d)]
-                            post_data = post_data[0] if len(post_data) == 1 else ""
-                            break
-            except:
-                Log.Exception('* get_googlevideo_url Error: >>>')
-            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, url, headers, post_data)
+            if (type_title_lower != 'anime'):
+                post_data = {'krsk': dmm(type_title_lower)}
+            #Log.Debug("* post_data = {}".format(post_data))
+
+            rks_init = get_rks_init(type_title_lower, url, headers, post_data)
+            #Log.Debug("* rks_init = {}".format(rks_init))
+            key = get_rks(type_title_lower, page, rks_init)
+            #Log.Debug("* key = {}".format(key))
+            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, key)
         else:
             vurl_old = String.Base64Decode(node.get('value'))
 
@@ -501,6 +489,7 @@ def NRequest(url, raw=False):
             if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
                 Log.Debug("* Fetching fresh data for '{}'".format(url))
                 r = get_element_from_url(url, name, resp=raw)
+                rks_cache(url, remove=True)
                 break
             else:
                 Log.Debug("* Fetching '{}' from DataHTTP".format(url))
@@ -556,3 +545,106 @@ def get_thumb(url):
         Log.Error('*' * 80)
 
     return thumb
+
+########################################################################################
+def dmm(kind):
+    if kind == 'cartoon':
+        params = String.Base64Decode('cmVkLHZlcnRpY2xlLGNlbnRlciw3OTI=').split(',')
+    elif kind == 'drama':
+        params = String.Base64Decode(
+            'NjlkZTQwNzczNzY5YjE3YWMzNWQ5ZDdiYTQ3OWVjMWM0OTc5ZjkzNmUwMzdjZmZhM2I1YWZmOWRj'
+            'MWNjYzIzMywxMTEsdmVydGljbGUtLDIxNQ=='
+            ).split(',')
+    code = (
+        "ZnVuY3Rpb24gYmNzKGEsIGIsIGMsIGQsIGUsIGYpIHsgdmFyIGcgPSAwOyBhICs9IGQ7IGMgKz0gYjsg"
+        "ZCArPSBmOyBhICs9IGIgKyBjICsgZDsgZCArPSBlOyBiICs9IGQ7IGEgKz0gYiArIGQ7IGZvcih2YXIg"
+        "aSA9IDA7IGkgPCBhLmxlbmd0aDsgaSsrKSB7IGcgKz0gYS5jaGFyQ29kZUF0KGkpIH0gcmV0dXJuIGcg"
+        "fTsgZnVuY3Rpb24gZG1tKGMsIGQsIGUsIGYpIHsgdmFyIGcgPSAwOyBjICs9IGQgKyBmICsgZTsgZCAr"
+        "PSAoZiArIGMpICogMjsgZSArPSBjICsgZCArIGY7IGMgKz0gKGMgKyBkICsgZSkgXiAyICsgTWF0aC5z"
+        "cXJ0KGQpOyBkICs9IGJjcyhkLCBjLCBmLCBlLCBjICogMiwgZiAvIDIpOyBmb3IodmFyIGggPSBkLmxl"
+        "bmd0aCAtIDE7IGggPj0gMDsgaC0tKSB7IGcgKz0gZC5jaGFyQ29kZUF0KGgpIH07IHJldHVybiBnIH07"
+        )
+    context = js2py.EvalJs()
+    context.execute(String.Base64Decode(code))
+    return context.dmm(*params)
+
+########################################################################################
+def rks_cache(url, rks=None, remove=False):
+    name = Hash.MD5('resp_' + url)
+    path = Data.data_item_path('DataRKS')
+    Data.ensure_dirs(path)
+    files = [f for f in Data.list_dir(path) if Data.file_exists(Data.join_path(path, f))]
+
+    for filename in files:
+        if (filename == name) and remove:
+            Data.Remove(Data.RKS(filename))
+            Log.Debug("* Removing RKS cache for '{}'".format(url))
+            return False
+        elif (filename == name):
+            Log.Debug("* Fetching RKS '{}' from DataRKS".format(url))
+            return Data.Load(Data.RKS(filename), True)
+
+    if rks:
+        Log.Debug("* Caching '{}' RKS to DataRKS".format(url))
+        Data.Save(Data.RKS(name), rks, True)
+        return rks
+    return False
+
+########################################################################################
+def get_rks_init(kind, url, headers=None, post_data=None):
+    rks_init = rks_cache(url)
+    if rks_init:
+        return rks_init
+    elif kind == 'anime':
+        rks_init = String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1]
+        return rks_cache(url, rks_init)
+    try:
+        headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
+        if post_data:
+            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
+        else:
+            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
+        r.raise_for_status()
+        rks_init = str(r.text)
+        return rks_cache(url, rks_init)
+    except:
+        Log.Exception(u"* <kissdecrypt.decrypt> error: Failed to retrieve RSK POST resquest >>>")
+    return False
+
+########################################################################################
+def get_rks(kind, page, rks_init):
+    if kind == 'anime':
+        return rks_init #+ String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
+    cl = list()
+    bl = list()
+    key = ""
+    code = ""
+    html = HTML.ElementFromString(page)
+    for node in html.xpath('//script[@type="text/javascript"]'):
+        r = Regex(r'var\s*?(\_[^\=]+)\=\$kissenc').search(node.text_content())
+        if r:
+            key = r.group(1)
+            cl.append('var %s = "%s"; ' %(key, rks_init))
+            continue
+        r2 = Regex(r'(\$kissenc[^\(]+\(%s\))' %key).search(node.text_content()) if key else None
+        if r2:
+            continue
+        r3 = Regex(r'(%s)' %key).search(node.text_content()) if key else None
+        if r3:
+            for i, n in enumerate(node.text_content().strip().split(';')):
+                n = n.strip()
+                if Regex(r'(%s)' %key).search(n):
+                    r4 = Regex(r'\s([^\(\=]+)\(').search(n)
+                    if r4:
+                        n = "function %s(a, b) {return a + 'bl_key' + b};" %r4.group(1) + n
+                    cl.append(n.lstrip('} \n') + ';')
+                elif (i == 0):
+                    r3 = Regex(r'var\s*?(\_[^\=]+)\=\[["\']([^"\']+)["\']\]').search(n)
+                    if r3:
+                        bl = [ String.Base64Decode(s.strip().decode('unicode_escape')) for s in r3.group(2).split(',') ]
+    code = ''.join(cl + [' %s' %key]) if cl else ''
+    code = code.replace('bl_key', (bl[0] if bl else '$'))
+    if code:
+        return js2py.eval_js(code)
+    Log.Error(u"* <ServiceCode.get_rks> - error: cannot process final rks")
+    return False
