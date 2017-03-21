@@ -10,6 +10,7 @@ IDENTIFIER                  = 'com.plexapp.plugins.kissnetwork'
 URL_CACHE_DIR               = 'DataHTTP'
 THUMB_CACHE_DIR             = 'DataCovers'
 BOOKMARK_CACHE_DIR          = 'DataBookmarks'
+RKS_CACHE_DIR               = 'DataRKS'
 
 class DataItem(object):
     def __init__(self):
@@ -46,6 +47,9 @@ class DataItem(object):
 
     def Bookmarks(self, itemname):
         return os.path.join(BOOKMARK_CACHE_DIR, itemname)
+
+    def RKS(self, itemname):
+        return os.path.join(RKS_CACHE_DIR, itemname)
 
     def Exists(self, itemname):
         return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)
