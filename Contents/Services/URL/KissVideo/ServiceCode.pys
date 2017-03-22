@@ -7,13 +7,13 @@ import common as Common
 import metadata as Metadata
 from kissheaders import Headers
 from data import Data
+import js2py
 from openload import OpenloadStreamFromURL
 from kissdecrypt import KissDecrypt
 from time import sleep
 from io import open
 import requests
 import shutil
-import js2py
 
 RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
@@ -304,6 +304,11 @@ def get_googlevideo_url(page, url, m, headers):
                 #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
         Log.Debug('* Selecting {}p stream'.format(mm))
+
+    if (type_title_lower == 'cartoon') and ('Play?' in vurl):
+        Log.Debug(u"* Trying to get Cartoon Redirect Link for '{}'".format(vurl))
+        headers['referer'] = url
+        vurl = get_url_redirect_v2(vurl, headers)
 
     return vurl
 
@@ -605,8 +610,7 @@ def get_rks_init(kind, url, headers=None, post_data=None):
         else:
             r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
         r.raise_for_status()
-        rks_init = str(r.text)
-        return rks_cache(url, rks_init)
+        return rks_cache(url, str(r.text))
     except:
         Log.Exception(u"* <kissdecrypt.decrypt> error: Failed to retrieve RSK POST resquest >>>")
     return False
@@ -644,7 +648,9 @@ def get_rks(kind, page, rks_init):
                         bl = [ String.Base64Decode(s.strip().decode('unicode_escape')) for s in r3.group(2).split(',') ]
     code = ''.join(cl + [' %s' %key]) if cl else ''
     code = code.replace('bl_key', (bl[0] if bl else '$'))
-    if code:
+    if code and ('$' not in code):
         return js2py.eval_js(code)
+    elif ('$' in code):
+        Log.Error(u"* <ServiceCode.get_rks> - error: cannot find bl_key")
     Log.Error(u"* <ServiceCode.get_rks> - error: cannot process final rks")
     return False
