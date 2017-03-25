@@ -188,6 +188,9 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('*' * 80)
 
     if vurl:
+        if Prefs['server'] == 'Beta':
+            http_headers = {'User-Agent': Common.USER_AGENT, 'Referer': req_url}
+            return IndirectResponse(VideoClipObject, key=vurl, http_headers=http_headers)
         return IndirectResponse(VideoClipObject, key=vurl)
 
     raise Ex.MediaNotAvailable
@@ -305,8 +308,8 @@ def get_googlevideo_url(page, url, m, headers):
                 break
         Log.Debug('* Selecting {}p stream'.format(mm))
 
-    if (type_title_lower == 'cartoon') and ('Play?' in vurl):
-        Log.Debug(u"* Trying to get Cartoon Redirect Link for '{}'".format(vurl))
+    if ((type_title_lower == 'cartoon') or (type_title_lower == 'drama') and ('Play?' in vurl)):
+        Log.Debug(u"* Trying to get {} Redirect Link for '{}'".format(type_title_lower, vurl))
         headers['referer'] = url
         vurl = get_url_redirect_v2(vurl, headers)
 

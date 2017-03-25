@@ -13,16 +13,16 @@ class KissDecryptkit(object):
     def __init__(self):
         #kissasian
         di = String.Base64Decode("XzMyYjgxMmU5YTEzMjFhZTBlODRhZjY2MGM0NzIyYjNhXw==")[1:-1]
-        self.derived_drama_iv = a2b_hex(di)
+        self.div = a2b_hex(di)
         #kisscartoon
         ci = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
-        self.derived_cartoon_iv = a2b_hex(ci)
+        self.civ = a2b_hex(ci)
         #kissanime
         ai = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
-        self.derived_anime_iv = a2b_hex(ai)
+        self.aiv = a2b_hex(ai)
         #kissmanga
         mi = String.Base64Decode("X2E1ZThlMmU5YzI3MjFiZTBhODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
-        self.derived_manga_iv = a2b_hex(mi)
+        self.miv = a2b_hex(mi)
 
     def ensure_unicode(self, v):
         if isinstance(v, str):
@@ -31,13 +31,13 @@ class KissDecryptkit(object):
 
     def decrypt(self, f, kind, key):
         if kind == 'anime':
-            iv = self.derived_anime_iv
+            iv = self.aiv
         elif kind == 'cartoon':
-            iv = self.derived_cartoon_iv
+            iv = self.civ
         elif kind == 'drama':
-            iv = self.derived_drama_iv
+            iv = self.div
         elif kind == 'manga':
-            iv = self.derived_manga_iv
+            iv = self.miv
         else:
             return False
 
