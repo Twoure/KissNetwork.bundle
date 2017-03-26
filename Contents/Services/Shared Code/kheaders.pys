@@ -5,46 +5,47 @@ KissNetwork shared code.
 Manipulate Headers for Kiss domains.
 """
 
-from __builtin__ import hasattr
 import os
 from io import open
 import json
+from __builtin__ import hasattr
 from threading import Thread, Event
-import domain as Domain  # domain imports shared lib path
-import common as Common
+from kbase import core, cache, paths
+from kdomain import domain
+from kutil import util
 
 try:
     import cfscrape
 except ImportError, e:
     cfscrape = None
-    Log.Critical('* cfscrape import ERROR: {}'.format(e))
+    Log.Critical('* <kheaders.import>: cfscrape import ERROR: {}'.format(e))
 
 ####################################################################################################
 def CFTest(kind):
     """test cfscrape"""
-    cookie, ua = cfscrape.get_cookie_string(url=Common.GetBaseURL(Common.DomainDict(kind)), user_agent=Common.USER_AGENT)
+    cookie, ua = cfscrape.get_cookie_string(url=util.get_base_url(domain.ddict(kind)), user_agent=core.user_agent)
     return str(cookie)
 
 ####################################################################################################
 class KissHeaders(object):
     def __init__(self):
-        self.user_agent = Common.USER_AGENT
-        self.header_file = os.path.join(Common.SUPPORT_PATH, 'Header_Dict')
+        self.user_agent = core.user_agent
+        self.header_file = os.path.join(paths.support_path, 'Header_Dict')
         self.header_data = dict()
         self.event = Event()
 
     def save_dict(self):
         if not self.header_data:
-            Log.Error('* No header content to Save')
+            Log.Error('* <KissHeaders.save_dict> -error: No header content to Save')
             return False
 
         with open(self.header_file, 'wb') as f:
             json.dump(self.header_data, f, indent=4, sort_keys=True, separators=(',', ': '))
 
         if os.path.isfile(self.header_file) and os.stat(self.header_file).st_size != 0:
-            Log.Debug('* Header file Saved')
+            Log.Debug('* <KissHeaders.save_dict>: Header file Saved')
             return True
-        Log.Error('* Header file NOT Saved')
+        Log.Error('* <KissHeaders.save_dict> -error: Header file NOT Saved')
         return False
 
     def load_dict(self):
@@ -61,22 +62,22 @@ class KissHeaders(object):
 
         # file does not exist or is empty, create new file and fill
         if not self.create_dict():
-            Log.Error('* cannot create new header dict')
+            Log.Error('* <KissHeaders.load_dict> -error: cannot create new header dict')
             return False
         if not self.load_dict():
-            Log.Error('* tried to re-save header dict but failed.')
+            Log.Error('* <KissHeaders.load_dict> -error: tried to re-save header dict but failed.')
             return False
         return bool(self.header_data)
 
     def set_header(self, url):
-        base_url = Common.GetBaseURL(url)
-        type_title = Common.GetTypeTitle(url)
+        base_url = util.get_base_url(url)
+        type_title = util.get_tt(url)
         try:
             try:
                 cookie, user_agent = cfscrape.get_cookie_string(url=base_url, user_agent=self.user_agent)
                 r_cf_clearance = Regex(r'cf_clearance\=.*\-(\d+)\-(\d+)').search(cookie)
             except:
-                Log.Exception(u'* set_header cfscrape.get_cookie_string Error: >>>')
+                Log.Exception(u'* <KissHeaders.set_header[cfscrape.get_cookie_string]> -error: >>>')
                 cookie = 'na'
                 user_agent = self.user_agent
                 r_cf_clearance = None
@@ -86,7 +87,7 @@ class KissHeaders(object):
                 expire = date + int(r_cf_clearance.group(2))
             else:
                 expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364)))
-                Log.Warn(u'* set_header Error: Cannot calculate expire time for {}.'.format(base_url))
+                Log.Warn(u'* <KissHeaders.set_header> -error: Cannot calculate expire time for {}.'.format(base_url))
 
             return {
                 type_title: {
@@ -95,32 +96,32 @@ class KissHeaders(object):
                     }
                 }
         except:
-            Log.Exception(u'* set_header() Error: >>>')
+            Log.Exception(u'* <KissHeaders.set_header> -error: >>>')
             return {}
 
     def create_dict(self):
-        Log.Debug('* Creating New Header Dict')
-        for item in Common.BaseURLListTuple():
+        Log.Debug('* <KissHeaders.create_dict>: Creating New Header Dict')
+        for item in util.base_url_list_tuple:
             self.header_data.update(self.set_header(item[1]))
         if not self.save_dict():
-            Log.Error('* failed to save new header dict')
+            Log.Error('* <KissHeaders.create_dict> -error: failed to save new header dict')
             return False
         return True
 
     def get_headers_for_url(self, url, update=False):
-        type_title = Common.GetTypeTitle(url)
+        type_title = util.get_tt(url)
         if not self.header_data:
-            Log("* Loading Header Dict")
+            Log("* <KissHeaders.get_headers_for_url>: Loading Header Dict")
             self.load_dict()
             if not self.header_data:
-                Log.Error(u'* Cannot load {} header, because header file does not exist'.format(type_title))
+                Log.Error(u'* <KissHeaders.get_headers_for_url> -error: Cannot load {} header, because header file does not exist'.format(type_title))
                 return {}
 
-        base_url = Common.GetBaseURL(url)
+        base_url = util.get_base_url(url)
         if not type_title:
-            Log(u"* '{}' is NOT a Kiss URL.  Returning default headers.".format(base_url))
+            Log(u"* <KissHeaders.get_headers_for_url>: '{}' is NOT a Kiss URL.  Returning default headers.".format(base_url))
             return {
-                'user-agent': Common.USER_AGENT,
+                'user-agent': core.user_agent,
                 'referer': base_url
                 }
 
@@ -140,27 +141,27 @@ class KissHeaders(object):
                         self.load_dict()
                         return check_update_instance(tt=tt, cts=cts, up1=up1, up2=True)
                 else:
-                    raise KeyError(u"'{}' is NOT within Header_Dict".format(tt))
+                    raise KeyError(u"<KissHeaders.get_headers_for_url> -error: '{}' is NOT within Header_Dict".format(tt))
                 return False, expire
 
             update2, expire = check_update_instance(type_title, current_timestamp, update)
             if update2:
-                Log.Debug(u'* {} cookies expired. Collecting fresh cookies.'.format(type_title))
+                Log.Debug(u'* <KissHeaders.get_headers_for_url>: {} cookies expired. Collecting fresh cookies.'.format(type_title))
 
                 self.header_data.update(self.set_header(base_url))
 
-                Log.Debug('* Updated {} Header to >>'.format(type_title))
+                Log.Debug('* <KissHeaders.get_headers_for_url>: Updated {} Header to >>'.format(type_title))
                 Log.Debug('* {}'.format(self.header_data[type_title]))
 
                 self.save_dict()
-                Log.Debug('* New Cookies saved for {} Header'.format(base_url))
+                Log.Debug('* <KissHeaders.get_headers_for_url>: New Cookies saved for {} Header'.format(base_url))
             elif expire:
                 current_datetime = Datetime.FromTimestamp(current_timestamp)
                 expire_datetime = Datetime.FromTimestamp(expire)
                 deltatime = str(expire_datetime - current_datetime)
-                Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
+                Log.Debug(u'* <KissHeaders.get_headers_for_url>: {} cookies expire in {}'.format(type_title, deltatime))
             else:
-                Log.Warn('* No Expire time within {} cookies'.format(type_title))
+                Log.Warn('* <KissHeaders.get_headers_for_url>: No Expire time within {} cookies'.format(type_title))
         else:
             self.create_dict()
 
@@ -175,56 +176,54 @@ class KissHeaders(object):
         if not self.header_data:
             self.load_dict()
             if not self.header_data:
-                Log.Error('* Cannot check all headers, because header file does not exist')
+                Log.Error('* <KissHeaders.check_all_headers> -error: Cannot check all headers, because header file does not exist')
                 return False
 
         updated = False
-        for (type_title, base_url) in Common.BaseURLListTuple():
+        for (type_title, base_url) in util.base_url_list_tuple:
             site_pref = 'kissasian' if type_title == 'Drama' else 'kiss{}'.format(type_title.lower())
             if len(self.header_data) > 1 and Prefs[site_pref]:
                 expire = int(self.header_data[type_title]['expire'])
                 current_timestamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
                 if current_timestamp >= expire:
                     updated = True
-                    Log.Debug(u'* {} cookies expired. Collecting fresh cookies.'.format(type_title))
+                    Log.Debug(u'* <KissHeaders.check_all_headers>: {} cookies expired. Collecting fresh cookies.'.format(type_title))
                     self.header_data.update(self.set_header(base_url))
                 else:
                     if 'expire' in self.header_data[type_title].keys():
                         current_datetime = Datetime.FromTimestamp(current_timestamp)
                         expire_datetime = Datetime.FromTimestamp(expire)
                         deltatime = str(expire_datetime - current_datetime)
-                        Log.Debug(u'* {} cookies expire in {}'.format(type_title, deltatime))
+                        Log.Debug(u'* <KissHeaders.check_all_headers>: {} cookies expire in {}'.format(type_title, deltatime))
                     else:
-                        Log.Warn(u'* No Expire time within {} cookies'.format(type_title))
+                        Log.Warn(u'* <KissHeaders.check_all_headers>: No Expire time within {} cookies'.format(type_title))
 
         if updated:
             if not self.save_dict():
-                Log.Error('* Failed to save new header data to file')
+                Log.Error('* <KissHeaders.check_all_headers> -error: Failed to save new header data to file')
         self.event.set()
-        Log('* Finished checking all headers')
+        Log('* <KissHeaders.check_all_headers>: Finished checking all headers')
         return updated
 
     def init_headers(self, init=False):
         if init:
             self.event.clear()
-            Log('* Starting check_all_headers() Thread')
+            Log('* <KissHeaders.init_headers[{}]>: Starting check_all_headers() Thread'.format(init))
             self.que_thread = Thread(target=self.check_all_headers)
             self.que_thread.start()
+            Log('* <KissHeaders.init_headers[{}]>: {}'.format(self.que_thread.is_alive(), self.que_thread))
         elif hasattr(self, 'que_thread') and self.event.is_set():
-            Log('* {}'.format(self.que_thread))
-            Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
-            Log('* Finished initializing Headers')
+            Log('* <KissHeaders.init_headers[{}]>: {}'.format(self.que_thread.is_alive(), self.que_thread))
+            Log('* <KissHeaders.init_headers[{}]>: Finished initializing Headers'.format(self.que_thread.is_alive()))
             return True
         elif hasattr(self, 'que_thread') and self.que_thread.is_alive():
-            Log('* {}'.format(self.que_thread))
-            Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
-            Log('* Headers are initializing')
+            Log('* <KissHeaders.init_headers[{}]>: {}'.format(self.que_thread.is_alive(), self.que_thread))
+            Log('* <KissHeaders.init_headers[{}]>: Headers are initializing'.format(self.que_thread.is_alive()))
         elif hasattr(self, 'que_thread') and not self.que_thread.is_alive():
-            Log('* {}'.format(self.que_thread))
-            Log('* Thread Status = {}'.format(self.que_thread.is_alive()))
-            Log.Critical('* KissHeaders unexpected Error.  Please contact Twoure with issue.')
+            Log('* <KissHeaders.init_headers[{}]>: {}'.format(self.que_thread.is_alive(), self.que_thread))
+            Log.Critical('* <KissHeaders.init_headers[{}]> -unexpected error.  Please contact Twoure with issue.'.format(init))
         else:
-            Log('* Headers initialization Skipping.')
+            Log('* <KissHeaders.init_headers[{}]>: Headers initialization Skipping.'.format(init))
             return True
         return False
 

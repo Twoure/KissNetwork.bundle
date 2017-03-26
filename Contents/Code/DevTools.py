@@ -1,4 +1,4 @@
-CFTest = SharedCodeService.kissheaders.CFTest
+CFTest = SharedCodeService.kheaders.CFTest
 import shutil
 import json
 
@@ -85,7 +85,7 @@ class BookmarksToolkit(object):
         self.context.clear()
         oc.add(DirectoryObject(key=Callback(self.gui_backup_tools),
             title="Backup Tools", summary="Manage bookmark backups."))
-        for name in ['All'] + sorted(Common.TypeTitleList()):
+        for name in ['All'] + sorted(KCore.util.tt_list):
             name2 = '\"' + name + '\"'
             if name == 'All':
                 name2 = ''
@@ -318,7 +318,7 @@ def ResetCustomDict(file_to_reset):
         Core.storage.remove(file_path)
 
     if file_to_reset == 'Domain_Dict':
-        Domain.CreateDomainDict()
+        KCore.domain.create_dict()
     elif file_to_reset == 'Header_Dict':
         Headers.create_dict()
 
@@ -392,7 +392,7 @@ def DevToolsH(title=None, header=None, message=None):
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating {} Headers in Header_Dict----------'.format(title))
 
-            for (h_name, h_url) in Common.BaseURLListTuple():
+            for (h_name, h_url) in KCore.util.base_url_list_tuple:
                 if h_name == title:
                     Headers.get_headers_for_url(h_url, update=True)
                     break
@@ -403,7 +403,7 @@ def DevToolsH(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
         summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
-    for name in sorted(Common.TypeTitleList()):
+    for name in sorted(KCore.util.tt_list):
         oc.add(DirectoryObject(key=Callback(DevToolsH, title=name),
             title='Update {} Headers'.format(name),
             summary='Update {} Headers Only in the \"Header_Dict\" file.'.format(name)))
@@ -426,7 +426,7 @@ def DevToolsD(title=None, header=None, message=None):
             return DevToolsD(header=header, message=message, title=None)
         elif title == 'recache_default_domains':
             Log('\n----------Re-Caching Default Domains----------')
-            Domain.get_domain_dict(True)
+            KCore.domain.fetch(True)
             message = 'Default Domains Re-Cached'
 
             return DevToolsD(header=header, message=message, title=None)
@@ -434,7 +434,7 @@ def DevToolsD(title=None, header=None, message=None):
             or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
             Log('\n----------Updating {} Domain in Domain_Dict----------'.format(title))
 
-            Domain.UpdateDomain(title, True)
+            KCore.domain.update(title, True)
 
             message = 'Updated {} Domain.'.format(title)
             return DevTools(header=header, message=message, file_to_reset=None)
@@ -445,7 +445,7 @@ def DevToolsD(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsD, title='Domain_Dict'),
         title='Reset Domain_Dict File',
         summary='Create backup of old Domain_Dict, delete current, create new and fill with fresh domains'))
-    for name in sorted(Common.TypeTitleList()):
+    for name in sorted(KCore.util.tt_list):
         oc.add(DirectoryObject(key=Callback(DevToolsD, title=name),
             title='Update {} Domain'.format(name),
             summary='Update {} Domain Only in the \"Domain_Dict\" file.'.format(name)))
@@ -513,10 +513,10 @@ def MoveOldBookmarks():
 def SaveCoverImage(image_url, count=0, page_url=None):
     """Save image to Cover Image Path and return the file name"""
 
-    content_url = Common.CorrectCoverImage(image_url)
-    if Common.is_kiss_url(image_url):
+    content_url = KCore.util.correct_cover_image(image_url)
+    if KCore.util.is_kiss_url(image_url):
         image_file = content_url.rsplit('/')[-1]
-        type_title = Common.GetTypeTitle(image_url)
+        type_title = KCore.util.get_tt(image_url)
     else:
         image_file = image_url.split('/', 3)[3].replace('/', '_')
         type_title = 'Unknow'
@@ -527,7 +527,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
     Log.Debug('Image File Path = {}'.format(path))
 
     if not Core.storage.file_exists(path):
-        if Common.is_kiss_url(content_url):
+        if KCore.util.is_kiss_url(content_url):
             r = requests.get(content_url, headers=Headers.get_headers_for_url(content_url), stream=True)
         else:
             r = requests.get(content_url, stream=True)
@@ -553,7 +553,7 @@ def SaveCoverImage(image_url, count=0, page_url=None):
                 Log.Warn('* Trying to Pull down fresh image from {}'.format(page_url))
                 html = RHTML.ElementFromURL(page_url)
                 try:
-                    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+                    cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
                     if not 'http' in cover_url: cover_url = None
                 except:
                     cover_url = None

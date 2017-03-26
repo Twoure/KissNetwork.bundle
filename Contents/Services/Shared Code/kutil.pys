@@ -146,12 +146,14 @@ class util(object):
     def is_kiss_url(self, url):
         return bool(self.re_tt.search(url))
 
+    """
     def domain_dict(self, kind):
         dd = domain.load()
         if len(dd.keys()) != 5 or 'Asian' in dd.keys():
             domain.create_dict()
             dd = domain.load()
         return dd[kind]
+    """
 
     def get_tt(self, url):
         r = self.re_tt.search(url)
@@ -160,7 +162,7 @@ class util(object):
 
     @property
     def base_url_list(self):
-        return [ self.domain_dict(t) for t in self.tt_list ]
+        return [ domain.ddict(t) for t in self.tt_list ]
 
     @property
     def base_url_list_tuple(self):

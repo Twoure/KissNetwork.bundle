@@ -4,20 +4,18 @@
 #                                                                                                  #
 ####################################################################################################
 # import Shared Service Code
-Domain                      = SharedCodeService.domain
-Headers                     = SharedCodeService.kissheaders.Headers
-Common                      = SharedCodeService.common
+KCore                       = SharedCodeService.kcore
+Headers                     = SharedCodeService.kheaders.Headers
 Metadata                    = SharedCodeService.metadata
-KData                       = SharedCodeService.data.Data
 
 # set global variables needed for imported packages
-TITLE                       = Common.TITLE
-PREFIX                      = Common.PREFIX
-TIMEOUT                     = Common.TIMEOUT
+TITLE                       = KCore.core.channel_title
+PREFIX                      = KCore.core.prefix
+TIMEOUT                     = KCore.util.timeout
 GIT_REPO                    = 'Twoure/{}.bundle'.format(TITLE)
-URL_CACHE_DIR               = 'DataHTTP'
-THUMB_CACHE_DIR             = 'DataCovers'
-BOOKMARK_CACHE_DIR          = 'DataBookmarks'
+URL_CACHE_DIR               = KCore.cache.url_cache_dir
+THUMB_CACHE_DIR             = KCore.cache.thumb_cache_dir
+BOOKMARK_CACHE_DIR          = KCore.cache.bookmark_cache_dir
 
 # setup Updater and update headers if Dict['init_run'] updates
 from pluginupdateservice import PluginUpdateService
@@ -30,7 +28,6 @@ if not Updater.initial_run:
 import messages
 import requests
 from io import open
-import rhtml as RHTML
 from AuthTools import CheckAdmin
 from DumbTools import DumbKeyboard, DumbPrefs
 from DevTools import add_dev_tools, SaveCoverImage, SetUpCFTest, ClearCache, BookmarkTools
@@ -88,7 +85,7 @@ def Start():
     InputDirectoryObject.art = R(MAIN_ART)
 
     HTTP.CacheTime = 0
-    HTTP.Headers['User-Agent'] = Common.USER_AGENT
+    HTTP.Headers['User-Agent'] = KCore.core.user_agent
     version = get_channel_version()
 
     Log.Debug('*' * 80)
@@ -105,19 +102,20 @@ def Start():
     # setup auto-managed bookmark backups
     BookmarkTools.auto_backup()
 
-    # Clear Old Cached URLs & Cover Thumbs
+    # Clear Old Cached URLs, RKS, and Cover Thumbs
     Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)
+    Thread.Create(ClearCache, itemname=KCore.cache.rks_cache_dir, timeout=TIMEOUT)
     Thread.Create(ClearCache, itemname=THUMB_CACHE_DIR, timeout=Datetime.Delta(weeks=4))
 
     # remove/clear old style of caching prior to v1.2.7
     if Dict['current_ch_version']:
-        if Common.ParseVersion(Dict['current_ch_version']) < (1, 2, 7):
+        if KCore.util.parse_version(Dict['current_ch_version']) < (1, 2, 7):
             Log(u"* Channel updated from {} to {}. Clearing old cache and moving Bookmark backups.".format(Dict['current_ch_version'], version))
             from DevTools import ClearOldCache, MoveOldBookmarks
             Thread.Create(MoveOldBookmarks)
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources'))
             Thread.Create(ClearOldCache, itempath=Core.storage.join_path(Core.storage.data_path, 'DataItems'))
-        elif Common.ParseVersion(Dict['current_ch_version']) < Common.ParseVersion(version):
+        elif KCore.util.parse_version(Dict['current_ch_version']) < KCore.util.parse_version(version):
             Log(u"* Channel updated from {} to {}".format(Dict['current_ch_version'], version))
 
     # setup current channel version
@@ -144,10 +142,10 @@ def MainMenu():
     admin = CheckAdmin()
     oc = ObjectContainer(title2=TITLE, no_cache=Client.Product in ['Plex Web'])
 
-    cp_match = True if Client.Platform in Common.LIST_VIEW_CLIENTS else False
+    cp_match = True if Client.Platform in KCore.core.list_view_clients else False
 
     data = list()
-    for t, u in Common.BaseURLListTuple():
+    for t, u in KCore.util.base_url_list_tuple:
         thumb = 'icon-{}.png'.format(t.lower())
         rthumb = None if cp_match else R(thumb)
         art = 'art-{}.jpg'.format(t.lower())
@@ -187,13 +185,13 @@ def MainMenu():
             # Setup Updater to track latest release
             Updater.gui_update(
                 PREFIX + '/updater', oc, GIT_REPO,
-                tag='latest', list_view_clients=Common.LIST_VIEW_CLIENTS
+                tag='latest', list_view_clients=KCore.core.list_view_clients
                 )
         else:
             # Setup Updater to track branch commits
             Updater.gui_update(
                 PREFIX + '/updater', oc, GIT_REPO,
-                branch='dev', list_view_clients=Common.LIST_VIEW_CLIENTS
+                branch='dev', list_view_clients=KCore.core.list_view_clients
                 )
 
     # set up Main Menu depending on what sites are picked in the Prefs menu
@@ -442,10 +440,10 @@ def BookmarksSub(type_title, art):
     for bookmark in Util.ListSortedByKey(Dict['Bookmarks'][type_title], type_title):
         item_title = bookmark['item_title']
         summary = bookmark['summary']
-        summary2 = Common.StringCode(string=summary, code='decode') if summary else None
+        summary2 = KCore.util.string_code(string=summary, code='decode') if summary else None
 
-        cover_file = Common.CorrectCoverImage(bookmark['cover_file']) if bookmark['cover_file'] else None
-        cover_url = Common.CorrectCoverImage(bookmark['cover_url']) if bookmark['cover_url'] else None
+        cover_file = KCore.util.correct_cover_image(bookmark['cover_file']) if bookmark['cover_file'] else None
+        cover_url = KCore.util.correct_cover_image(bookmark['cover_url']) if bookmark['cover_url'] else None
 
         cover = None
         if cover_file and cover_url:
@@ -458,8 +456,8 @@ def BookmarksSub(type_title, art):
             'cover_url': cover_url,
             'cover_file': cover_file,
             'type_title': type_title,
-            'base_url': Common.GetBaseURL(bookmark['page_url']),
-            'page_url': Common.GetBaseURL(bookmark['page_url']) + '/' + bookmark['page_url'].split('/', 3)[3],
+            'base_url': KCore.util.get_base_url(bookmark['page_url']),
+            'page_url': KCore.util.get_base_url(bookmark['page_url']) + '/' + bookmark['page_url'].split('/', 3)[3],
             'art': art}
 
         # get genre info, provide legacy support for older Bookmarks
@@ -468,19 +466,19 @@ def BookmarksSub(type_title, art):
         if 'genres' in bookmark.keys():
             genres = [g.replace('_', ' ') for g in bookmark['genres'].split()]
             update = False
-            if cover_url and Common.is_kiss_url(cover_url):
-                cover_type_title = Common.GetTypeTitle(cover_url)
-                cover_base_url = Common.RE_BASE_URL.search(bookmark['cover_url']).group(1)
+            if cover_url and KCore.util.is_kiss_url(cover_url):
+                cover_type_title = KCore.util.get_tt(cover_url)
+                cover_base_url = KCore.util.re_base_url.search(bookmark['cover_url']).group(1)
                 if 'date_added' not in bookmark.keys():
                     Log.Debug("* Bookmark 'date_added' missing. Updating Bookmark Metadata.")
                     update = True
                     force_update_cover = cover_type_title == 'Anime'
-                elif (cover_type_title, cover_base_url) not in Common.BaseURLListTuple():
+                elif (cover_type_title, cover_base_url) not in KCore.util.base_url_list_tuple:
                     Log.Debug('* Bookmark Cover URL Domain changed. Updating Bookmark Metadata.')
                     update = True
             else:
-                page_base_url = Common.RE_BASE_URL.search(bookmark['page_url']).group(1)
-                if (type_title, page_base_url) not in Common.BaseURLListTuple():
+                page_base_url = KCore.util.re_base_url.search(bookmark['page_url']).group(1)
+                if (type_title, page_base_url) not in KCore.util.base_url_list_tuple:
                     Log.Debug('* Bookmark Page URL Domain changed. Updating Bookmark Metadata.')
                     update = True
             if update:
@@ -504,7 +502,7 @@ def BookmarksSub(type_title, art):
 
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=item_info),
-            title=Common.StringCode(string=item_title, code='decode'),
+            title=KCore.util.string_code(string=item_title, code='decode'),
             summary=summary2, thumb=cover, art=cover))
 
     if not Prefs['hide_clear_bookmarks']:
@@ -538,7 +536,7 @@ def GenreList(url, title, art):
     """Create Genre Directory for each kiss site"""
 
     genre_url = url + '/{}List'.format(title)
-    html = RHTML.ElementFromURL(genre_url)
+    html = KCore.network.ElementFromURL(genre_url)
 
     oc = ObjectContainer(title2='{} By Genres'.format(title), art=R(art))
 
@@ -564,7 +562,7 @@ def CountryList(url, title, art):
     """Create Country Directory for KissAsian"""
 
     country_url = url + '/DramaList'  # setup url for finding current Country list
-    html = RHTML.ElementFromURL(country_url)
+    html = KCore.network.ElementFromURL(country_url)
 
     oc = ObjectContainer(title2='Drama By Country', art=R(art))
 
@@ -626,7 +624,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     Logger(u"* Sorting Option = '{}'".format(SORT_OPT[Prefs['sort_opt']]))  # Log Pref being used
     Logger(u"* Category = '{}' | URL = '{}'".format(pname, item_url))
 
-    html = RHTML.ElementFromURL(item_url)
+    html = KCore.network.ElementFromURL(item_url)
 
     pages = "Last Page"
     nextpg_node = None
@@ -635,7 +633,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
     if "Search" in pname:
         # The Search result page returnes a long list with no 'next page' option
         # set url back to base url
-        base_url = Common.GetBaseURL(item_url)
+        base_url = KCore.util.get_base_url(item_url)
         Logger("* Searching for {}".format(category))  # check to make sure its searching
     else:
         # parse html for 'last' and 'next' page numbers
@@ -681,16 +679,16 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
             drama_title_html = HTML.ElementFromString(item.get('title'))
         try:
             if not drama_test:
-                thumb = Common.CorrectCoverImage(title_html.xpath('//img/@src')[0])
+                thumb = KCore.util.correct_cover_image(title_html.xpath('//img/@src')[0])
             else:
-                thumb = Common.CorrectCoverImage(item.xpath('./a/img/@src')[0])
+                thumb = KCore.util.correct_cover_image(item.xpath('./a/img/@src')[0])
             if not 'http' in thumb:
                 Log.Debug('* thumb missing valid url. | {}'.format(thumb))
                 Log.Debug('* thumb xpath = {}'.format(title_html.xpath('//img/@src')))
                 Log.Debug('* item name | {} | {}'.format(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
                 thumb = None
                 cover_file = None
-            elif Common.is_kiss_url(thumb):
+            elif KCore.util.is_kiss_url(thumb):
                 cover_file = thumb.rsplit('/')[-1]
             else:
                 cover_file = thumb.split('/', 3)[3].replace('/', '_')
@@ -706,8 +704,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         a_node = item.xpath('./a')[0]
 
         item_url_base = a_node.get('href')
-        item_sys_name = Common.StringCode(string=item_url_base.rsplit('/')[-1].strip(), code='encode')
-        item_url_final = base_url + Common.StringCode(string=item_url_base, code='encode')
+        item_sys_name = KCore.util.string_code(string=item_url_base.rsplit('/')[-1].strip(), code='encode')
+        item_url_final = base_url + KCore.util.string_code(string=item_url_base, code='encode')
         Logger('*' * 80)
         Logger('* item_url_base     = {}'.format(item_url_base))
         Logger('* item_sys_name     = {}'.format(item_sys_name))
@@ -740,8 +738,8 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
 
         item_info = {
             'item_sys_name': item_sys_name,
-            'item_title': Common.StringCode(string=item_title, code='encode'),
-            'short_summary': Common.StringCode(string=summary, code='encode'),
+            'item_title': KCore.util.string_code(string=item_title, code='encode'),
+            'short_summary': KCore.util.string_code(string=summary, code='encode'),
             'cover_url': thumb,
             'cover_file': cover_file,
             'type_title': type_title,
@@ -783,22 +781,22 @@ def HomePageList(tab, category, base_url, type_title, art):
     main_title = u'{} | {}'.format(type_title, category)
     oc = ObjectContainer(title2=main_title, art=R(art))
 
-    html = RHTML.ElementFromURL(base_url)
+    html = KCore.network.ElementFromURL(base_url)
 
     # scrape home page for Top (Day, Week, and Month) list
     for node in html.xpath('//div[@id="tab-top-{}"]/div'.format(tab)):
-        page_node = Common.StringCode(string=node.xpath('./a')[1].get('href'), code='encode')
-        item_sys_name = Common.StringCode(string=page_node.split('/')[-1], code='encode')
+        page_node = KCore.util.string_code(string=node.xpath('./a')[1].get('href'), code='encode')
+        item_sys_name = KCore.util.string_code(string=page_node.split('/')[-1], code='encode')
         item_title = node.xpath('./a/span/text()')[0]
         latest = node.xpath('./p/span[@class="info"][text()="Latest:"]/../a/text()')[0]
         title2 = u'{} | Latest {}'.format(item_title, latest)
         summary = 'NA'  # no summarys are given in the 'Top' lists
         try:
-            thumb = Common.CorrectCoverImage(node.xpath('./a/img')[0].get('src'))
+            thumb = KCore.util.correct_cover_image(node.xpath('./a/img')[0].get('src'))
             if not 'http' in thumb:
                 thumb = None
                 cover_file = None
-            elif Common.is_kiss_url(thumb):
+            elif KCore.util.is_kiss_url(thumb):
                 cover_file = thumb.rsplit('/')[-1]
             else:
                 cover_file = thumb.split('/', 3)[3].replace('/', '_')
@@ -809,7 +807,7 @@ def HomePageList(tab, category, base_url, type_title, art):
 
         item_info = {
             'item_sys_name': item_sys_name,
-            'item_title': Common.StringCode(string=item_title, code='encode'),
+            'item_title': KCore.util.string_code(string=item_title, code='encode'),
             'short_summary': summary,
             'cover_url': thumb,
             'cover_file': cover_file,
@@ -842,11 +840,11 @@ def ItemPage(item_info):
     art = item_info['art']
 
     # decode string & set title2 for oc
-    item_title_decode = unicode(Common.StringCode(string=item_title, code='decode'))
+    item_title_decode = unicode(KCore.util.string_code(string=item_title, code='decode'))
     title2 = u'{} | {}'.format(type_title, item_title_decode)
     oc = ObjectContainer(title2=title2, art=R(art))
 
-    html = RHTML.ElementFromURL(page_url)
+    html = KCore.network.ElementFromURL(page_url)
     genres, genres_list = Metadata.GetGenres(html)
 
     if not Prefs['adult']:
@@ -874,9 +872,9 @@ def ItemPage(item_info):
     Logger('*' * 80)
     if not item_info['cover_url']:
         try:
-            cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
-            if Common.is_kiss_url(cover_url):
-                content_url = Common.GetBaseURL(cover_url) + '/' + cover_url.split('/', 3)[3]
+            cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+            if KCore.util.is_kiss_url(cover_url):
+                content_url = KCore.util.get_base_url(cover_url) + '/' + cover_url.split('/', 3)[3]
                 image_file = content_url.rsplit('/')[-1]
             else:
                 content_url = cover_url
@@ -892,7 +890,7 @@ def ItemPage(item_info):
         item_info.update({'summary': summary})
         item_info.pop('short_summary')
         manga_info.pop('summary')
-        summary2 = Common.StringCode(string=summary, code='decode')
+        summary2 = KCore.util.string_code(string=summary, code='decode')
 
         oc.add(TVShowObject(
             key=Callback(MangaSubPage, item_info=item_info, manga_info=manga_info),
@@ -907,7 +905,7 @@ def ItemPage(item_info):
         item_info.update({'summary': summary})
         item_info.pop('short_summary')
         movie_info.pop('summary')
-        summary2 = Common.StringCode(string=summary, code='decode')
+        summary2 = KCore.util.string_code(string=summary, code='decode')
 
         oc.add(TVShowObject(
             key=Callback(MovieSubPage, item_info=item_info, movie_info=movie_info),
@@ -922,7 +920,7 @@ def ItemPage(item_info):
         item_info.update({'summary': summary})
         item_info.pop('short_summary')
         show_info.pop('summary')
-        summary2 = Common.StringCode(string=summary, code='decode')
+        summary2 = KCore.util.string_code(string=summary, code='decode')
 
         oc.add(TVShowObject(
             key=Callback(ShowSubPage, item_info=item_info, show_info=show_info),
@@ -943,8 +941,8 @@ def ItemPage(item_info):
             rel_title = jd['Name']
             rel_url = jd['Link']
             rel_item_info = {
-                'item_sys_name': Common.StringCode(string=rel_url.split('/')[-1], code='encode'),
-                'item_title': Common.StringCode(string=rel_title, code='encode'),
+                'item_sys_name': KCore.util.string_code(string=rel_url.split('/')[-1], code='encode'),
+                'item_title': KCore.util.string_code(string=rel_title, code='encode'),
                 'short_summary': 'NA', 'cover_url': "", 'cover_file': "",
                 'type_title': type_title, 'base_url': base_url, 'page_url': rel_url, 'art': art
                 }
@@ -955,8 +953,8 @@ def ItemPage(item_info):
             if (len(hrel.split('/')) == 3) and (hrel != '/'+page_url.split('/', 3)[3]):
                 rel_title = rel.text_content().strip()
                 rel_item_info = {
-                    'item_sys_name': Common.StringCode(string=hrel.split('/')[-1], code='encode'),
-                    'item_title': Common.StringCode(string=rel_title, code='encode'),
+                    'item_sys_name': KCore.util.string_code(string=hrel.split('/')[-1], code='encode'),
+                    'item_title': KCore.util.string_code(string=rel_title, code='encode'),
                     'short_summary': 'NA', 'cover_url': "", 'cover_file': "",
                     'type_title': type_title, 'base_url': base_url, 'page_url': base_url + hrel, 'art': art
                     }
@@ -995,7 +993,7 @@ def RelatedList(r_list, title, art):
     for r_info in r_list:
         oc.add(DirectoryObject(
             key=Callback(ItemPage, item_info=r_info),
-            title=unicode(Common.StringCode(string=r_info['item_title'], code='decode')),
+            title=unicode(KCore.util.string_code(string=r_info['item_title'], code='decode')),
             art=R(art)
             ))
     return oc
@@ -1005,7 +1003,7 @@ def GetItemList(html, url, item_title, type_title):
     """Get list of Episodes, Movies, or Chapters"""
 
     episode_list = html.xpath('//table[@class="listing"]/tr/td')
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
+    item_title_decode = KCore.util.string_code(string=item_title, code='decode')
     item_title_regex = RE_TITLE_CLEAN_DOT.sub('', item_title_decode)
 
     # if no shows, then none have been added yet
@@ -1046,18 +1044,18 @@ def GetItemList(html, url, item_title, type_title):
 def MovieSubPage(item_info, movie_info):
     """Setup Movie Page"""
 
-    item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
+    item_title_decode = KCore.util.string_code(string=item_info['item_title'], code='decode')
     title2 = u'{} | {} | {}'.format(item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
-    html = RHTML.ElementFromURL(item_info['page_url'])
+    html = KCore.network.ElementFromURL(item_info['page_url'])
 
     movie_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if movie_list == 'Not Yet Aired':
         return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
 
-    summary = unicode(Common.StringCode(string=item_info['summary'], code='decode')) if item_info['summary'] else None
+    summary = unicode(KCore.util.string_code(string=item_info['summary'], code='decode')) if item_info['summary'] else None
     cover = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
     genres, genres_list = Metadata.GetGenres(html)
     for movie in movie_list:
@@ -1081,11 +1079,11 @@ def MangaSubPage(item_info, manga_info):
     """Create the Manga/Comic Sub Page with Chapter list"""
     #TODO split this into ~30 chapters per book or so, similar to what was done with seasons
 
-    item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
+    item_title_decode = KCore.util.string_code(string=item_info['item_title'], code='decode')
     title2 = u'{} | {} | {}'.format(item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
-    html = RHTML.ElementFromURL(item_info['page_url'])
+    html = KCore.network.ElementFromURL(item_info['page_url'])
 
     cp_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if cp_list == 'Not Yet Aired':
@@ -1117,9 +1115,12 @@ def GetPhotoAlbum(url, source_title, title, art):
 
     oc = ObjectContainer(title2=title, art=R(art))
 
-    page = HTML.StringFromElement(RHTML.ElementFromURL(url))
-    images = Regex(r'lstImages\.push\(["\'](http[^"\']+)["\']').findall(page)
+    page = HTML.StringFromElement(KCore.network.ElementFromURL(url))
+    images = Regex(r'lstImages\.push[^"\']+?["\']([^"\']+)["\']').findall(page)
     for image in images:
+        image = KCore.rks.decrypt(image, url) if 'http' not in image else image
+        if not image:
+            continue
         name = image.rsplit('/')[-1].rsplit('.', 1)[0]
         if "proxy" in name:
             name = name.rsplit('%')[-1].rsplit('2f')[1]
@@ -1135,17 +1136,17 @@ def GetPhotoAlbum(url, source_title, title, art):
 def ShowSubPage(item_info, show_info):
     """Setup Show page"""
 
-    item_title_decode = Common.StringCode(string=item_info['item_title'], code='decode')
+    item_title_decode = KCore.util.string_code(string=item_info['item_title'], code='decode')
     title2 = u'{} | {} | {}'.format(item_info['type_title'], item_title_decode, item_info['page_category'].lower())
 
     oc = ObjectContainer(title2=title2, art=R(item_info['art']))
 
-    html = RHTML.ElementFromURL(item_info['page_url'])
+    html = KCore.network.ElementFromURL(item_info['page_url'])
     ep_list = GetItemList(html, item_info['page_url'], item_info['item_title'], item_info['type_title'])
     if ep_list == 'Not Yet Aired':
         return MC.message_container(u'Warning', '{} \"{}\" Not Yet Aired.'.format(item_info['type_title'], item_title_decode))
     else:
-        tags = Metadata.string_to_list(Common.StringCode(string=show_info['tags'], code='decode')) if show_info['tags'] else []
+        tags = Metadata.string_to_list(KCore.util.string_code(string=show_info['tags'], code='decode')) if show_info['tags'] else []
         thumb = Callback(GetThumb, cover_url=item_info['cover_url'], cover_file=item_info['cover_file'])
         summary = unicode(Metadata.GetSummary(html))
         show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
@@ -1228,10 +1229,10 @@ def SeasonSubPage(season_info):
 
     oc = ObjectContainer(title2=title2, art=R(season_info['art']))
 
-    html = RHTML.ElementFromURL(season_info['page_url'])
+    html = KCore.network.ElementFromURL(season_info['page_url'])
 
     ep_list = GetItemList(html, season_info['page_url'], season_info['item_title'], season_info['type_title'])
-    tags = Metadata.string_to_list(Common.StringCode(string=season_info['tags'], code='decode')) if season_info['tags'] else []
+    tags = Metadata.string_to_list(KCore.util.string_code(string=season_info['tags'], code='decode')) if season_info['tags'] else []
     thumb = Callback(GetThumb, cover_url=season_info['cover_url'], cover_file=season_info['cover_file'])
     summary = unicode(Metadata.GetSummary(html))
     show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
@@ -1320,19 +1321,19 @@ def Search(query=''):
     if len(b_prefs_names) == 1:
         b_prefs_name = b_prefs_names[0]
         b_prefs_name = 'comic' if b_prefs_name == 'kisscomic' else b_prefs_name
-        search_url = [s for s in Common.SearchURLList() if b_prefs_name in s][0]
+        search_url = [s for s in KCore.util.search_url_list if b_prefs_name in s][0]
         search_url_filled = search_url.format(String.Quote(query, usePlus=True))
         type_title = 'Drama' if b_prefs_name == 'kissasian' else (b_prefs_name.split('kiss')[1].title() if 'kiss' in b_prefs_name else 'Comic')
         art = 'art-{}.jpg'.format(type_title.lower())
 
-        html = RHTML.ElementFromURL(search_url_filled)
+        html = KCore.network.ElementFromURL(search_url_filled)
         if html.xpath('//table[@class="listing"]'):
             return SearchPage(type_title=type_title, search_url=search_url_filled, art=art)
     else:
         Logger('*' * 80)
-        for search_url in Common.SearchURLList():
+        for search_url in KCore.util.search_url_list:
             search_url_filled = search_url.format(String.Quote(query, usePlus=True))
-            type_title = Common.GetTypeTitle(search_url_filled)
+            type_title = KCore.util.get_tt(search_url_filled)
             # change kissasian info to 'Drama'
             art = 'art-{}.jpg'.format(type_title.lower())
             thumb = 'icon-{}.png'.format(type_title.lower())
@@ -1344,7 +1345,7 @@ def Search(query=''):
 
                 listing = True
                 if Prefs['search_all']:
-                    html = RHTML.ElementFromURL(search_url_filled)
+                    html = KCore.network.ElementFromURL(search_url_filled)
                     listing = bool(html.xpath('//table[@class="listing"]'))
 
                 if listing:
@@ -1372,7 +1373,7 @@ def SearchPage(type_title, search_url, art):
     If normal seach result then send to DirectoryList
     """
 
-    html = RHTML.ElementFromURL(search_url)
+    html = KCore.network.ElementFromURL(search_url)
     cover_url = None
     cover_file = None
 
@@ -1383,15 +1384,15 @@ def SearchPage(type_title, search_url, art):
         search_match = Regex(r"var\ path\ =\ ('Search')").search(node)
         if not search_match:
             # Send url to 'ItemPage'
-            base_url = Common.GetBaseURL(search_url)
+            base_url = KCore.util.get_base_url(search_url)
             node = html.xpath('//div[@class="barContent"]/div/a')[0]
 
-            item_sys_name = Common.StringCode(string=node.get('href').rsplit('/')[-1].strip(), code='encode')
-            item_url = base_url + '/' + type_title + '/' + Common.StringCode(item_sys_name, code='encode')
+            item_sys_name = KCore.util.string_code(string=node.get('href').rsplit('/')[-1].strip(), code='encode')
+            item_url = base_url + '/' + type_title + '/' + KCore.util.string_code(item_sys_name, code='encode')
             item_title = node.text
             try:
-                cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
-                if ('http' in cover_url) and Common.is_kiss_url(cover_url):
+                cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+                if ('http' in cover_url) and KCore.util.is_kiss_url(cover_url):
                     cover_file = cover_url.rsplit('/')[-1]
                 elif 'http' in cover_url:
                     cover_file = cover_url.split('/', 3)[3].replace('/', '_')
@@ -1406,7 +1407,7 @@ def SearchPage(type_title, search_url, art):
 
             item_info = {
                 'item_sys_name': item_sys_name,
-                'item_title': Common.StringCode(string=item_title, code='encode'),
+                'item_title': KCore.util.string_code(string=item_title, code='encode'),
                 'short_summary': None,
                 'cover_url': cover_url,
                 'cover_file': cover_file,
@@ -1446,12 +1447,12 @@ def AddBookmark(item_info):
     page_url = item_info['page_url']
 
     # decode title string
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
+    item_title_decode = KCore.util.string_code(string=item_title, code='decode')
     Logger('*' * 80)
     Logger(u'* item to add = {} | {}'.format(item_title_decode, item_sys_name), kind='Info')
 
     # setup html for parsing
-    html = RHTML.ElementFromURL(page_url)
+    html = KCore.network.ElementFromURL(page_url)
 
     # Genres
     genres = html.xpath('//p[span[@class="info"]="Genres:"]/a/text()')
@@ -1462,11 +1463,11 @@ def AddBookmark(item_info):
 
     # if no cover url then try and find one on the item page
     if cover_url:
-        cover_url = Common.CorrectCoverImage(cover_url)
+        cover_url = KCore.util.correct_cover_image(cover_url)
         image_file = item_info['cover_file']
     else:
         try:
-            cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+            cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
             if not 'http' in cover_url:
                 cover_url = None
                 image_file = None
@@ -1553,7 +1554,7 @@ def RemoveBookmark(item_info):
     type_title = item_info['type_title']
 
     # decode string
-    item_title_decode = unicode(Common.StringCode(string=item_title, code='decode'))
+    item_title_decode = unicode(KCore.util.string_code(string=item_title, code='decode'))
 
     # index 'Bookmarks' list
     bm = Dict['Bookmarks'][type_title]
@@ -1636,21 +1637,21 @@ def UpdateLegacyBookmark(bm_info=dict, new_cover=False):
 
     type_title = bm_info['type_title']
     item_title = bm_info['item_title']
-    item_title_decode = Common.StringCode(string=item_title, code='decode')
+    item_title_decode = KCore.util.string_code(string=item_title, code='decode')
     base_url = bm_info['base_url']
     page_url = base_url + '/' + bm_info['page_url'].split('/', 3)[3]
 
-    html = RHTML.ElementFromURL(page_url)
+    html = KCore.network.ElementFromURL(page_url)
 
     cover_url = None
-    if bm_info['cover_url'] and (Common.is_kiss_url(bm_info['cover_url']) == False):
+    if bm_info['cover_url'] and (KCore.util.is_kiss_url(bm_info['cover_url']) == False):
         cover_url = bm_info['cover_url']
     elif bm_info['cover_url'] and (base_url in bm_info['cover_url']):
         cover_url = base_url + '/' + bm_info['cover_url'].split('/', 3)[3]
 
     if new_cover or (not cover_url):
         try:
-            cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+            cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
             if not 'http' in cover_url:
                 cover_url = None
         except:
@@ -1736,24 +1737,24 @@ def GetThumb(cover_url, cover_file):
     if not cover_url:
         Log.Error('* No cover_url')
         return cover
-    elif Common.is_kiss_url(cover_url):
+    elif KCore.util.is_kiss_url(cover_url):
         if cover_file:
-            type_title = Common.GetTypeTitle(cover_url)
+            type_title = KCore.util.get_tt(cover_url)
             Logger('* cover file name   = {}'.format(cover_file))
-            if KData.CoverExists(Core.storage.join_path(type_title, cover_file)):
+            if KCore.storage.cover_exists(Core.storage.join_path(type_title, cover_file)):
                 Log.Debug(u'* Loading cover from {} folder'.format(THUMB_CACHE_DIR))
-                cover = KData.data_object(KData.Covers(Core.storage.join_path(type_title, cover_file)))
+                cover = KCore.storage.data_object(KCore.storage.Covers(Core.storage.join_path(type_title, cover_file)))
             else:
                 Logger('* Cover not yet saved, saving {} now'.format(cover_file))
                 try:
                     tt, f = SaveCoverImage(cover_url)
-                    cover = KData.data_object(KData.Covers(Core.storage.join_path(tt, f)))
+                    cover = KCore.storage.data_object(KCore.storage.Covers(Core.storage.join_path(tt, f)))
                 except:
                     Log.Exception(u'* Cannot Save/Load "{}"'.format(cover_url))
                     cover = None
     elif 'http' in cover_url:
         Logger('* Thumb NOT hosted on Kiss, Redirecting URL {}'.format(cover_url))
-        cover = Redirect(Common.CorrectCoverImage(cover_url))
+        cover = Redirect(KCore.util.correct_cover_image(cover_url))
 
     if not cover:
         Log.Error('* There is no cover')

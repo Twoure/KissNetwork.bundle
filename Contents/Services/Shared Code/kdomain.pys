@@ -97,4 +97,11 @@ class domain(object):
         d.update({kind: self.set_domain(kind.lower(), fresh)})
         return self.save(d)
 
+    def ddict(self, kind):
+        dd = self.load()
+        if len(dd.keys()) != 5 or 'Asian' in dd.keys():
+            self.create_dict()
+            dd = self.load()
+        return dd[kind]
+
 domain = domain()

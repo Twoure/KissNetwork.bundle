@@ -2,9 +2,9 @@
 
 from __builtin__ import getattr
 from kbase import core, cache, paths
-from kutil import storage, util
-from kissheaders import Headers
 from kdomain import domain
+from kutil import storage, util
+from kheaders import Headers
 from binascii import a2b_hex, a2b_base64
 from crypto.cipher.aes_cbc import AES_CBC
 import requests
@@ -130,8 +130,8 @@ class network(object):
 
     def ElementFromURL(self, url, headers=None, follow_redirects=True):
         return HTML.ElementFromString(self.Request(url, headers, follow_redirects=follow_redirects, method='GET').text)
-network = network()
 
+network = network()
 
 class rks(object):
     def __init__(self):
@@ -182,6 +182,8 @@ class rks(object):
             return irks
         elif ttl == 'anime':
             return network.rks_cache(url, String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1])
+        elif ttl == 'manga':
+            return network.rks_cache(url, String.Base64Decode("X21zaHNkZjgzMm5zZGJhc2gyMGFzZG1f")[1:-1])
         try:
             headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
             if data:
@@ -199,23 +201,33 @@ class rks(object):
         irks = self.get_base_rks(ttl, url, headers, data)
         if ttl == 'anime':
             return irks #+ String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
+
         cl = list()
         bl = list()
         key = ""
         code = ""
         html = network.ElementFromURL(url)
         for node in html.xpath('//script[@type="text/javascript"]'):
-            r = Regex(r'var\s*?(\_[^\=]+)\=\$kissenc').search(node.text_content())
-            if r:
-                key = r.group(1)
+            node = node.text_content().strip()
+            rke = Regex(r'var\s*?(\_[^\=]+)\=\$kissenc').search(node)
+            rcj = Regex(r'CryptoJS\.SHA256\(([^\)]+?)\)').search(node)
+            if rke:
+                key = rke.group(1)
                 cl.append('var %s = "%s"; ' %(key, irks))
                 continue
-            r2 = Regex(r'(\$kissenc[^\(]+\(%s\))' %key).search(node.text_content()) if key else None
+            elif rcj:
+                key = rcj.group(1)
+                for s in node.split(';'):
+                    if 'CryptoJS' in s:
+                        continue
+                    cl.append(s+';')
+                continue
+            r2 = Regex(r'(\$kissenc[^\(]+\(%s\))' %key).search(node) if key else None
             if r2:
                 continue
-            r3 = Regex(r'(%s)' %key).search(node.text_content()) if key else None
+            r3 = Regex(r'(%s)' %key).search(node) if key else None
             if r3:
-                for i, n in enumerate(node.text_content().strip().split(';')):
+                for i, n in enumerate(node.split(';')):
                     n = n.strip()
                     if Regex(r'(%s)' %key).search(n):
                         r4 = Regex(r'\s([^\(\=]+)\(').search(n)
@@ -226,13 +238,19 @@ class rks(object):
                         r3 = Regex(r'var\s*?(\_[^\=]+)\=\[["\']([^"\']+)["\']\]').search(n)
                         if r3:
                             bl = [ String.Base64Decode(s.strip().decode('unicode_escape')) for s in r3.group(2).split(',') ]
-        code = ''.join(cl + [' %s' %key]) if cl else ''
+
+        if key and cl and irks and [ s for s in cl if Regex(r'(%s)' %key).findall(s) ]:
+            cl = ['var %s = "%s";' %(key, irks)] + cl
+        if key and cl:
+            code = ''.join(cl + [' %s' %key]) if cl else ''
+
         code = code.replace('bl_key', (bl[0] if bl else '$'))
         if code and ('$' not in code):
             return js2py.eval_js(code)
         elif ('$' in code):
             Log.Error(u"* <rks.get_rks> - error: cannot find bl_key")
-        Log.Error(u"* <rks.get_rks> - error: cannot process final rks")
+
+        Log.Error(u"* <rks.get_rks> - error: cannot process final rks >>>\n{}".format(code))
         return False
 
     def Decode(self, f, ttl, key):
@@ -253,9 +271,10 @@ class rks(object):
     def decrypt(self, f, url, headers=None):
         data = None
         ttl = util.get_tt(url).lower()
-        if (ttl == 'anime') or (ttl == 'cartoon'):
+        if (ttl == 'drama') or (ttl == 'cartoon'):
             data = {'krsk': self.dmm(ttl)}
 
         key = self.get_rks(url, headers, data)
-        return self.Decode(f, ttl, key)
+        if key: return self.Decode(f, ttl, key)
+        else: return
 rks = rks()
