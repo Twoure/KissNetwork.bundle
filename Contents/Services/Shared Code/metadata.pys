@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import common as Common
+from kcore import util
 
 ########################################################################################
 def FindPartElement(array=list, string=str):
@@ -80,14 +80,14 @@ def GetSummary(html):
 
     if summary:
         #Log.Debug('* summary = {}'.format(summary))
-        summary = Common.StringCode(string=summary, code='encode')
+        summary = util.string_code(string=summary, code='encode')
 
     return summary
 
 ########################################################################################
 def get_art(url):
     time_stamp = int(Datetime.TimestampFromDatetime(Datetime.Now()))
-    return '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-{}.jpg?t={}'.format(Common.GetTypeTitle(url).lower(), str(time_stamp))
+    return '/:/plugins/com.plexapp.plugins.kissnetwork/resources/art-{}.jpg?t={}'.format(util.get_tt(url).lower(), str(time_stamp))
 
 ########################################################################################
 def GetGenres(html):
@@ -107,7 +107,7 @@ def GetCountries(html):
     countries = html.xpath('//p[span[@class="info"]="Country:"]/a/text()')
     countries_string_list = None
     if countries:
-        countries_string_list = Common.StringCode(string=list_to_string(countries), code='encode')
+        countries_string_list = util.string_code(string=list_to_string(countries), code='encode')
 
     return countries, countries_string_list
 
@@ -252,7 +252,7 @@ def GetEpisodeNameAndNumber(html, title, url):
 def GetSeasonNumber(title, show_name_raw, tags=list, summary=str):
     """Get Season Number"""
 
-    summary = Common.StringCode(string=summary, code='decode') if summary else None
+    summary = util.string_code(string=summary, code='decode') if summary else None
 
     season_number = None
     # test title for season # via Regex
@@ -394,7 +394,7 @@ def GetBaseMovieInfo(html, url):
 
     tags_list = None
     if other_names:
-        tags_list = Common.StringCode(string=' '.join([t.replace(' ', '_') for t in other_names]), code='encode')
+        tags_list = util.string_code(string=' '.join([t.replace(' ', '_') for t in other_names]), code='encode')
 
     movie_info = {
         'title': show_name_raw.strip(), 'summary': GetSummary(html),
@@ -416,7 +416,7 @@ def GetBaseShowInfo(html, url):
     tags = other_names + genres
     tags_list = None
     if tags:
-        tags_list = Common.StringCode(string=' '.join([t.replace(' ', '_') for t in tags]), code='encode')
+        tags_list = util.string_code(string=' '.join([t.replace(' ', '_') for t in tags]), code='encode')
 
     year = GetYear(html)
     if year:
@@ -444,7 +444,7 @@ def GetBaseMangaInfo(html, url):
     tags = other_names + genres
     tags_list = None
     if tags:
-        tags_list = Common.StringCode(string=' '.join([t.replace(' ', '_') for t in tags]), code='encode')
+        tags_list = util.string_code(string=' '.join([t.replace(' ', '_') for t in tags]), code='encode')
 
     year = GetYear(html)
     if year:

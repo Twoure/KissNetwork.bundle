@@ -1,0 +1,261 @@
+#!/usr/bin/env python
+
+from __builtin__ import getattr
+from kbase import core, cache, paths
+from kutil import storage, util
+from kissheaders import Headers
+from kdomain import domain
+from binascii import a2b_hex, a2b_base64
+from crypto.cipher.aes_cbc import AES_CBC
+import requests
+import js2py
+
+class network(object):
+    def __init__(self):
+        pass
+
+    def raise_error_for_req(self, req):
+        ourl = req.history[0].url if req.history else req.url
+
+        http_error_msg = ''
+        s = ''
+        if isinstance(req.reason, requests.compat.bytes):
+            try:
+                reason = req.reason.decode('utf-8')
+            except UnicodeDecodeError:
+                reason = req.reason.decode('iso-8859-1')
+        else:
+            reason = req.reason
+
+        if Regex(r'(/recaptcha)').search(req.text):
+            http_error_msg = u'%s Server Error: %s for url: %s' % (req.status_code, 'Captcha Present!', ourl)
+        elif util.is_kiss_url(ourl) and req.history:
+            tt = util.get_tt(ourl)
+            rburl = util.re_url_base.search(req.url).group(1)
+            burl = util.re_url_base.search(ourl).group(1)
+            if rbu != burl:
+                domain.update(tt, True)
+
+        if (400 <= req.status_code < 500):
+            http_error_msg = u'%s Client Error: %s for url: %s' % (req.status_code, reason, ourl)
+        elif (500 <= req.status_code < 600) and (503 != req.status_code):
+            http_error_msg = u'%s Server Error: %s for url: %s' % (req.status_code, reason, ourl)
+        elif 503 == req.status_code:
+            try:
+                Log.Critical("* <network.raise_error_for_req>: 503 Server Error: for url: {} >>>\n{}".format(ourl, req.text))
+            except:
+                Log.Error("* <network.raise_error_for_req>: 503 Server Error: for url: {}".format(ourl))
+            http_error_msg = u'%s Server Error: %s for url: %s' % (req.status_code, reason, ourl)
+
+        if http_error_msg:
+            raise requests.exceptions.HTTPError(http_error_msg, response=self)
+
+    def HTTPRequest(self, url, headers=None, data=None, follow_redirects=True, method='GET'):
+        """not sure how to do this part yet"""
+
+        if util.is_kiss_url(url):
+            if not headers:
+                headers = Headers.get_headers_for_url(url)
+        nc = headers.get('cookie', None)
+
+        r = requests
+        rm = getattr(r, method.lower())
+        try:
+            req = rm(url, headers=headers, data=data, allow_redirects=follow_redirects)
+            self.raise_error_for_req(req)
+        except Exception as e:
+            Log.Error(u"* <network.request> -error: cannot handle '{}' >>>\n{}".format(url, e))
+            return None
+
+        if ('k_token' in req.cookies) and nc:
+            headers.update({'cookie': '; '.join([nc, 'k_token={}'.format(req.cookies['k_token'])])})
+        if 'location' in req.headers.keys():
+            headers['location'] = req.headers['location']
+        if util.is_kiss_url(url):
+            req.headers = headers
+        return req
+
+    def cache_hash(self, url):
+        return Hash.MD5('kc_'+url)
+
+    def cache_path(self, cache_dir):
+        return storage.data_item_path(getattr(cache, cache_dir))
+
+    def cache_list(self, cache_dir):
+        path = self.cache_path(cache_dir)
+        storage.ensure_dirs(path)
+        return [f for f in storage.list_dir(path) if storage.file_exists(storage.join_path(path, f))]
+
+    def rks_cache(self, url, rks=None, remove=False):
+        name = self.cache_hash(url)
+        for fn in self.cache_list('rks_cache_dir'):
+            if fn != name:
+                continue
+            elif (fn == name) and remove:
+                storage.remove(storage.RKS(fn))
+                Log.Debug("* Removing RKS cache for '{}'".format(url))
+                return False
+            else:
+                Log.Debug("* Fetching RKS '{}' from {}".format(url, cache.rks_cache_dir))
+                return storage.load(storage.RKS(fn))
+        if rks:
+            Log.Debug("* Caching '{}' RKS to {}".format(url, cache.rks_cache_dir))
+            storage.save(storage.RKS(name), rks)
+            return rks
+        return False
+
+    def cache(self, url):
+        name = self.cache_hash(url)
+        path = self.cache_path('url_cache_dir')
+        for fn in self.cache_list('url_cache_dir'):
+            if fn != name:
+                continue
+            if (Datetime.FromTimestamp(storage.last_modified(storage.join_path(path, fn))) + util.timeout) <= Datetime.Now():
+                Log.Debug("* Fetching fresh data for '{}'".format(url))
+                self.rks_cache(url, remove=True)
+                return
+            else:
+                Log.Debug("* Fetching '{}' from {}".format(url, cache.url_cache_dir))
+                return storage.load(storage.HTTP(fn), True)
+        return
+
+    def Request(self, url, headers=None, data=None, follow_redirects=True, method='GET'):
+        c = self.cache(url)
+        if c:
+            return c
+        Log.Debug("* Caching '{}' HTTP to {}".format(url, cache.url_cache_dir))
+        req = self.HTTPRequest(url, headers, data, follow_redirects, method)
+        storage.save(storage.HTTP(self.cache_hash(url)), req, True)
+        return req
+
+    def ElementFromURL(self, url, headers=None, follow_redirects=True):
+        return HTML.ElementFromString(self.Request(url, headers, follow_redirects=follow_redirects, method='GET').text)
+network = network()
+
+
+class rks(object):
+    def __init__(self):
+        # kissasian
+        di = String.Base64Decode("XzMyYjgxMmU5YTEzMjFhZTBlODRhZjY2MGM0NzIyYjNhXw==")[1:-1]
+        self.div = a2b_hex(di)
+        # kisscartoon
+        ci = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
+        self.civ = a2b_hex(ci)
+        # kissanime
+        ai = String.Base64Decode("X2E1ZThkMmU5YzE3MjFhZTBlODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
+        self.aiv = a2b_hex(ai)
+        # kissmanga
+        mi = String.Base64Decode("X2E1ZThlMmU5YzI3MjFiZTBhODRhZDY2MGM0NzJjMWYzXw==")[1:-1]
+        self.miv = a2b_hex(mi)
+
+    def ensure_unicode(self, v):
+        if isinstance(v, str):
+            v = v.decode('utf8')
+        return unicode(v)
+
+    def dmm(self, tt):
+        if tt == 'cartoon':
+            params = String.Base64Decode('cmVkLHZlcnRpY2xlLGNlbnRlciw3OTI=').split(',')
+        elif tt == 'drama':
+            params = String.Base64Decode(
+                'NjlkZTQwNzczNzY5YjE3YWMzNWQ5ZDdiYTQ3OWVjMWM0OTc5ZjkzNmUwMzdjZmZhM2I1YWZmOWRj'
+                'MWNjYzIzMywxMTEsdmVydGljbGUtLDIxNQ=='
+                ).split(',')
+        else:
+            return ''
+        code = (
+            "ZnVuY3Rpb24gYmNzKGEsIGIsIGMsIGQsIGUsIGYpIHsgdmFyIGcgPSAwOyBhICs9IGQ7IGMgKz0gYjsg"
+            "ZCArPSBmOyBhICs9IGIgKyBjICsgZDsgZCArPSBlOyBiICs9IGQ7IGEgKz0gYiArIGQ7IGZvcih2YXIg"
+            "aSA9IDA7IGkgPCBhLmxlbmd0aDsgaSsrKSB7IGcgKz0gYS5jaGFyQ29kZUF0KGkpIH0gcmV0dXJuIGcg"
+            "fTsgZnVuY3Rpb24gZG1tKGMsIGQsIGUsIGYpIHsgdmFyIGcgPSAwOyBjICs9IGQgKyBmICsgZTsgZCAr"
+            "PSAoZiArIGMpICogMjsgZSArPSBjICsgZCArIGY7IGMgKz0gKGMgKyBkICsgZSkgXiAyICsgTWF0aC5z"
+            "cXJ0KGQpOyBkICs9IGJjcyhkLCBjLCBmLCBlLCBjICogMiwgZiAvIDIpOyBmb3IodmFyIGggPSBkLmxl"
+            "bmd0aCAtIDE7IGggPj0gMDsgaC0tKSB7IGcgKz0gZC5jaGFyQ29kZUF0KGgpIH07IHJldHVybiBnIH07"
+            )
+        context = js2py.EvalJs()
+        context.execute(String.Base64Decode(code))
+        return context.dmm(*params)
+
+    def get_base_rks(self, ttl, url, headers=dict, data=None):
+        irks = network.rks_cache(url)
+        if irks:
+            return irks
+        elif ttl == 'anime':
+            return network.rks_cache(url, String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1])
+        try:
+            headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
+            if data:
+                r = requests.post(util.get_base_url(url) + '/External/RSK', headers=headers, data=data)
+            else:
+                r = requests.post(util.get_base_url(url) + '/External/RSK', headers=headers)
+            r.raise_for_status()
+            return network.rks_cache(url, str(r.text))
+        except:
+            Log.Exception(u"* <network.get_base_rks> -error: Failed to retrieve RSK POST resquest >>>")
+        return False
+
+    def get_rks(self, url, headers=dict, data=None):
+        ttl = util.get_tt(url).lower()
+        irks = self.get_base_rks(ttl, url, headers, data)
+        if ttl == 'anime':
+            return irks #+ String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
+        cl = list()
+        bl = list()
+        key = ""
+        code = ""
+        html = network.ElementFromURL(url)
+        for node in html.xpath('//script[@type="text/javascript"]'):
+            r = Regex(r'var\s*?(\_[^\=]+)\=\$kissenc').search(node.text_content())
+            if r:
+                key = r.group(1)
+                cl.append('var %s = "%s"; ' %(key, irks))
+                continue
+            r2 = Regex(r'(\$kissenc[^\(]+\(%s\))' %key).search(node.text_content()) if key else None
+            if r2:
+                continue
+            r3 = Regex(r'(%s)' %key).search(node.text_content()) if key else None
+            if r3:
+                for i, n in enumerate(node.text_content().strip().split(';')):
+                    n = n.strip()
+                    if Regex(r'(%s)' %key).search(n):
+                        r4 = Regex(r'\s([^\(\=]+)\(').search(n)
+                        if r4:
+                            n = "function %s(a, b) {return a + 'bl_key' + b};" %r4.group(1) + n
+                        cl.append(n.lstrip('} \n') + ';')
+                    elif (i == 0):
+                        r3 = Regex(r'var\s*?(\_[^\=]+)\=\[["\']([^"\']+)["\']\]').search(n)
+                        if r3:
+                            bl = [ String.Base64Decode(s.strip().decode('unicode_escape')) for s in r3.group(2).split(',') ]
+        code = ''.join(cl + [' %s' %key]) if cl else ''
+        code = code.replace('bl_key', (bl[0] if bl else '$'))
+        if code and ('$' not in code):
+            return js2py.eval_js(code)
+        elif ('$' in code):
+            Log.Error(u"* <rks.get_rks> - error: cannot find bl_key")
+        Log.Error(u"* <rks.get_rks> - error: cannot process final rks")
+        return False
+
+    def Decode(self, f, ttl, key):
+        if ttl == 'anime':
+            iv = self.aiv
+        elif ttl == 'cartoon':
+            iv = self.civ
+        elif ttl == 'drama':
+            iv = self.div
+        elif ttl == 'manga':
+            iv = self.miv
+        else:
+            return False
+
+        cipher = AES_CBC(key=Hash.SHA256(key, True), keySize=32)
+        return self.ensure_unicode(cipher.decrypt(a2b_base64(f), iv))
+
+    def decrypt(self, f, url, headers=None):
+        data = None
+        ttl = util.get_tt(url).lower()
+        if (ttl == 'anime') or (ttl == 'cartoon'):
+            data = {'krsk': self.dmm(ttl)}
+
+        key = self.get_rks(url, headers, data)
+        return self.Decode(f, ttl, key)
+rks = rks()

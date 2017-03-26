@@ -3,17 +3,19 @@
 """Kiss(anime, cartoon, and drama) Service code"""
 
 # import Shared Service Code
-import common as Common
+#import common as Common
 import metadata as Metadata
-from kissheaders import Headers
-from data import Data
-import js2py
+#from kissheaders import Headers
+#from data import Data
+#import js2py
 from openload import OpenloadStreamFromURL
-from kissdecrypt import KissDecrypt
-from time import sleep
+#from kissdecrypt import KissDecrypt
+#from time import sleep
 from io import open
 import requests
 import shutil
+
+import kcore
 
 RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
@@ -28,12 +30,12 @@ def MetadataObjectForURL(url):
 
     Log('*' * 80)
     Log(u'* MetadataObjectForURL url = {}'.format(url))
-    url = Common.CorrectURL(url)
+    url = kcore.util.correct_url(url)
 
     video_id = int(url.split('=')[-1])
     show_url = url.rsplit('/', 1)[0]
 
-    html = ElementFromURL(show_url)
+    html = kcore.network.ElementFromURL(show_url)
 
     genres, genres_list = Metadata.GetGenres(html)
     date_added = Metadata.GetDateAdded(html, url)
@@ -47,16 +49,16 @@ def MetadataObjectForURL(url):
         # remove 'Movie' from genre list
         genre_list = [g for g in genres if not g == 'Movie']
         mi = Metadata.GetBaseMovieInfo(html, url)
-        summary = unicode(Common.StringCode(string=mi['summary'], code='decode')) if mi['summary'] else None
+        summary = unicode(kcore.util.string_code(string=mi['summary'], code='decode')) if mi['summary'] else None
 
         return MovieObject(
             title=mi['title'],
             genres=genre_list,
-            tags=Metadata.string_to_list(Common.StringCode(string=mi['tags'], code='decode')) if mi['tags'] else [],
+            tags=Metadata.string_to_list(kcore.util.string_code(string=mi['tags'], code='decode')) if mi['tags'] else [],
             source_title=mi['source_title'],
             originally_available_at=date_added if date_added else None,
             year=int(mi['year']) if mi['year'] else None,
-            countries=Metadata.string_to_list(Common.StringCode(string=mi['countries'], code='decode')) if mi['countries'] else [],
+            countries=Metadata.string_to_list(kcore.util.string_code(string=mi['countries'], code='decode')) if mi['countries'] else [],
             thumb=thumb,
             art=art,
             summary=summary
@@ -66,8 +68,8 @@ def MetadataObjectForURL(url):
         Log('* -----TV Show-----')
 
         si = Metadata.GetBaseShowInfo(html, url)
-        summary = unicode(Common.StringCode(string=si['summary'], code='decode')) if si['summary'] else None
-        tags = Metadata.string_to_list(Common.StringCode(string=si['tags'], code='decode')) if si['tags'] else []
+        summary = unicode(kcore.util.string_code(string=si['summary'], code='decode')) if si['summary'] else None
+        tags = Metadata.string_to_list(kcore.util.string_code(string=si['tags'], code='decode')) if si['tags'] else []
         show_name_raw = html.xpath('//div[@class="barContent"]/div/a[@class="bigChar"]/text()')[0]
         start_title = Metadata.get_title(html, video_id, show_name_raw)
         season_number = Metadata.GetSeasonNumber(start_title, show_name_raw, tags, summary)
@@ -92,7 +94,7 @@ def MediaObjectsForURL(url):
 
     Log.Debug('*' * 80)
     fmt_list = [('1080', 'm37', 5000), ('720', 'm22', 2500), ('480', 'm59', 1125), ('360', 'm18', 650)]
-    url = Common.CorrectURL(url)
+    url = kcore.util.correct_url(url)
 
     # create media objects for each video quality
     if Prefs['force_transcode']:
@@ -153,21 +155,25 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Channel.Server     = {}'.format(Prefs['server']))
 
     req_url = url + ('&s={}'.format(Prefs['server'].lower()) if Prefs['server'] != 'KissNetwork' else '')
-    vurl = get_video_url(url, m, *setup_video_page(req_url))
+    #vurl = get_video_url(url, m, *setup_video_page(req_url))
+    vurl = get_video_url(url, m, kcore.network.Request(req_url))
 
     if (not vurl) and (Prefs['server'] == 'KissNetwork'):
         Log.Warn("* GoogleVideo URL offline, falling back to Openload")
         req_url = url + '&s=openload'
-        vurl = get_video_url(url, m, *setup_video_page(req_url))
+        #vurl = get_video_url(url, m, *setup_video_page(req_url))
+        vurl = get_video_url(url, m, kcore.network.Request(req_url))
 
     if (not vurl) and (req_url.endswith('openload')):
         Log.Warn("* Openload URL offline, falling back to Stream.moe")
         req_url = url + '&s=stream'
-        vurl = get_video_url(url, m, *setup_video_page(req_url))
+        #vurl = get_video_url(url, m, *setup_video_page(req_url))
+        vurl = get_video_url(url, m, kcore.network.Request(req_url))
 
     if (not vurl) and (req_url.endswith('stream')) and (Prefs['server'] != 'KissNetwork'):
         Log.Warn("* Stream.moe URL offline, falling back to KissNetwork")
-        vurl = get_video_url(url, m, *setup_video_page(url))
+        #vurl = get_video_url(url, m, *setup_video_page(url))
+        vurl = get_video_url(url, m, kcore.network.Request(url))
 
     Log.Debug('* PlayVideo URL      = {}'.format(vurl))
 
@@ -189,7 +195,7 @@ def PlayVideo(url, m, **kwargs):
 
     if vurl:
         if Prefs['server'] == 'Beta':
-            http_headers = {'User-Agent': Common.USER_AGENT, 'Referer': req_url}
+            http_headers = {'User-Agent': kcore.core.user_agent, 'Referer': req_url}
             return IndirectResponse(VideoClipObject, key=vurl, http_headers=http_headers)
         return IndirectResponse(VideoClipObject, key=vurl)
 
@@ -197,17 +203,14 @@ def PlayVideo(url, m, **kwargs):
 
 ########################################################################################
 def setup_video_page(url):
-    r = NRequest(url, raw=True)
-    headers = Headers.get_headers_for_url(url)
-    dc = headers['cookie']
-    if 'k_token' in r.cookies:
-        headers.update({'cookie': '; '.join([dc, 'k_token={}'.format(r.cookies['k_token'])])})
-    return headers, r.text
+    req = kcore.network.Request(url)
+    return req.headers, req.text
 
 ########################################################################################
-def get_video_url(url, m, headers, page):
-    ol = RE_URL_OL.search(page)
-    st = RE_URL_SM.search(page)
+#def get_video_url(url, m, headers, page):
+def get_video_url(url, m, resp):
+    ol = RE_URL_OL.search(resp.text)
+    st = RE_URL_SM.search(resp.text)
     if ol:
         Log.Debug('* OpenLoad URL       = {}'.format(ol.group(1)))
         vurl = get_openload_url(ol.group(1))
@@ -215,11 +218,12 @@ def get_video_url(url, m, headers, page):
         Log.Debug('* StreamMoe URL      = {}'.format(st.group(1)))
         vurl = get_streammoe_url(st.group(1))
     else:
-        vurl = get_googlevideo_url(page, url, m, headers)
+        vurl = get_googlevideo_url(url, m, resp)
     return vurl
 
 ####################################################################################################
-def get_googlevideo_url(page, url, m, headers):
+#def get_googlevideo_url(page, url, m, headers):
+def get_googlevideo_url(url, m, resp):
     """
     Get GoogleVideo URLs
     Returns the Hights stream playable depending on the previous Stream Selections
@@ -230,13 +234,15 @@ def get_googlevideo_url(page, url, m, headers):
         If 1080p was previously chosen, then 720p will be used
     """
 
+    page = resp.text
+    headers = resp.headers
     html = HTML.ElementFromString(page)
     sQual = Regex(r'(id\="slcQualix")').search(page)
     olist = html.xpath('//select[@id="%s"]/option' %("slcQualix" if sQual else "selectQuality"))
-    type_title = Common.GetTypeTitle(url)
-    type_title_lower = type_title.lower()
+    tt = kcore.util.get_tt(url)
+    ttl = tt.lower()
     if not olist:
-        Log.Error('* This Video is broken, Kiss{} is working to fix it.'.format(type_title))
+        Log.Error('* This Video is broken, Kiss{} is working to fix it.'.format(tt))
         raise Ex.MediaNotAvailable
 
     vurl = False
@@ -260,16 +266,18 @@ def get_googlevideo_url(page, url, m, headers):
 
     for node in olist:
         if enc_test:
-            post_data = None
-            if (type_title_lower != 'anime'):
-                post_data = {'krsk': dmm(type_title_lower)}
+            #post_data = None
+            #if (ttl != 'anime'):
+            #    post_data = {'krsk': dmm(ttl)}
             #Log.Debug("* post_data = {}".format(post_data))
 
-            rks_init = get_rks_init(type_title_lower, url, headers, post_data)
+            #rks_init = get_rks_init(ttl, url, headers, post_data)
             #Log.Debug("* rks_init = {}".format(rks_init))
-            key = get_rks(type_title_lower, page, rks_init)
+            #key = get_rks(ttl, page, rks_init)
             #Log.Debug("* key = {}".format(key))
-            vurl_old = KissDecrypt.decrypt(node.get('value'), type_title_lower, key)
+            #vurl_old = KissDecrypt.decrypt(node.get('value'), ttl, key)
+
+            vurl_old = kcore.rks.decrypt(node.get('value'), url, headers)
         else:
             vurl_old = String.Base64Decode(node.get('value'))
 
@@ -308,8 +316,8 @@ def get_googlevideo_url(page, url, m, headers):
                 break
         Log.Debug('* Selecting {}p stream'.format(mm))
 
-    if ((type_title_lower == 'cartoon') or (type_title_lower == 'drama') and ('Play?' in vurl)):
-        Log.Debug(u"* Trying to get {} Redirect Link for '{}'".format(type_title_lower, vurl))
+    if ((ttl == 'cartoon') or (ttl == 'drama') and ('Play?' in vurl)):
+        Log.Debug(u"* Trying to get {} Redirect Link for '{}'".format(ttl, vurl))
         headers['referer'] = url
         vurl = get_url_redirect_v2(vurl, headers)
 
@@ -322,7 +330,7 @@ def get_openload_url(url):
     Code returns stream link for OpenLoad videos
     """
 
-    http_headers = {'User-Agent': Common.USER_AGENT, 'Referer': url}
+    http_headers = {'User-Agent': kcore.core.user_agent, 'Referer': url}
     ourl = OpenloadStreamFromURL(url, http_headers=http_headers)
     if ourl:
         rourl = get_url_redirect_v2(ourl, http_headers)
@@ -357,7 +365,7 @@ def get_url_redirect_v2(input_url, http_headers=None):
     """URL Redirect V2 using requests.head"""
 
     if not http_headers:
-        http_headers = {'User-Agent': Common.USER_AGENT, 'Referer': input_url}
+        http_headers = {'User-Agent': kcore.core.user_agent, 'Referer': input_url}
 
     r = requests.head(input_url, headers=http_headers)
     if 'location' in r.headers.keys():
@@ -369,167 +377,24 @@ def get_url_redirect_v2(input_url, http_headers=None):
     Log.Debug(u'* URL Redirect: Headers = {}'.format(r.headers))
     return input_url
 
-####################################################################################################
-def html_from_error(page, name, resp):
-    error = {'closed': False, 'unavailable': False, 'human': False}
-    for err in Common.ERROR_LIST:
-        if Regex(r'(?i)(^%s$)' %err).search(page.text):
-            if err.lower() == "the service is unavailable.":
-                Log.Warn(u"* <ServiceCode>, html_from_error:{} Not Caching '{}'".format(err, page.url))
-                error['unavailable'] = True
-                break
-            else:
-                Log.Warn(str(page.text.strip()))
-                error['closed'] = True
-                return page if resp else HTML.Element('head', 'Error'), error
-
-    if Regex(r'(/recaptcha/api\.js)').search(page.text):
-        Log.Error(u'* <ServiceCode>, html_from_error: Human Verification needed for \'{}\''.format(page.url))
-        Log.Warn(str(page.text.strip()))
-        error['human'] = True
-        return page if resp else HTML.Element('head', 'Error'), error
-    else:
-        Data.Save(Data.HTTP(name), page if resp else page.text, resp)
-    return page if resp else HTML.ElementFromString(page.text), error
-
-####################################################################################################
-def get_element_from_url(url, name, count=0, resp=False):
-    """Error Handling for ServiceCode URL Requests"""
-
-    try:
-        page = requests.get(url, headers=Headers.get_headers_for_url(url))
-        if (int(page.status_code) == 503) or (len(page.history) > 0):
-            if count <= 1:
-                count += 1
-                if len(page.history) > 0:
-                    type_title = Common.GetTypeTitle(url)
-                    req_base_url = Common.RE_URL_BASE.search(page.url).group(1)
-                    base_url = Common.RE_URL_BASE.search(url).group(1)
-                    if req_base_url == base_url:
-                        page = requests.get(page.url, headers=Headers.get_headers_for_url(req_base_url))
-                        html = html_from_error(page, name, resp)
-                        return html[0]
-                    else:
-                        Log.Warn('* <ServiceCode>, get_element_from_url Error: HTTP 301 Redirect Error. Refreshing {} Domain'.format(type_title))
-                        Log.Warn('* <ServiceCode>, get_element_from_url Error: page history {} | {}'.format(url, page.history))
-                        Domain.UpdateDomain(type_title, True)
-                        url = Common.CorrectURL(url)
-                else:
-                    error = html_from_error(page, name, resp)
-                    if error[1]['unavailable']:
-                        Log.Warn("* <ServiceCode>, URL unavailable. Trying again for '{}'".format(page.url))
-                        sleep(2)
-                    elif error[1]['closed']:
-                        Log.Warn("* <ServiceCode>, Site Closed for Maintenance.")
-                        return error[0]
-                    else:
-                        Log.Warn('* <ServiceCode>, HTTP 503 Error: Refreshing site cookies')
-                        Headers.get_headers_for_url(url, update=True)
-                return get_element_from_url(url, name, count, resp)
-            else:
-                Log.Error('* <ServiceCode>, get_element_from_url Error: HTTP 503 Site error, tried refreshing cookies but that did not fix the issue')
-                if Data.Exists(Data.HTTP(name)):
-                    Log.Warn('* Using bad page')
-                    return page if resp else HTML.ElementFromString(page.text)
-        else:
-            try:
-                page.raise_for_status()
-                html = html_from_error(page, name, resp)
-                return html[0]
-            except Exception, e:
-                if (int(page.status_code) == 522):
-                    Log.Error('* <ServiceCode>, get_element_from_url Error: HTTP 522 Site Error, site is currently offline')
-                elif (int(page.status_code) == 524):
-                    Log.Error('* <ServiceCode>, get_element_from_url Error: HTTP 524 Site Error, A timeout occurred')
-                    if count < 1:
-                        Log.Debug("* ReTrying '{}'".format(page.url))
-                        count += 1
-                        return get_element_from_url(url, name, count, resp)
-                else:
-                    Log.Error('* <ServiceCode>, get_element_from_url Error: Unknown Site Error, check output below.')
-                Log.Error(u'* {}'.format(e))
-    except:
-        Log.Exception(u'* <ServiceCode>, get_element_from_url Error: Cannot load {}'.format(url))
-
-    return False if resp else HTML.Element('head', 'Error')
-
-####################################################################################################
-def ElementFromURL(url):
-    """setup requests html"""
-
-    match = False
-    name = Hash.MD5(url)
-    path = Data.data_item_path('DataHTTP')
-    Data.ensure_dirs(path)
-    files = [f for f in Data.list_dir(path) if Data.file_exists(Data.join_path(path, f))]
-
-    for filename in files:
-        if filename == name:
-            match = True
-            if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
-                Log.Debug("* Re-Caching '{}' to DataHTTP".format(url))
-                html = get_element_from_url(url, name)
-                break
-            else:
-                Log.Debug("* Fetching '{}' from DataHTTP".format(url))
-                html = HTML.ElementFromString(Data.Load(Data.HTTP(filename)))
-                break
-
-    if not match:
-        Log.Debug("* Caching '{}' to DataHTTP".format(url))
-        html = get_element_from_url(url, name)
-
-    return html
-
-####################################################################################################
-def NRequest(url, raw=False):
-    """setup requests text page"""
-
-    match = False
-    name = Hash.MD5(('resp_' if raw else '')+url)
-    path = Data.data_item_path('DataHTTP')
-    Data.ensure_dirs(path)
-    files = [f for f in Data.list_dir(path) if Data.file_exists(Data.join_path(path, f))]
-
-    for filename in files:
-        if filename == name:
-            match = True
-            if (Datetime.FromTimestamp(Data.last_modified(Data.join_path(path, filename))) + Common.TIMEOUT) <= Datetime.Now():
-                Log.Debug("* Fetching fresh data for '{}'".format(url))
-                r = get_element_from_url(url, name, resp=raw)
-                rks_cache(url, remove=True)
-                break
-            else:
-                Log.Debug("* Fetching '{}' from DataHTTP".format(url))
-                r = Data.Load(Data.HTTP(filename), raw)
-                break
-
-    if not match:
-        Log.Debug("* URL Not in Cache, Fetching fresh data from '{}'".format(url))
-        r = get_element_from_url(url, name, resp=raw)
-
-    if not r:
-        raise Ex.MediaNotAvailable
-    return r
-
 ########################################################################################
 def get_thumb(url):
     thumb = None
-    html = ElementFromURL(url)
-    cover_url = Common.CorrectCoverImage(html.xpath('//head/link[@rel="image_src"]/@href')[0])
+    html = kcore.network.ElementFromURL(url)
+    cover_url = kcore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]/@href')[0])
 
-    if Common.is_kiss_url(cover_url):
+    if kcore.util.is_kiss_url(cover_url):
         cover_file = cover_url.rsplit('/')[-1]
-        type_title = Common.GetTypeTitle(url)
-        if Data.CoverExists(Data.join_path(type_title, cover_file)):
-            return Data.data_object(Data.Covers(Data.join_path(type_title, cover_file)))
+        tt = kcore.util.get_tt(url)
+        if kcore.storage.cover_exists(kcore.storage.join_path(tt, cover_file)):
+            return kcore.storage.data_object(kcore.storage.Covers(kcore.storage.join_path(tt, cover_file)))
 
-        type_dir = Data.data_item_path(Data.Covers(type_title))
-        Data.ensure_dirs(type_dir)
-        path = Data.join_path(type_dir, cover_file)
+        type_dir = kcore.storage.data_item_path(kcore.storage.Covers(tt))
+        kcore.storage.ensure_dirs(type_dir)
+        path = kcore.storage.join_path(type_dir, cover_file)
         Log("* file save path '{}'".format(path))
 
-        if not Data.file_exists(path):
+        if not kcore.storage.file_exists(path):
             r = requests.get(cover_url, headers=Headers.get_headers_for_url(cover_url), stream=True)
             if r.status_code == 200:
                 with open(path, 'wb') as f:
@@ -541,8 +406,8 @@ def get_thumb(url):
         else:
             Log.Warn('* Cover file already exists, Skipped file save.')
 
-        if Data.CoverExists(Data.join_path(type_title, cover_file)):
-            return Data.data_object(Data.Covers(Data.join_path(type_title, cover_file)))
+        if kcore.storage.cover_exists(kcore.storage.join_path(tt, cover_file)):
+            return kcore.storage.data_object(kcore.storage.Covers(kcore.storage.join_path(tt, cover_file)))
 
         Log.Error("* Issues loading '{}'".format(path))
     elif 'http' in cover_url:
@@ -553,107 +418,3 @@ def get_thumb(url):
         Log.Error('*' * 80)
 
     return thumb
-
-########################################################################################
-def dmm(kind):
-    if kind == 'cartoon':
-        params = String.Base64Decode('cmVkLHZlcnRpY2xlLGNlbnRlciw3OTI=').split(',')
-    elif kind == 'drama':
-        params = String.Base64Decode(
-            'NjlkZTQwNzczNzY5YjE3YWMzNWQ5ZDdiYTQ3OWVjMWM0OTc5ZjkzNmUwMzdjZmZhM2I1YWZmOWRj'
-            'MWNjYzIzMywxMTEsdmVydGljbGUtLDIxNQ=='
-            ).split(',')
-    code = (
-        "ZnVuY3Rpb24gYmNzKGEsIGIsIGMsIGQsIGUsIGYpIHsgdmFyIGcgPSAwOyBhICs9IGQ7IGMgKz0gYjsg"
-        "ZCArPSBmOyBhICs9IGIgKyBjICsgZDsgZCArPSBlOyBiICs9IGQ7IGEgKz0gYiArIGQ7IGZvcih2YXIg"
-        "aSA9IDA7IGkgPCBhLmxlbmd0aDsgaSsrKSB7IGcgKz0gYS5jaGFyQ29kZUF0KGkpIH0gcmV0dXJuIGcg"
-        "fTsgZnVuY3Rpb24gZG1tKGMsIGQsIGUsIGYpIHsgdmFyIGcgPSAwOyBjICs9IGQgKyBmICsgZTsgZCAr"
-        "PSAoZiArIGMpICogMjsgZSArPSBjICsgZCArIGY7IGMgKz0gKGMgKyBkICsgZSkgXiAyICsgTWF0aC5z"
-        "cXJ0KGQpOyBkICs9IGJjcyhkLCBjLCBmLCBlLCBjICogMiwgZiAvIDIpOyBmb3IodmFyIGggPSBkLmxl"
-        "bmd0aCAtIDE7IGggPj0gMDsgaC0tKSB7IGcgKz0gZC5jaGFyQ29kZUF0KGgpIH07IHJldHVybiBnIH07"
-        )
-    context = js2py.EvalJs()
-    context.execute(String.Base64Decode(code))
-    return context.dmm(*params)
-
-########################################################################################
-def rks_cache(url, rks=None, remove=False):
-    name = Hash.MD5('resp_' + url)
-    path = Data.data_item_path('DataRKS')
-    Data.ensure_dirs(path)
-    files = [f for f in Data.list_dir(path) if Data.file_exists(Data.join_path(path, f))]
-
-    for filename in files:
-        if (filename == name) and remove:
-            Data.Remove(Data.RKS(filename))
-            Log.Debug("* Removing RKS cache for '{}'".format(url))
-            return False
-        elif (filename == name):
-            Log.Debug("* Fetching RKS '{}' from DataRKS".format(url))
-            return Data.Load(Data.RKS(filename), True)
-
-    if rks:
-        Log.Debug("* Caching '{}' RKS to DataRKS".format(url))
-        Data.Save(Data.RKS(name), rks, True)
-        return rks
-    return False
-
-########################################################################################
-def get_rks_init(kind, url, headers=None, post_data=None):
-    rks_init = rks_cache(url)
-    if rks_init:
-        return rks_init
-    elif kind == 'anime':
-        rks_init = String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1]
-        return rks_cache(url, rks_init)
-    try:
-        headers.update({'X-Requested-With': 'XMLHttpRequest', 'Content-Length': '0'})
-        if post_data:
-            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers, data=post_data)
-        else:
-            r = requests.post(Common.GetBaseURL(url) + '/External/RSK', headers=headers)
-        r.raise_for_status()
-        return rks_cache(url, str(r.text))
-    except:
-        Log.Exception(u"* <kissdecrypt.decrypt> error: Failed to retrieve RSK POST resquest >>>")
-    return False
-
-########################################################################################
-def get_rks(kind, page, rks_init):
-    if kind == 'anime':
-        return rks_init #+ String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
-    cl = list()
-    bl = list()
-    key = ""
-    code = ""
-    html = HTML.ElementFromString(page)
-    for node in html.xpath('//script[@type="text/javascript"]'):
-        r = Regex(r'var\s*?(\_[^\=]+)\=\$kissenc').search(node.text_content())
-        if r:
-            key = r.group(1)
-            cl.append('var %s = "%s"; ' %(key, rks_init))
-            continue
-        r2 = Regex(r'(\$kissenc[^\(]+\(%s\))' %key).search(node.text_content()) if key else None
-        if r2:
-            continue
-        r3 = Regex(r'(%s)' %key).search(node.text_content()) if key else None
-        if r3:
-            for i, n in enumerate(node.text_content().strip().split(';')):
-                n = n.strip()
-                if Regex(r'(%s)' %key).search(n):
-                    r4 = Regex(r'\s([^\(\=]+)\(').search(n)
-                    if r4:
-                        n = "function %s(a, b) {return a + 'bl_key' + b};" %r4.group(1) + n
-                    cl.append(n.lstrip('} \n') + ';')
-                elif (i == 0):
-                    r3 = Regex(r'var\s*?(\_[^\=]+)\=\[["\']([^"\']+)["\']\]').search(n)
-                    if r3:
-                        bl = [ String.Base64Decode(s.strip().decode('unicode_escape')) for s in r3.group(2).split(',') ]
-    code = ''.join(cl + [' %s' %key]) if cl else ''
-    code = code.replace('bl_key', (bl[0] if bl else '$'))
-    if code and ('$' not in code):
-        return js2py.eval_js(code)
-    elif ('$' in code):
-        Log.Error(u"* <ServiceCode.get_rks> - error: cannot find bl_key")
-    Log.Error(u"* <ServiceCode.get_rks> - error: cannot process final rks")
-    return False

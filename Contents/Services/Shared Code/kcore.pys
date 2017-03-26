@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+
+import kbase
+core    = kbase.core
+cache   = kbase.cache
+paths   = kbase.paths
+
+import kdomain
+domain  = kdomain.domain
+
+import kutil
+util    = kutil.util
+storage = kutil.storage
+
+import knetwork
+network = knetwork.network
+rks     = knetwork.rks

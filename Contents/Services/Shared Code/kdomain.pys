@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+import os, sys
+import json
+from io import open
+from kbase import core, cache, paths
+
+# add module_path to python env
+if paths.modules_path not in sys.path:
+    sys.path.append(paths.modules_path)
+import requests
+
+class domain(object):
+    def __init__(self):
+        self.domain_file = os.path.join(paths.support_path, cache.domain_dict)
+        self.ddd_url = String.Base64Decode(
+            'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9Ud291cm'
+            'UvOGJiNTQwMzM3ZGVmYWY3MTg4ZTZjMDE5NDUzMDc2NjEvcmF3'
+            )
+
+    def fetch(self, fresh=False):
+        """cache control for deafutl domain dictionary"""
+        if fresh:
+            return JSON.ObjectFromURL(self.ddd_url, cacheTime=0)
+        return JSON.ObjectFromURL(self.ddd_url, cacheTime=CACHE_1DAY)
+
+    def set_domain(self, string, fresh=False):
+        """
+        Get the domain url dynamically
+        Sites like the Kiss Sites sometimes change thier domain names
+        This will find the new domain and return it
+        """
+        Log.Debug('* <domain.set_domain>: string = {}'.format(string))
+
+        test = self.fetch[string]
+        try:
+            r = requests.head(test, headers={'user-agent': core.user_agent})
+        except:
+            Log.Exception("* <domain.set_domain> -error: Unable to handle URL '{}'".format(test))
+            return test
+
+        status = int(r.status_code)
+        Log.Debug('* <domain.set_domain>: Header Status Code = {}'.format(status))
+
+        if (status == 301):
+            try:
+                r_domain = r.headers['location']
+                r_domain = r_domain[:-1] if r_domain.endswith('/') else r_domain
+                Log.Debug('* <domain.set_domain>: Current Domain "{}" different from test "{}"'.format(r_domain, test))
+                return r_domain
+            except:
+                Log.Exception('* <domain.set_domain>: -error: Unable to process headers for "{}"'.format(test))
+        elif (status == 503) or (status == 200):
+            url = r.url[:-1] if r.url.endswith('/') else r.url
+            if url == test:
+                Log.Debug('* <domain.set_domain>: Current Domain "{}" and test "{}" are the same.'.format(url, test))
+            else:
+                Log.Error('* <domain.set_domain> -error: Status Code check FAILD.')
+                Log.Error('* <domain.set_domain> -error: Current Domain "{}" and "{}" are NOT the same.'.format(url, test))
+        else:
+            Log.Critical('* <domain.set_domain> -error: Cannot find Domain for {}'.format(string.title()))
+        return test
+
+    def save(self, content=dict):
+        """ Save Domains to file json file """
+        Log.Debug('* <domain.save>: Saving Domains to file')
+        with open(self.domain_file, 'wb') as f:
+            json.dump(content, f, indent=4, sort_keys=True, separators=(',', ': '))
+
+        Log.Debug('* <domain.save>: Domain Dictionary file has been saved')
+        Log.Debug('*' * 80)
+        return
+
+    def create_dict(self, fresh=False):
+        """setup the domain dict"""
+        Log.Debug('*' * 80)
+        for i, item in enumerate(['anime', 'drama', 'cartoon', 'manga', 'comic']):
+            if (i == 0):
+                temp_dict = {item.title(): self.set_domain(item, fresh)}
+            else:
+                temp_dict.update({item.title(): self.set_domain(item, fresh)})
+        return self.save(temp_dict)
+
+    def load(self):
+        """load domain dict to json format string"""
+        if os.path.isfile(self.domain_file) and os.stat(self.domain_file).st_size != 0:
+            with open(self.domain_file, 'rb') as data_file:
+                data = json.load(data_file)
+            return data
+        else:
+            self.create_dict()
+            return self.load()
+
+    def update(self, kind, fresh=False):
+        """Update only one domain"""
+        d = self.load()
+        d.update({kind: self.set_domain(kind.lower(), fresh)})
+        return self.save(d)
+
+domain = domain()

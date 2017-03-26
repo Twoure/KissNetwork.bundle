@@ -1,0 +1,237 @@
+#!/usr/bin/env python
+
+import os
+import pickle
+import shutil
+import datetime
+from io import open
+from kbase import core, cache, paths
+from kdomain import domain
+
+class storage(object):
+    def __init__(self):
+        self.last_modified  = os.path.getmtime
+        self.data_path      = os.path.join(os.getcwd().lstrip('\\\?').split('Plug-in Support')[0], 'Plug-in Support', 'Data', core.identifier)
+
+    def list_dir(self, path):
+        return os.listdir(path)
+
+    def join_path(self, *args):
+        return os.path.join(*args)
+
+    def file_exists(self, path):
+        return os.path.exists(path) and os.path.isfile(path)
+
+    def ensure_dirs(self, path):
+        if not os.path.exists(path):
+            try: os.makedirs(path)
+            except: raise
+
+    def data_item_path(self, itemname):
+        return os.path.join(self.data_path, 'DataItems', itemname)
+
+    def HTTP(self, itemname):
+        return os.path.join(cache.url_cache_dir, itemname)
+
+    def Covers(self, itemname):
+        return os.path.join(cache.thumb_cache_dir, itemname)
+
+    def Bookmarks(self, itemname):
+        return os.path.join(cache.bookmark_cache_dir, itemname)
+
+    def RKS(self, itemname):
+        return os.path.join(cache.rks_cache_dir, itemname)
+
+    def exists(self, itemname):
+        return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)
+
+    def cover_exists(self, itemname):
+        if itemname and self.exists(self.Covers(itemname)):
+            return True
+        Log.Warn('* {} does not exist.'.format(itemname))
+        return False
+
+    def load(self, itemname, is_object=False):
+        if self.exists(itemname):
+            filename = os.path.abspath(self.data_item_path(itemname))
+            try:
+                with open(filename, 'rb') as f:
+                    data = f.read()
+                if is_object:
+                    return pickle.loads(data)
+                else:
+                    return data
+            except Exception, e:
+                Log.Critical(u'* {}'.format(e))
+        return None
+
+    def save(self, itemname, data, is_object=False):
+        if data == None:
+            Log.Error("* No data to Save for '{}'".format(itemname))
+            return
+
+        if is_object:
+            data = pickle.dumps(data)
+
+        filename = os.path.abspath(self.data_item_path(itemname))
+        tempfile = '{}/._{}'.format(os.path.dirname(filename), os.path.basename(filename))
+        try:
+            if os.path.exists(tempfile):
+                os.remove(tempfile)
+            with open(tempfile, 'wb') as f:
+                f.write(str(data))
+            if os.path.exists(filename):
+                os.remove(filename)
+            shutil.move(tempfile, filename)
+        except Exception, e:
+            Log.Error(u'* {}'.format(e))
+            if os.path.exists(tempfile):
+                os.remove(tempfile)
+            raise
+
+    def remove(self, itemname):
+        if self.exists(itemname):
+            try:
+                os.remove(os.path.abspath(self.data_item_path(itemname)))
+            except:
+                Log.Exception('* <storage.remove>: Error Removing file >>>')
+
+    def data_object(self, itemname):
+        img_data = self.load(itemname)
+        if not img_data:
+            Log.Error('* Cannot find {}'.format(itemname))
+            return None
+
+        ext = String.SplitExtension(itemname)[-1]
+        mime_type = {
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+            '.gif': 'image/gif',  '.tiff': 'image/tiff', '.bmp': 'image/bmp'
+            }.get(ext, '*/*')
+
+        return DataObject(img_data, mime_type)
+
+class util(object):
+    def __init__(self):
+        #self.domain = domain()
+        self.timeout = Datetime.Delta(hours=1)
+        self.re_base_url = Regex(r'(https?://(?:www\.)?[^/]+\.\w+)')
+        self.re_tt = Regex(r'^https?://(?:www\.)?(?:kiss|read)(comic|\w+)(?:online)?\.\w+')
+        self.tt_list = ['Anime', 'Drama', 'Cartoon', 'Manga', 'Comic']
+        self.error_list = [
+            "This feature is under maintenance.", "closed to fix some serious issues",
+            "We will come back soon.", "The site is overload. Please come back later.",
+             ]
+
+    def parse_version(self, version):
+        try: return tuple(map(int, (version.split('.'))))
+        except: return version
+
+    def datetime_to_utc(self, dt):
+        n = datetime.datetime.now().replace(microsecond=0)
+        nutc = datetime.datetime.utcnow().replace(microsecond=0)
+        if n < nutc:
+            return dt + (nutc - n)
+        elif n == nutc:
+            return dt
+        return dt - (n - nutc)
+
+    def item_last_modified(self, path, utc=False):
+        if os.path.exists(path):
+            ts = os.path.getmtime(path)
+            if utc:
+                return datetime_to_utc(datetime.datetime.fromtimestamp(ts)).replace(microsecond=0)
+            return datetime.datetime.fromtimestamp(ts).replace(microsecond=0)
+        return False
+
+    def is_kiss_url(self, url):
+        return bool(self.re_tt.search(url))
+
+    def domain_dict(self, kind):
+        dd = domain.load()
+        if len(dd.keys()) != 5 or 'Asian' in dd.keys():
+            domain.create_dict()
+            dd = domain.load()
+        return dd[kind]
+
+    def get_tt(self, url):
+        r = self.re_tt.search(url)
+        tt = r.group(1).title() if r else None
+        return 'Drama' if tt == 'Asian' else tt
+
+    @property
+    def base_url_list(self):
+        return [ self.domain_dict(t) for t in self.tt_list ]
+
+    @property
+    def base_url_list_tuple(self):
+        return [ (self.get_tt(u), u) for u in self.base_url_list]
+
+    def base_url(self, kind):
+        return [u for t, u in self.base_url_list_tuple if t == kind][0]
+
+    def search_url(self, kind):
+        return self.base_url(kind) + '/Search/' + kind + '?keyword={}'
+
+    @property
+    def search_url_list(self):
+        return [ self.search_url(t) for t in self.tt_list ]
+
+    def get_base_url(self, url):
+        tt = self.get_tt(url)
+        base_url = self.re_base_url.search(url).group(1)
+        if not (tt, base_url) in self.base_url_list_tuple:
+            for node in self.base_url_list_tuple:
+                if node[0] == tt:
+                    base_url = node[1]
+                    break
+            Log.Warn('* <core.get_base_url>: Old {} URL parsed from page! URL Domain changed to {}'.format(tt, base_url))
+            Log.Warn('* {}'.format(url))
+
+        return base_url
+
+    def correct_url(self, url):
+        base_url = self.get_base_url(url)
+        return base_url + '/' + url.split('/', 3)[3] if (len(url.split('/')) > 3) else base_url
+
+    def correct_cover_image(self, string):
+        if not string:
+            return string
+        elif self.is_kiss_url(string):
+            string = self.get_base_url(string) + '/' + string.split('/', 3)[3]
+        elif 'cdn.myanimelist.net' in string:
+            string = 'http://' + string.split('/', 2)[2]
+
+        name, ext = String.SplitExtension(string)
+        ext_l = ext.lower()
+
+        if (ext_l == '.jpg') or (ext_l == '.jpeg') or (ext_l == '.png') or (ext_l == '.gif'):
+            string = name + ext_l
+        elif ext_l == '.jp' or ext_l == '.pn':
+            string = name + ext_l + 'g'
+        elif ext_l == '.j':
+            string = name + ext_l + 'pg'
+        elif ext_l == '.p':
+            string = name + ext_l + 'ng'
+        elif ext_l == '.gi':
+            string = name + ext_l + 'f'
+        elif ext_l == '.g':
+            string = name + ext_l + 'if'
+        else:
+            Log.Error('* <core.correct_cover_image>: Content_url not valid picture | {}'.format(string))
+            return None
+        return string
+
+    def string_code(self, string, code):
+        if not string:
+            return None
+
+        elif code == 'encode':
+            string = String.Quote(string.encode('utf-8'))
+        elif code == 'decode':
+            # Â artifact in Windows OS, don't know why, think it has to do with the Dict protocall
+            string = String.Unquote(string).decode('utf-8').replace('Â', '')
+        return string
+
+# globally initilize classes
+storage = storage()
+util = util()
