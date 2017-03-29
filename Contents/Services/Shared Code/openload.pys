@@ -3,34 +3,8 @@
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
 # Modified for use with Plex Media Server by Twoure (03/28/17)
 
-import js2py
-
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 RE_NORM = Regex(r'(https?://\w+\.\w+)/\w+/([^/]+)(/.+)?')
-
-def js2py_decode(hurls, page):
-    try:
-        page = Regex(r'(\$\(document\).+?\}\})\)\;').search(page).group(1).decode('string_escape')
-        code = page.replace("$(document)['ready'](function()", "function getUrl(r)")
-        code = Regex(r'\=(\_[^\]]+?\]\(\$.+?r\).*?\[["\']text["\']\][^\)]+?\))').sub('=r', code)
-        code = Regex(r'\:\_[^\]]+?\]\(\$.+?["\']\#streamurl["\']\).*?\[["\']text["\']\]\(([^\)]+?\))\)').sub(r':return \1', code)
-        code = code.replace("['", '.').replace("']", '').replace('.,', ',').replace('.)', ')')
-
-        context = js2py.EvalJs()
-        context.execute(code)
-    except:
-        Log.Exception("* <openload.js2py_decode[0]> - error: cannot decode with method 03/21/17 >>>")
-        return False
-
-    for (hid, k) in hurls:
-        if " " in k:
-            continue
-        try:
-            dat = context.getUrl(k)
-            return dat
-        except:
-            Log.Exception("* <openload.js2py_decode[1]> - error: cannot decode with method 03/21/17 >>>")
-    return False
 
 def decode_k(enc):
     dec = ''
@@ -99,7 +73,6 @@ def OpenloadStreamFromURL(url, http_headers=None):
     hiddenUrls = html.xpath('//span[@id]')
     if hiddenUrls:
         hurl = decode_hiddenUrl([(h.get('id'), h.text) for h in hiddenUrls])
-        #hurl = js2py_decode([(h.get('id'), h.text) for h in hiddenUrls], page)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
