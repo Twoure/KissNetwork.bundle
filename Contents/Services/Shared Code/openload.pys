@@ -21,18 +21,18 @@ def js2py_decode(enc, wid, jscode):
             , window = this;
         %s
         var $ = function(){
-                return {
-                    text: function(a){
-                        if(a)
-                            decoded = a;
-                        else
-                            return id;
-                    },
-                    ready: function(a){
-                        a()
-                    }
+            return {
+                text: function(a){
+                    if(a)
+                        decoded = a;
+                    else
+                        return id;
+                },
+                ready: function(a){
+                    a()
                 }
-            };
+            }
+        };
         %s;""" %(enc, wid, jscode)
 
         context = js2py.EvalJs()
