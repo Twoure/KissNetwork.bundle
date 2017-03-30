@@ -1,52 +1,70 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# Modified for use with Plex Media Server by Twoure (03/28/17)
+# Modified for use with Plex Media Server by Twoure (03/29/17)
+
+import js2py
+from aadecode import aadecode
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 RE_NORM = Regex(r'(https?://\w+\.\w+)/\w+/([^/]+)(/.+)?')
 
-def decode_k(enc):
-    dec = ''
+def js2py_decode(enc, wid, jscode):
+    decoded = ''
     try:
-        a = enc[0:24]
-        b = []
-        for i in range(0, len(a), 8):
-            b.append(int(a[i:i + 8] or '0', 16))
-        enc = enc[24:]
-        j = 0
-        k = 0
-        while j < len(enc):
-            c = 128
-            d = 0
-            e = 0
-            f = 0
-            more = True
-            while more:
-                if j + 1 >= len(enc):
-                    c = 143
-                f = int(enc[j:j + 2] or '0', 16)
-                j += 2
-                d += (f & 127) << e
-                e += 7
-                more = f >= c
-            g = d ^ b[k % 3]
-            for i in range(4):
-                char_dec = (g >> 8 * i) & (c + 127)
-                char = chr(char_dec)
-                if char != '#':
-                    dec += char
-            k += 1
-        return dec
+        jscode = """
+        var id = "%s"
+            , decoded
+            , document = {
+                getElementById: true
+            }
+            , window = this;
+        %s
+        var $ = function(){
+                return {
+                    text: function(a){
+                        if(a)
+                            decoded = a;
+                        else
+                            return id;
+                    },
+                    ready: function(a){
+                        a()
+                    }
+                }
+            };
+        %s;""" %(enc, wid, jscode)
+
+        context = js2py.EvalJs()
+        context.execute(jscode)
+        decoded = context.decoded
+
+        if decoded:
+            return decoded.strip()
+        else:
+            Log.Error("* <openload.js2py_decode> - error: js2py didn't return anything, with method 03/29/17")
     except:
-        Log.Exception("* <openload.decode_k> - error: cannot decode with method 03/28/17 >>>")
+        Log.Exception("* <openload.js2py_decode> - error: cannot decode with method 03/29/17 >>>")
     return False
 
-def decode_hiddenUrl(hurls):
+def decode_hiddenUrl(hurls, aalist, page):
+    wid = ''
+    r = Regex(r'(?s)\(\'\_\'\)\;(.+?)ﾟωﾟﾉ= /｀ｍ´）ﾉ').search(page)
+    if not r:
+        Log.Error("* <openload.decode_hiddenUrl> - error: cannot find jscode in page, with method 03/29/17 >>>")
+        return False
+    jscode = r.group(1)
+
+    for a in aalist:
+        try:
+            wid += aadecode(a)
+        except:
+            Log.Exception("* Cannot aadecode window.r id >>>")
+
     for (hid, k) in hurls:
         if " " in k:
             continue
-        dec = decode_k(k)
+        dec = js2py_decode(k, wid, jscode)
         if dec:
             return dec
     return False
@@ -71,8 +89,9 @@ def OpenloadStreamFromURL(url, http_headers=None):
 
     html = HTML.ElementFromString(page)
     hiddenUrls = html.xpath('//span[@id]')
+    aadata_list = Regex(r'(?s)<script type="text/javascript">(ﾟωﾟ.*?)</script>').findall(page)
     if hiddenUrls:
-        hurl = decode_hiddenUrl([(h.get('id'), h.text) for h in hiddenUrls])
+        hurl = decode_hiddenUrl([(h.get('id'), h.text) for h in hiddenUrls], aadata_list, page)
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
