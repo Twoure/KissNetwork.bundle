@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# Modified for use with Plex Media Server by Twoure (03/29/17)
+# Modified for use with Plex Media Server by Twoure (03/31/17)
 
 import js2py
 from aadecode import aadecode
@@ -34,6 +34,7 @@ def js2py_decode(enc, wid, jscode):
             }
         };
         %s;""" %(enc, wid, jscode)
+        jscode = Regex(r'if\s*\([^\}]+?typeof[^\}]+?\}').sub('', jscode)
 
         context = js2py.EvalJs()
         context.execute(jscode)
@@ -42,9 +43,9 @@ def js2py_decode(enc, wid, jscode):
         if decoded:
             return decoded.strip()
         else:
-            Log.Error("* <openload.js2py_decode> - error: js2py didn't return anything, with method 03/29/17")
+            Log.Error("* <openload.js2py_decode> - error: js2py didn't return anything, with method 03/31/17")
     except:
-        Log.Exception("* <openload.js2py_decode> - error: cannot decode with method 03/29/17 >>>")
+        Log.Exception("* <openload.js2py_decode> - error: cannot decode with method 03/31/17 >>>")
     return False
 
 def decode_hiddenUrl(hurls, aalist, page):
