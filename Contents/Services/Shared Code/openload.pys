@@ -1,40 +1,95 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# Modified for use with Plex Media Server by Twoure (03/31/17)
+# Modified for use with Plex Media Server by Twoure (04/07/17)
 
 import js2py
 from aadecode import aadecode
+from operator import ixor
 
 USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'
 RE_NORM = Regex(r'(https?://\w+\.\w+)/\w+/([^/]+)(/.+)?')
 
-def js2py_decode(enc, wid, jscode):
-    decoded = ''
+def link_from_api(fid):
+    l = 'OTdiMjMyNmQ3ZGI4MWYwZg__'
+    k = 'QVFGTzNRSlE_'
+    burl = 'aHR0cHM6Ly9hcGkub3BlbmxvYWQuY28vMS9maWxlLw__'
+    api1 = 'e31kbHRpY2tldD9maWxlPXt9JmxvZ2luPXt9JmtleT17fQ__'
+    api2 = 'e31kbD9maWxlPXt9JnRpY2tldD17fQ__'
+
     try:
-        jscode = """
-        var id = "%s"
-            , decoded
-            , document = {
-                getElementById: true
-            }
-            , window = this;
-        %s
-        var $ = function(){
-            return {
-                text: function(a){
-                    if(a)
-                        decoded = a;
-                    else
-                        return id;
-                },
-                ready: function(a){
-                    a()
-                }
-            }
-        };
-        %s;""" %(enc, wid, jscode)
+        data = JSON.ObjectFromURL(D(api1).format(D(burl), fid, D(l), D(k)), cacheTime=CACHE_1HOUR*5)
+    except:
+        Log.Exception(u"* <openload.link_from_api> - error: cannot handle first api link >>>")
+        return False
+
+    if (data["status"] == 200):
+        t = data["result"]["ticket"]
+        try:
+            data = JSON.ObjectFromURL(D(api2).format(D(burl), fid, t), cacheTime=CACHE_1HOUR*5)
+            return (data['result']['url']).replace("https", "http")
+        except:
+            Log.Exception(u"* <openload.link_from_api> - error: cannot handle 2nd api link >>>")
+    Log.Error("* <openload.link_from_api> - error: failed to retrieve video stream")
+    return False
+
+def direct_decode(encode, numeros):
+    Log("* <openload.direct_decode> - Trying direct method 04/07/17.")
+    text_decode = ""
+    try:
+        rango1 = encode[:56]
+        decode1 = []
+        for i in range(0, len(rango1), 8):
+            decode1.append(int(rango1[i:i+8], 16))
+        rango1 = encode[56:]
+        j = 0
+        i = 0
+        while i < len(rango1):
+            index1 = 64
+            value1 = 0
+            value2 = 0
+            value3 = 0
+            while True:
+                if (i + 1) >= len(rango1):
+                    index1 = 143
+                value3 = int(rango1[i:i+2], 16)
+                i += 2
+                data = value3 & 63
+                value2 += data << value1
+                value1 += 6
+                if value3 < index1:
+                    break
+
+            value4 = value2 ^ decode1[j % 7]
+            for n in numeros:
+                if not n.isdigit():
+                    n = int(n, 16)
+                #value4 ^= int(n)
+                value4 = ixor(value4, int(n))
+            value5 = index1 * 2 + 127
+            for h in range(4):
+                valorfinal = (value4 >> 8 * h) & (value5)
+                valorfinal = chr(valorfinal)
+                if valorfinal != "%":
+                    text_decode += valorfinal
+            j += 1
+        return text_decode
+    except:
+        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 04/07/17 >>>")
+    return False
+
+def js2py_decode(enc, wid, jscode):
+    rn = Regex(r'_0x[0-9a-f]+\s*=\s*([0-9]{4,}|0x[0-9a-f]{4,});').findall(jscode)
+    try:
+        jscode = String.Base64Decode(
+            'dmFyIGlkID0gIiVzIiwgZGVjb2RlZCwgZG9jdW1lbnQgPSB7IGdldEVsZW1lbnRCeUlkOiB0cnVl'
+            'IH0sIHdpbmRvdyA9IHRoaXM7ICVzIHZhciAkID0gZnVuY3Rpb24gKCkgeyByZXR1cm4geyB0ZXh0'
+            'OiBmdW5jdGlvbiAoYSkgeyBpZihhKSBkZWNvZGVkID0gYTsgZWxzZSByZXR1cm4gaWQ7IH0sIHJl'
+            'YWR5OiBmdW5jdGlvbiAoYSkgeyBhKCkgfSB9IH07ICVzOw=='
+            ) %(enc, wid, jscode)
+
         jscode = Regex(r'if\s*\([^\}]+?typeof[^\}]+?\}').sub('', jscode)
+        jscode = Regex(r'if\s*\([^\}]+?document[^\}]+?\}').sub('', jscode)
 
         context = js2py.EvalJs()
         context.execute(jscode)
@@ -46,7 +101,7 @@ def js2py_decode(enc, wid, jscode):
             Log.Error("* <openload.js2py_decode> - error: js2py didn't return anything, with method 03/31/17")
     except:
         Log.Exception("* <openload.js2py_decode> - error: cannot decode with method 03/31/17 >>>")
-    return False
+    return direct_decode(enc, rn)
 
 def decode_hiddenUrl(hurls, aalist, page):
     wid = ''
@@ -96,7 +151,9 @@ def OpenloadStreamFromURL(url, http_headers=None):
         if hurl:
             return u'https://openload.co/stream/{0}?mime=true'.format(hurl)
         else:
-            Log.Error(u'* Cannot directly decode hiddenUrl.')
+            Log.Error(u'* Cannot directly decode hiddenUrl. Trying api method.')
+            # Fallback to api method, although at peak times it will not work
+            return link_from_api(base.group(2))
     else:
         Log.Warn(u'* No hiddenUrl to decode.')
     return False
