@@ -12,6 +12,10 @@ from zipfile import ZipFile
 import zipfile
 
 class logs(object):
+    """
+    Method adapted from @ukdtom's WebTools logs class:
+    https://github.com/ukdtom/WebTools.bundle/blob/39c1d17b5250927cd0cff9ef907cf4c5d758771e/Contents/Code/logs.py#L15...L33
+    """
     def __init__(self):
         try:
             if 'PLEX_MEDIA_SERVER_LOG_DIR' in os.environ:
@@ -176,6 +180,10 @@ class storage(object):
         return DataObject(img_data, mime_type)
 
     def compress(self, filename, src_path, dst_dir=None):
+        """
+        Method adapted from @trakt's Plex-Trakt-Scrobbler:
+        https://github.com/trakt/Plex-Trakt-Scrobbler/blob/a6ab5f41527560930a5a69bd876bb82892220703/Tools/build.py#L192...L247
+        """
         if not dst_dir:
             dst_dir = self.data_item_path("Archives")
         self.ensure_dirs(dst_dir)
