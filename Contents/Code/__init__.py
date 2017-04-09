@@ -664,6 +664,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         listing = html.xpath('//div[@class="item"]')
 
     drama_test = type_title == 'Drama' and ('Search' not in pname)
+    drama_test = (type_title == 'Cartoon' and ('Search' not in pname)) if not drama_test else drama_test
     listing_count = len(listing)
     allowed_count = 200
     Logger('* {} items in Directory List.'.format(listing_count), kind='Info')
@@ -682,7 +683,10 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
                 thumb = KCore.util.correct_cover_image(title_html.xpath('//img/@src')[0])
             else:
                 thumb = KCore.util.correct_cover_image(item.xpath('./a/img/@src')[0])
-            if not 'http' in thumb:
+            if thumb.startswith('/') and type_title == 'Cartoon':
+                thumb = base_url + thumb
+                cover_file = thumb.rsplit('/')[-1]
+            elif not 'http' in thumb:
                 Log.Debug('* thumb missing valid url. | {}'.format(thumb))
                 Log.Debug('* thumb xpath = {}'.format(title_html.xpath('//img/@src')))
                 Log.Debug('* item name | {} | {}'.format(title_html.xpath('//a/@href'), title_html.xpath('//a/text()')))
@@ -792,7 +796,10 @@ def HomePageList(tab, category, base_url, type_title, art):
         title2 = u'{} | Latest {}'.format(item_title, latest)
         summary = 'NA'  # no summarys are given in the 'Top' lists
         try:
-            thumb = KCore.util.correct_cover_image(node.xpath('./a/img')[0].get('src'))
+            curl = node.xpath('./a/img')[0].get('src')
+            if curl.startswith('/') and type_title == 'Cartoon':
+                curl = base_url + curl
+            thumb = KCore.util.correct_cover_image(curl)
             if not 'http' in thumb:
                 thumb = None
                 cover_file = None
@@ -872,7 +879,10 @@ def ItemPage(item_info):
     Logger('*' * 80)
     if not item_info['cover_url']:
         try:
-            cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]')[0].get('href'))
+            curl = html.xpath('//head/link[@rel="image_src"]')[0].get('href')
+            if curl.startswith('/') and type_title == 'Cartoon':
+                curl = base_url + curl
+            cover_url = KCore.util.correct_cover_image(curl)
             if KCore.util.is_kiss_url(cover_url):
                 content_url = KCore.util.get_base_url(cover_url) + '/' + cover_url.split('/', 3)[3]
                 image_file = content_url.rsplit('/')[-1]

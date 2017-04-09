@@ -16,6 +16,7 @@ class cache(object):
     thumb_cache_dir     = 'DataCovers'
     bookmark_cache_dir  = 'DataBookmarks'
     rks_cache_dir       = 'DataRKS'
+    zip_cache_dir       = 'DataZip'
     header_dict         = 'Header_Dict'
     domain_dict         = 'Domain_Dict'
 
@@ -24,4 +25,6 @@ class paths(object):
     bundle_path         = os.path.join(os.getcwd().lstrip('\\\?').split('Plug-in Support')[0], 'Plug-ins', core.channel_title+'.bundle')
     modules_path        = os.path.join(bundle_path, 'Contents', 'Libraries', 'Shared')
     resources_path      = os.path.join(bundle_path, 'Contents', 'Resources')
-    support_path        = os.path.join(bundle_path.split('Plug-ins')[0], 'Plug-in Support', 'Data', core.identifier)
+    app_support_path    = os.path.join(bundle_path.split('Plug-ins')[0])
+    support_path        = os.path.join(app_support_path, 'Plug-in Support')
+    data_path           = os.path.join(support_path, 'Data', core.identifier)

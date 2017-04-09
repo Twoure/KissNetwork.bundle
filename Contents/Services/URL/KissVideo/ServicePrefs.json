@@ -33,7 +33,7 @@
   },
   {
     "id": "kisscartoon",
-    "label": "View Cartoon (Kisscartoon.se)",
+    "label": "View Cartoon (Kimcartoon.me)",
     "type": "bool",
     "default": "True"
   },

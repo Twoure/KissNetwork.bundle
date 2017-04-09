@@ -11,6 +11,7 @@ domain  = kdomain.domain
 import kutil
 util    = kutil.util
 storage = kutil.storage
+logs    = kutil.logs
 
 import knetwork
 network = knetwork.network

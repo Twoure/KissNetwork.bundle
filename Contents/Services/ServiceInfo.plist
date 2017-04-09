@@ -12,7 +12,7 @@
       <array>
         <string>^https?://(?:www\.)?kissanime\.\w+/Anime/.+(?:\?id=\d+)$</string>
         <string>^https?://(?:www\.)?kissasian\.\w+/Drama/.+(?:\?id=\d+)$</string>
-        <string>^https?://(?:www\.)?kisscartoon\.\w+/Cartoon/.+(?:\?id=\d+)$</string>
+        <string>^https?://(?:www\.)?ki(?:ss|m)cartoon\.\w+/Cartoon/.+(?:\?id=\d+)$</string>
       </array>
     </dict>
   </dict>

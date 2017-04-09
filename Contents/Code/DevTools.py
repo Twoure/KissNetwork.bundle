@@ -469,6 +469,9 @@ def DevToolsC(title=None, header=None, message=None):
             count = ClearCache(URL_CACHE_DIR, Datetime.Delta())
             message = 'Cleaned {} Cached URL files'.format(count)
             Log(u'\n----------Removed {} Cached URL files from {}----------'.format(count, URL_CACHE_DIR))
+        elif title == 'zip_cache':
+            ZipCache()
+            message = 'Copied Video Page cache to Zip file'
         return DevToolsC(title=None, header=header, message=message)
 
     oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_covers'),
@@ -477,6 +480,9 @@ def DevToolsC(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_http'),
         title=u'Reset {} Cache'.format(URL_CACHE_DIR),
         summary=u'Remove all cached URLs from {} directory.'.format(URL_CACHE_DIR)))
+    oc.add(DirectoryObject(key=Callback(DevToolsC, title='zip_cache'),
+        title=u'Zip Cache',
+        summary=u'Copy URL & RKS cache into zip file.'))
 
     return oc
 
@@ -646,3 +652,51 @@ def ClearOldCache(itempath):
 
     Log.Debug('* Finished Resetting \'{}\''.format(itempath))
     return True
+
+####################################################################################################
+def ZipCache():
+    """copy cached resources into zip folder, then move to resources directory"""
+    rks_dir = Core.storage.data_item_path(KCore.cache.rks_cache_dir)
+    http_dir = Core.storage.data_item_path(KCore.cache.url_cache_dir)
+    zip_dir = Core.storage.data_item_path(KCore.cache.zip_cache_dir)
+    log_dir = Core.storage.join_path(zip_dir, "Logs")
+
+    # clean zip_dir before copying in new files
+    Core.storage.remove_tree(zip_dir)
+
+    # copy DataHTTP into zip dir
+    KCore.storage.copytree(http_dir, Core.storage.join_path(zip_dir, KCore.cache.url_cache_dir))
+    # copy DataRKS into zip dir
+    KCore.storage.copytree(rks_dir, Core.storage.join_path(zip_dir, KCore.cache.rks_cache_dir))
+
+    # clean user-ip from DataHTTP files
+    for fn in Core.storage.list_dir(Core.storage.join_path(zip_dir, KCore.cache.url_cache_dir)):
+        fn_tpath = Core.storage.join_path(KCore.cache.zip_cache_dir, KCore.cache.url_cache_dir, fn)
+        Log(u"* Cleaning Public IP from '{}'".format(fn_tpath))
+        fn_data = Data.Load(fn_tpath) # open file as string
+        # clean public ip
+        fn_data = Regex(r"'\d+\.\d+\.\d+\.\d+\-\d+'").sub("'xxx.xxx.xxx.xxx-xxxxxxxxx'", fn_data)
+        Data.Save(fn_tpath, fn_data) # re-save cleaned file in zip cache location
+
+    # copy kissnetwork logs
+    Core.storage.ensure_dirs(log_dir)
+    for l in KCore.logs.logs_for_identifier(Core.identifier):
+        # copy kissnetwork logs into zip dir
+        Core.storage.copy(l, log_dir)
+
+    # we need the system logs as well
+    for l in KCore.logs.logs_for_identifier('com.plexapp.system'):
+        Core.storage.copy(l, log_dir)
+
+    zip_filename = 'KissNetwork_cache_' + Datetime.Now().strftime("%Y%m%d-%H%M%S") + '.zip'
+
+    # create and save zip file from zip dir
+    zip_filepath = KCore.storage.compress(zip_filename, zip_dir)
+
+    # move final zip file to channel resources directory, make easier for user to find.
+    res_dir = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources')
+    Core.storage.rename(zip_filepath, Core.storage.join_path(res_dir, zip_filename))
+
+    # TODO add way to clean zip cache in Resources dir?
+
+    return

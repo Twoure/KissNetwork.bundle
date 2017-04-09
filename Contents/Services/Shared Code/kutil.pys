@@ -1,17 +1,55 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import pickle
 import shutil
 import datetime
 from io import open
 from kbase import core, cache, paths
 from kdomain import domain
+from zipfile import ZipFile
+import zipfile
+
+class logs(object):
+    def __init__(self):
+        try:
+            if 'PLEX_MEDIA_SERVER_LOG_DIR' in os.environ:
+                self.log_dir = os.environ['PLEX_MEDIA_SERVER_LOG_DIR']
+            elif sys.platform.find('linux') == 0 and 'PLEXLOCALAPPDATA' in os.environ:
+                self.log_dir = os.path.join(os.environ['PLEXLOCALAPPDATA'], 'Plex Media Server', 'Logs')
+            elif sys.platform == 'win32':
+                if 'PLEXLOCALAPPDATA' in os.environ:
+                    key = 'PLEXLOCALAPPDATA'
+                else:
+                    key = 'LOCALAPPDATA'
+                self.log_dir = os.path.join(os.environ[key], 'Plex Media Server', 'Logs')
+            else:
+                self.log_dir = os.path.join(os.environ['HOME'], 'Library', 'Logs', 'Plex Media Server')
+                if not os.path.isdir(self.log_dir):
+                    self.log_dir = os.path.join(paths.app_support_path, 'Logs')
+        except:
+            Log.Exception('* Cannot find Plex Log path >>>')
+            self.log_dir = None
+
+    def logs_for_identifier(self, identifier):
+        if not self.log_dir:
+            Log.Error("* Cannot find Logs dir")
+            return list()
+
+        log_list = list()
+        for root, dirs, files in os.walk(self.log_dir):
+            dirs[:] = [d for d in dirs if d in ['PMS Plugin Logs']]
+            for f in files:
+                if identifier not in f:
+                    continue
+                log_list.append(os.path.join(root, f))
+        return log_list
+
 
 class storage(object):
     def __init__(self):
         self.last_modified  = os.path.getmtime
-        self.data_path      = os.path.join(os.getcwd().lstrip('\\\?').split('Plug-in Support')[0], 'Plug-in Support', 'Data', core.identifier)
 
     def list_dir(self, path):
         return os.listdir(path)
@@ -22,13 +60,37 @@ class storage(object):
     def file_exists(self, path):
         return os.path.exists(path) and os.path.isfile(path)
 
-    def ensure_dirs(self, path):
+    def dir_exists(self, path):
+        return os.path.exists(path) and os.path.isdir(path)
+
+    def make_dirs(self, path):
         if not os.path.exists(path):
-            try: os.makedirs(path)
-            except: raise
+            os.makedirs(path)
+
+    def ensure_dirs(self, path):
+        try:
+            self.make_dirs(path)
+        except:
+            if not os.path.exists(path):
+                raise
+
+    def copytree(self, src, dst):
+        if not self.file_exists(dst):
+            Log(u"Creating dir at '{}'".format(dst))
+            self.make_dirs(dst)
+        Log(u"Recursively copying contents of '{}' into '{}'".format(src, dst))
+        for item in self.list_dir(src):
+            s = self.join_path(src, item)
+            d = self.join_path(dst, item)
+            if self.dir_exists(s):
+                Log(u"Copying '{}' into '{}'".format(s, d))
+                self.copytree(s, d)
+            else:
+                Log(u"Copying with copy2 '{}' into '{}'".format(s, d))
+                shutil.copy2(s, d)
 
     def data_item_path(self, itemname):
-        return os.path.join(self.data_path, 'DataItems', itemname)
+        return os.path.join(paths.data_path, 'DataItems', itemname)
 
     def HTTP(self, itemname):
         return os.path.join(cache.url_cache_dir, itemname)
@@ -41,6 +103,9 @@ class storage(object):
 
     def RKS(self, itemname):
         return os.path.join(cache.rks_cache_dir, itemname)
+
+    def Zip(self, itemname):
+        return os.path.join(cache.zip_cache_dir, itemname)
 
     def exists(self, itemname):
         return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)
@@ -110,12 +175,28 @@ class storage(object):
 
         return DataObject(img_data, mime_type)
 
+    def compress(self, filename, src_path, dst_dir=None):
+        if not dst_dir:
+            dst_dir = self.data_item_path("Archives")
+        self.ensure_dirs(dst_dir)
+
+        dst_path = os.path.join(dst_dir, filename)
+        archive = ZipFile(dst_path, 'w', zipfile.ZIP_DEFLATED)
+        for root, dirs, files in os.walk(src_path):
+            for f in files:
+                archive.write(
+                    os.path.join(root, f),
+                    os.path.join(os.path.relpath(root, src_path), f)
+                    )
+        archive.close()
+        return dst_path
+
+
 class util(object):
     def __init__(self):
-        #self.domain = domain()
         self.timeout = Datetime.Delta(hours=1)
         self.re_base_url = Regex(r'(https?://(?:www\.)?[^/]+\.\w+)')
-        self.re_tt = Regex(r'^https?://(?:www\.)?(?:kiss|read)(comic|\w+)(?:online)?\.\w+')
+        self.re_tt = Regex(r'^https?://(?:www\.)?(?:kiss|read|kim)(comic|\w+)(?:online)?\.\w+')
         self.tt_list = ['Anime', 'Drama', 'Cartoon', 'Manga', 'Comic']
         self.error_list = [
             "This feature is under maintenance.", "closed to fix some serious issues",
@@ -146,15 +227,6 @@ class util(object):
     def is_kiss_url(self, url):
         return bool(self.re_tt.search(url))
 
-    """
-    def domain_dict(self, kind):
-        dd = domain.load()
-        if len(dd.keys()) != 5 or 'Asian' in dd.keys():
-            domain.create_dict()
-            dd = domain.load()
-        return dd[kind]
-    """
-
     def get_tt(self, url):
         r = self.re_tt.search(url)
         tt = r.group(1).title() if r else None
@@ -166,7 +238,7 @@ class util(object):
 
     @property
     def base_url_list_tuple(self):
-        return [ (self.get_tt(u), u) for u in self.base_url_list]
+        return [ (self.get_tt(u), u) for u in self.base_url_list ]
 
     def base_url(self, kind):
         return [u for t, u in self.base_url_list_tuple if t == kind][0]
@@ -237,3 +309,4 @@ class util(object):
 # globally initilize classes
 storage = storage()
 util = util()
+logs = logs()

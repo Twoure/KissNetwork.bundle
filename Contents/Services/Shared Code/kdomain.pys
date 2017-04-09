@@ -12,11 +12,15 @@ import requests
 
 class domain(object):
     def __init__(self):
-        self.domain_file = os.path.join(paths.support_path, cache.domain_dict)
+        self.domain_file = os.path.join(paths.data_path, cache.domain_dict)
+        #self.ddd_url = String.Base64Decode(
+        #    'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9Ud291cm'
+        #    'UvOGJiNTQwMzM3ZGVmYWY3MTg4ZTZjMDE5NDUzMDc2NjEvcmF3'
+        #    )  # original domains
         self.ddd_url = String.Base64Decode(
             'aHR0cHM6Ly9naXN0LmdpdGh1YnVzZXJjb250ZW50LmNvbS9Ud291cm'
-            'UvOGJiNTQwMzM3ZGVmYWY3MTg4ZTZjMDE5NDUzMDc2NjEvcmF3'
-            )
+            'UvODI5MTg0NTk0OTQ3ODlhMGJhOWVjMmMyNTI2ZjJjMDYvcmF3'
+            )  # temp update for new cartoon site
 
     def fetch(self, fresh=False):
         """cache control for deafutl domain dictionary"""

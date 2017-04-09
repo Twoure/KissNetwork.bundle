@@ -13,7 +13,7 @@ import shutil
 
 RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
-RE_ENC_TEST = Regex(r'/Scripts/((?:kissenc|oran|subo)\.min\.j[^"\']+|vr\.j[^"\']+)')
+RE_ENC_TEST = Regex(r'/Scripts/((?:kissenc|oran|subo)(?:\.min)?\.j[^"\']+|vr\.j[^"\']+)')
 RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
 RE_WINDOW2 = Regex(r'(.+window[^\=]+[^\;]+)')
 RE_ITAG = Regex(r'itag\=(\d+)')
@@ -219,12 +219,13 @@ def get_googlevideo_url(url, m, resp):
 
     page = resp.text
     headers = resp.headers
+    page_url = resp.url
     html = HTML.ElementFromString(page)
     sQual = Regex(r'(id\="slcQualix")').search(page)
     olist = html.xpath('//select[@id="%s"]/option' %("slcQualix" if sQual else "selectQuality"))
     tt = KCore.util.get_tt(url)
     ttl = tt.lower()
-    if not olist:
+    if not olist and (not page_url.endswith('openload')):
         Log.Error('* This Video is broken, Kiss{} is working to fix it.'.format(tt))
         raise Ex.MediaNotAvailable
 
@@ -287,6 +288,9 @@ def get_googlevideo_url(url, m, resp):
                 #Log.Debug('* Selecting {}p stream'.format(mm))
                 break
         Log.Debug('* Selecting {}p stream'.format(mm))
+    elif enc_test and page_url.endswith('openload'):
+        olr = Regex(r'\$kissenc\.decrypt\(["\']([^"\']+)["\']').findall(page)
+        vurl = get_openload_url(KCore.rks.decrypt(olr[0], url, headers)) if olr else False
 
     if ((ttl == 'cartoon') or (ttl == 'drama')) and ('Play?' in vurl):
         Log.Debug(u"* Trying to get {} Redirect Link for '{}'".format(ttl, vurl))
@@ -353,7 +357,11 @@ def get_url_redirect_v2(input_url, http_headers=None):
 def get_thumb(url):
     thumb = None
     html = KCore.network.ElementFromURL(url)
-    cover_url = KCore.util.correct_cover_image(html.xpath('//head/link[@rel="image_src"]/@href')[0])
+    cover_url = "na"
+    tmp_curl = html.xpath('//head/link[@rel="image_src"]/@href')
+    if tmp_curl:
+        curl = tmp_curl[0] if tmp_curl[0].startswith('http') else KCore.util.get_base_url(url) + tmp_curl[0]
+        cover_url = KCore.util.correct_cover_image(curl)
 
     if KCore.util.is_kiss_url(cover_url):
         cover_file = cover_url.rsplit('/')[-1]

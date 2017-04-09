@@ -30,7 +30,7 @@ def CFTest(kind):
 class KissHeaders(object):
     def __init__(self):
         self.user_agent = core.user_agent
-        self.header_file = os.path.join(paths.support_path, 'Header_Dict')
+        self.header_file = os.path.join(paths.data_path, 'Header_Dict')
         self.header_data = dict()
         self.event = Event()
 
@@ -88,6 +88,8 @@ class KissHeaders(object):
             else:
                 expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364)))
                 Log.Warn(u'* <KissHeaders.set_header> -error: Cannot calculate expire time for {}.'.format(base_url))
+                #if 'kim' in base_url:
+                    #expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(hours=1)))
 
             return {
                 type_title: {
