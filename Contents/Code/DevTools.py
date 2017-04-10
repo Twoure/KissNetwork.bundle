@@ -351,8 +351,15 @@ def DevTools(file_to_reset=None, header=None, message=None):
             Log('\n----------Attempting to Restart KissNetwork Channel----------')
             RestartChannel()
             message = 'Restarting channel'
+        elif file_to_reset == 'temp_upgrade':
+            Log('\n----------Attempting to Upgrade Cartoon Section----------')
+            message = UpgradeTemp()
         return DevTools(header=header, message=message, file_to_reset=None)
 
+    if not Dict['kimcartoon_upgrade']:
+        oc.add(DirectoryObject(key=Callback(DevTools, file_to_reset='temp_upgrade'),
+            title='-->Cartoon Upgrade<--',
+            summary='Run before using New KimCartoon temp source for Cartoons.'))
     oc.add(DirectoryObject(key=Callback(BookmarkTools.gui_tools),
         title='Bookmark Tools',
         summary='Tools to Clean dirty bookmarks dictionary, and Toggle "Clear Bookmarks".'))
@@ -700,3 +707,29 @@ def ZipCache():
     # TODO add way to clean zip cache in Resources dir?
 
     return
+
+####################################################################################################
+def UpgradeTemp():
+    """Temp update procedure between v1.2.9 and v1.3.0"""
+
+    msl = list()
+    # first update cartoon domain
+    try:
+        KCore.domain.update('Cartoon', True)
+        msl.append("Domain")
+    except:
+        Log.Exception("* <DevTools.UpgradeTemp[error][0]>: Cannot setup new domain >>>")
+        return "Error: Failed to update Cartoon Domain"
+    # 2nd update cartoon header
+    try:
+        Headers.get_headers_for_url(KCore.util.base_url('Cartoon'), True)
+        msl.append("Header")
+    except:
+        Log.Exception("* <DevTools.UpgradeTemp[error][1]>: Cannot setup new header >>>")
+        return "Error: Failed to update Cartoon Header"
+    # once finished, tell user to access Cartoon bookmarks, so the covers can update ?
+    if msl:
+        Dict['kimcartoon_upgrade'] = True
+        Dict.Save()
+        return "Finished updating Cartoon " + ' & '.join(msl) + '. '
+    return "Warn: Did not Update"
