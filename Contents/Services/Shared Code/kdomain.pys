@@ -36,7 +36,7 @@ class domain(object):
         """
         Log.Debug('* <domain.set_domain>: string = {}'.format(string))
 
-        test = self.fetch[string]
+        test = self.fetch(fresh)[string]
         try:
             r = requests.head(test, headers={'user-agent': core.user_agent})
         except:
