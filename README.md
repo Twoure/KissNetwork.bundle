@@ -30,6 +30,7 @@ KissNetwork
     - [Enable Debug Logging](#enable-debug-logging)
   - [About / Help](#about--help)
     - [Developer Tools](#developer-tools)
+      - [Cartoon Upgrade](#cartoon-upgrade)
       - [Bookmark Tools](#bookmark-tools)
       - [Cache Tools](#cache-tools)
       - [Domain Tools](#domain-tools)
@@ -189,12 +190,17 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 ### About / Help
 
 ##### Developer Tools
+- [**Cartoon Upgrade**](#cartoon-upgrade)
 - [**Bookmark Tools**](#bookmark-tools)
 - [**Cache Tools**](#cache-tools)
 - [**Domain Tools**](#domain-tools)
 - [**Header Tools**](#header-tools)
 - **Reset Dict cfscrape Test Key:** Delete test key and then force the channel to retake the cfscrape test.
 - **Restart KissNetwork Channel:** Will restart KissNetwork Channel in PMS, but will not refresh URL Service Code.
+
+##### Cartoon Upgrade
+- One time use, to prepare channel for use with new KimCartoon temporary source
+- **Note:** this is only temporary until KissCartoon comes back online
 
 ##### Bookmark Tools
 - **Backup Tools:**
