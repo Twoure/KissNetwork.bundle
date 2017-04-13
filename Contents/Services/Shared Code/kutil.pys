@@ -184,8 +184,24 @@ class storage(object):
         Method adapted from @trakt's Plex-Trakt-Scrobbler:
         https://github.com/trakt/Plex-Trakt-Scrobbler/blob/a6ab5f41527560930a5a69bd876bb82892220703/Tools/build.py#L192...L247
         """
+
+        if not filename:
+            Log.Error("* <KCore.kutil.storage.compress[error][0]>: compress requires filename, but none found")
+            return
+
+        if not src_path:
+            Log.Error("* <KCore.kutil.storage.compress[error][1]>: compress requires src_path, but none found")
+            return
+
+        # clean windows unc src_path
+        if sys.platform == 'win32':
+            src_path = src_path.lstrip('\\\?')
+
+        # setup destination directory
         if not dst_dir:
             dst_dir = self.data_item_path("Archives")
+        elif sys.platform == 'win32':
+            dst_dir = dst_dir.lstrip('\\\?')
         self.ensure_dirs(dst_dir)
 
         dst_path = os.path.join(dst_dir, filename)
