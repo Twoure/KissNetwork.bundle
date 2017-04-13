@@ -199,8 +199,6 @@ class rks(object):
     def get_rks(self, url, headers=dict, data=None):
         ttl = util.get_tt(url).lower()
         irks = self.get_base_rks(ttl, url, headers, data)
-        if ttl == 'anime':
-            return irks #+ String.Base64Decode("XzZuMjNuY2FzZGxuMjEzXw==")[1:-1]
 
         cl = list()
         bl = list()
