@@ -31,8 +31,8 @@ class network(object):
             http_error_msg = u'%s Server Error: %s for url: %s' % (req.status_code, 'Captcha Present!', ourl)
         elif util.is_kiss_url(ourl) and req.history:
             tt = util.get_tt(ourl)
-            rburl = util.re_url_base.search(req.url).group(1)
-            burl = util.re_url_base.search(ourl).group(1)
+            rburl = util.re_base_url.search(req.url).group(1)
+            burl = util.re_base_url.search(ourl).group(1)
             if rbu != burl:
                 domain.update(tt, True)
 
