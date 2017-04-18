@@ -33,7 +33,7 @@ class network(object):
             tt = util.get_tt(ourl)
             rburl = util.re_base_url.search(req.url).group(1)
             burl = util.re_base_url.search(ourl).group(1)
-            if rbu != burl:
+            if rburl != burl:
                 domain.update(tt, True)
 
         if (400 <= req.status_code < 500):
@@ -57,11 +57,12 @@ class network(object):
             if not headers:
                 headers = Headers.get_headers_for_url(url)
         nc = headers.get('cookie', None)
+        cookies = dict((k,v) for (k,v) in Regex(r'(\w+)\=([^\;]+)').findall(nc)) if nc else {}
 
         r = requests
         rm = getattr(r, method.lower())
         try:
-            req = rm(url, headers=headers, data=data, allow_redirects=follow_redirects)
+            req = rm(url, headers=headers, cookies=cookies, data=data, allow_redirects=follow_redirects)
             self.raise_error_for_req(req)
         except Exception as e:
             Log.Error(u"* <network.request> -error: cannot handle '{}' >>>\n{}".format(url, e))
