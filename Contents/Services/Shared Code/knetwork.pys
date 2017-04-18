@@ -203,6 +203,7 @@ class rks(object):
 
         cl = list()
         bl = list()
+        fn = ""
         key = ""
         code = ""
         html = network.ElementFromURL(url)
@@ -226,17 +227,24 @@ class rks(object):
                 continue
             r3 = Regex(r'(%s)' %key).search(node) if key else None
             if r3:
-                for i, n in enumerate(node.split(';')):
+                rcl = list()
+                sc = len(node.split(';'))-1
+                for i, n in enumerate(reversed(node.split(';'))):
                     n = n.strip()
                     if Regex(r'(%s)' %key).search(n):
                         r4 = Regex(r'\s([^\(\=]+)\(').search(n)
                         if r4:
-                            n = "function %s(a, b) {return a + 'bl_key' + b};" %r4.group(1) + n
-                        cl.append(n.lstrip('} \n') + ';')
-                    elif (i == 0):
+                            fn = r4.group(1)
+                        rcl.append(n.lstrip('} \n') + ';')
+                    elif (i == sc):
                         r3 = Regex(r'var\s*?(\_[^\=]+)\=\[["\']([^"\']+)["\']\]').search(n)
                         if r3:
                             bl = [ String.Base64Decode(s.strip().decode('unicode_escape')) for s in r3.group(2).split(',') ]
+                    elif fn and fn in n:
+                        n = Regex(r'\_[^\+\=]+?\(.*?\)').sub(r"'bl_key'", n)
+                        n = n + "}" if not n.endswith("}") else n
+                        rcl.append(n.lstrip('} \n') + ';')
+                cl = cl + list(reversed(rcl)) if rcl else cl
 
         if key and cl and irks and [ s for s in cl if Regex(r'(%s)' %key).findall(s) ]:
             cl = ['var %s = "%s";' %(key, irks)] + cl
