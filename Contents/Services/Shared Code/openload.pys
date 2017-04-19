@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Code take from plugin IPTVPlayer: "https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
-# Modified for use with Plex Media Server by Twoure (04/07/17)
+#
+# js2py method from:
+#   plugin IPTVPlayer: https://gitlab.com/iptvplayer-for-e2/iptvplayer-for-e2/
+# direct and api method from:
+#   streamondemand: https://github.com/streamondemand/plugin.video.streamondemand/blob/master/servers/openload.py
+#
+# Edited by:    Twoure
+# Edit Date:    04/13/17
 
 import js2py
 from aadecode import aadecode
@@ -34,7 +40,7 @@ def link_from_api(fid):
     return False
 
 def direct_decode(encode, numeros):
-    Log("* <openload.direct_decode> - Trying direct method 04/07/17.")
+    Log("* <openload.direct_decode> - Trying direct method 04/13/17.")
     text_decode = ""
     try:
         rango1 = encode[:56]
@@ -64,7 +70,6 @@ def direct_decode(encode, numeros):
             for n in numeros:
                 if not n.isdigit():
                     n = int(n, 16)
-                #value4 ^= int(n)
                 value4 = ixor(value4, int(n))
             value5 = index1 * 2 + 127
             for h in range(4):
@@ -73,13 +78,13 @@ def direct_decode(encode, numeros):
                 if valorfinal != "%":
                     text_decode += valorfinal
             j += 1
-        return text_decode
+        return unicode(text_decode)
     except:
-        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 04/07/17 >>>")
+        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 04/13/17 >>>")
     return False
 
 def js2py_decode(enc, wid, jscode):
-    rn = Regex(r'_0x[0-9a-f]+\s*=\s*([0-9]{4,}|0x[0-9a-f]{4,});').findall(jscode)
+    rn = Regex(r'_[A-Fa-f0-9]+x[A-Fa-f0-9]+\s*=\s*([0-9]{4,}|0x[A-Fa-f0-9]{4,});').findall(jscode)
     try:
         jscode = String.Base64Decode(
             'dmFyIGlkID0gIiVzIiwgZGVjb2RlZCwgZG9jdW1lbnQgPSB7IGdldEVsZW1lbnRCeUlkOiB0cnVl'
