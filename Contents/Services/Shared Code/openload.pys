@@ -7,7 +7,7 @@
 #   streamondemand: https://github.com/streamondemand/plugin.video.streamondemand/blob/master/servers/openload.py
 #
 # Edited by:    Twoure
-# Edit Date:    04/13/17
+# Edit Date:    04/23/17
 
 import js2py
 from aadecode import aadecode
@@ -39,15 +39,16 @@ def link_from_api(fid):
     Log.Error("* <openload.link_from_api> - error: failed to retrieve video stream")
     return False
 
-def direct_decode(encode, numeros):
-    Log("* <openload.direct_decode> - Trying direct method 04/13/17.")
+def direct_decode(encode, numeros, ops):
+    Log("* <openload.direct_decode> - Trying direct method 04/23/17.")
     text_decode = ""
     try:
-        rango1 = encode[:56]
+        mult = int(ops[0]) * int(ops[1])
+        rango1 = encode[:mult]
         decode1 = []
         for i in range(0, len(rango1), 8):
             decode1.append(int(rango1[i:i+8], 16))
-        rango1 = encode[56:]
+        rango1 = encode[mult:]
         j = 0
         i = 0
         while i < len(rango1):
@@ -66,7 +67,7 @@ def direct_decode(encode, numeros):
                 if value3 < index1:
                     break
 
-            value4 = value2 ^ decode1[j % 7]
+            value4 = value2 ^ decode1[j % (mult/8)]
             for n in numeros:
                 if not n.isdigit():
                     n = int(n, 16)
@@ -80,11 +81,13 @@ def direct_decode(encode, numeros):
             j += 1
         return unicode(text_decode)
     except:
-        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 04/13/17 >>>")
+        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 04/23/17 >>>")
     return False
 
 def js2py_decode(enc, wid, jscode):
     rn = Regex(r'_[A-Fa-f0-9]+x[A-Fa-f0-9]+\s*=\s*([0-9]{4,}|0x[A-Fa-f0-9]{4,});').findall(jscode)
+    rops = Regex(r'\(0x(\d),0x(\d)\);').search(jscode)
+    ops = rops.groups() if rops else list()
     try:
         jscode = String.Base64Decode(
             'dmFyIGlkID0gIiVzIiwgZGVjb2RlZCwgZG9jdW1lbnQgPSB7IGdldEVsZW1lbnRCeUlkOiB0cnVl'
@@ -106,7 +109,7 @@ def js2py_decode(enc, wid, jscode):
             Log.Error("* <openload.js2py_decode> - error: js2py didn't return anything, with method 03/31/17")
     except:
         Log.Exception("* <openload.js2py_decode> - error: cannot decode with method 03/31/17 >>>")
-    return direct_decode(enc, rn)
+    return direct_decode(enc, rn, ops)
 
 def decode_hiddenUrl(hurls, aalist, page):
     wid = ''
