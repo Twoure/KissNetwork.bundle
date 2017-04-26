@@ -477,8 +477,7 @@ def DevToolsC(title=None, header=None, message=None):
             message = 'Cleaned {} Cached URL files'.format(count)
             Log(u'\n----------Removed {} Cached URL files from {}----------'.format(count, URL_CACHE_DIR))
         elif title == 'zip_cache':
-            ZipCache()
-            message = 'Copied Video Page cache to Zip file'
+            message = ZipCache()
         return DevToolsC(title=None, header=header, message=message)
 
     oc.add(DirectoryObject(key=Callback(DevToolsC, title='data_covers'),
@@ -702,11 +701,19 @@ def ZipCache():
 
     # move final zip file to channel resources directory, make easier for user to find.
     res_dir = Core.storage.join_path(Core.bundle_path, 'Contents', 'Resources')
-    Core.storage.rename(zip_filepath, Core.storage.join_path(res_dir, zip_filename))
+    try:
+        Core.storage.rename(zip_filepath, Core.storage.join_path(res_dir, zip_filename))
+        message = 'Copied Video Page cache to Zip file'
+    except IOError as e:
+        Log.Error("* ZipCache[IOError]: {}".format(e))
+        message = u"Error 'Permission denied'. Zipfile left in {}".format(zip_filepath)
+    except Exception as e:
+        Log.Error("* ZipCache[Exception]: {}".format(e))
+        message = u"Error '{}'. Zipfile left in {}".format(e, zip_filepath)
 
     # TODO add way to clean zip cache in Resources dir?
 
-    return
+    return message
 
 ####################################################################################################
 def UpgradeTemp():
