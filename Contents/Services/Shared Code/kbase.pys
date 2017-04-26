@@ -17,6 +17,7 @@ class cache(object):
     bookmark_cache_dir  = 'DataBookmarks'
     rks_cache_dir       = 'DataRKS'
     zip_cache_dir       = 'DataZip'
+    tmp_cache_dir       = 'DataTMP'
     header_dict         = 'Header_Dict'
     domain_dict         = 'Domain_Dict'
 

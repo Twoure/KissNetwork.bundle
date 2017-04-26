@@ -111,6 +111,9 @@ class storage(object):
     def Zip(self, itemname):
         return os.path.join(cache.zip_cache_dir, itemname)
 
+    def TMP(self, itemname):
+        return os.path.join(cache.tmp_cache_dir, itemname)
+
     def exists(self, itemname):
         return os.path.isfile(self.data_item_path(itemname)) and (os.stat(self.data_item_path(itemname)).st_size != 0)
 

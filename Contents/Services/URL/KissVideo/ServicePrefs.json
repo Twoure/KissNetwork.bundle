@@ -16,8 +16,15 @@
     "id": "server",
     "label": "Preferred Video Server",
     "type": "enum",
-    "values": ["KissNetwork", "Openload", "Stream", "Beta"],
+    "values": ["KissNetwork", "Openload", "Beta"],
     "default": "KissNetwork"
+  },
+  {
+    "id": "beta_res",
+    "label": "Preferred BetaVideo Resolution",
+    "type": "enum",
+    "values": ["1080p", "720p", "480p", "360p"],
+    "default": "720p"
   },
   {
     "id": "search_all",

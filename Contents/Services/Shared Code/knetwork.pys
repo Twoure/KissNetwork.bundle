@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-from __builtin__ import getattr
+from io import open
+from __builtin__ import getattr, hasattr, setattr
+from threading import Thread, Event
 from kbase import core, cache, paths
 from kdomain import domain
 from kutil import storage, util
@@ -12,7 +14,8 @@ import js2py
 
 class network(object):
     def __init__(self):
-        pass
+        self.event = Event()
+        self.stream_fp = None
 
     def raise_error_for_req(self, req):
         ourl = req.history[0].url if req.history else req.url
@@ -132,7 +135,76 @@ class network(object):
     def ElementFromURL(self, url, headers=None, follow_redirects=True):
         return HTML.ElementFromString(self.Request(url, headers, follow_redirects=follow_redirects, method='GET').text)
 
+    def setup_hash_fp(self, hash_name, fp):
+        setattr(self, hash_name, fp)
+        Log(fp)
+
+    def stream_fpath(self, hash_name):
+        return storage.data_item_path(storage.TMP(hash_name)+'.mp4')
+
+    def check_stream_fp(self, hash_name):
+        dir_path = storage.data_item_path(cache.tmp_cache_dir)
+        storage.ensure_dirs(dir_path)
+        return bool(storage.file_exists(self.stream_fpath(hash_name)))
+
+    def save_stream(self, url, hash_name, headers=None):
+        """
+        Save images and videos
+        Limit to videos for now...
+        """
+        #tt = util.get_tt(url) if util.get_tt(url) else 'Unknown'
+        filepath = self.stream_fpath(hash_name)
+
+        if self.check_stream_fp(hash_name):
+            Log.Warn("* <network.save_stream[warn]>: filepath already exists - {}".format(filepath))
+            self.setup_hash_fp(hash_name, filepath)
+            self.event.set()  # end event
+            return
+
+        res = requests.get(url, headers=headers, stream=True)
+        if (res.status_code != 200):
+            Log.Error("* <network.save_stream[error(0)]>: HTTP {} Error for {}".format(res.status_code, url))
+            self.event.set()  # end event
+            return
+
+        self.setup_hash_fp(hash_name, filepath)
+        with open(filepath, 'wb') as f:
+            for chunk in res.iter_content(chunk_size=1024):
+            #for chunk in res.iter_content():
+                if not chunk:
+                    continue  # filter out keep-alive new chunks
+                f.write(chunk)
+        Log("* Finished saving Video Stream {} into {}".format(url, filepath))
+        self.event.set()  # end event
+        return
+
+    def init_stream(self, url, headers=None, init=False):
+        hash_name = self.cache_hash(url)
+        Log(hash_name)
+        if not self.check_stream_fp(hash_name):
+            self.event.clear()
+
+        if (init and url):
+            self.event.clear()
+            kwargs = {'hash_name': hash_name, 'headers': headers, 'url': url}
+            self.que_thread = Thread(target=self.save_stream, kwargs=kwargs)
+            self.que_thread.start()
+        elif hasattr(self, 'que_thread') and self.event.is_set():
+            Log("* <network.init_stream>: threaded download complete")
+            #return (True, getattr(self, hash_name, None))
+            #return (True, storage.data_item_path(storage.TMP(hash_name)+'.mp4'))
+            return (True, self.stream_fpath(hash_name))
+        elif hasattr(self, 'que_thread') and self.que_thread.is_alive():
+            Log("* <network.init_stream>: still downloading stream")
+        elif hasattr(self, 'que_thread') and not self.que_thread.is_alive():
+            Log.Critical("* <network.init_stream[error(1)]>: thead failed to download stream. Please contact Twoure with issue.")
+        else:
+            Log("* <network.init_stream>: skip downloading a stream")
+            #return (True, getattr(self, hash_name, None))
+        return (False, self.stream_fpath(hash_name))
+
 network = network()
+
 
 class rks(object):
     def __init__(self):
@@ -182,7 +254,7 @@ class rks(object):
         if irks:
             return irks
         elif ttl == 'anime':
-            return network.rks_cache(url, String.Base64Decode("X25uc2RmYjIzbm1hc2RsMDQ3c21f")[1:-1])
+            return network.rks_cache(url, String.Base64Decode("X25oYXNhc2RiYXNkdGVuZTcyMzBhc2Jf")[1:-1])
         elif ttl == 'manga':
             return network.rks_cache(url, String.Base64Decode("X21zaHNkZjgzMm5zZGJhc2gyMGFzZG1f")[1:-1])
         try:

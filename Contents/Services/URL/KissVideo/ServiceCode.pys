@@ -84,14 +84,26 @@ def MetadataObjectForURL(url):
             )
 
 ########################################################################################
+@deferred
 def MediaObjectsForURL(url):
 
     Log.Debug('*' * 80)
     fmt_list = [('1080', 'm37', 5000), ('720', 'm22', 2500), ('480', 'm59', 1125), ('360', 'm18', 650)]
     url = KCore.util.correct_url(url)
 
-    # create media objects for each video quality
-    if Prefs['force_transcode']:
+    if Prefs['server'] == 'Beta':
+        Log.Debug("* Testing Beta Server")
+        return [
+            MediaObject(
+                audio_channels=2,
+                video_resolution=res,
+                optimized_for_streaming=False,
+                parts=[
+                    PartObject(**PlayVideo(url, m))
+                    ],
+                ) for res, m, b in fmt_list if Prefs['beta_res'][:-1] == res
+            ]
+    elif Prefs['force_transcode']:
         Log.Debug('* Force Transcoding ON')
         return [
             MediaObject(
@@ -151,6 +163,7 @@ def PlayVideo(url, m, **kwargs):
     req_url = url + ('&s={}'.format(Prefs['server'].lower()) if Prefs['server'] != 'KissNetwork' else '')
     vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
+    # TODO remove stream.moe and add Beta once Beta finished
     if (not vurl) and (Prefs['server'] == 'KissNetwork'):
         Log.Warn("* GoogleVideo URL offline, falling back to Openload")
         req_url = url + '&s=openload'
@@ -184,9 +197,28 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('*' * 80)
 
     if vurl:
-        if Prefs['server'] == 'Beta':
+        # TODO Fixed old open requests in Beta
+        # TODO add cache time for beta cache
+        if (Prefs['server'] == 'Beta') and (False):
             http_headers = {'User-Agent': KCore.core.user_agent, 'Referer': req_url}
-            return IndirectResponse(VideoClipObject, key=vurl, http_headers=http_headers)
+            #t1 = KCore.network.init_stream(vurl)
+            t1 = KCore.network.init_stream(url=vurl, headers=http_headers, init=True)
+            Log("* beta.test[1] = {}".format(t1))
+            if not t1[0]:
+                KCore.network.init_stream(url=vurl, headers=http_headers, init=True)
+            t2 = KCore.network.init_stream(vurl)
+            Log("* beta.test[2] = {}".format(t2))
+            if not t2[1]:
+                raise Ex.MediaNotAvailable
+            return {'key': t2[1], 'file': t2[1]}
+            #return Redirect(t2[1])
+            #return IndirectResponse(VideoClipObject, key=t2[0])
+            #return {'key': t2[1], 'file': t2[1]}
+
+            #return IndirectResponse(VideoClipObject, key=vurl, http_headers=http_headers)
+            #test_file = KCore.storage.data_item_path(KCore.storage.join_path('DataTMP', 'test.mkv'))
+            #Log("* test_file location = {}".format(test_file))
+            #return IndirectResponse(VideoClipObject, key=test_file)
         return IndirectResponse(VideoClipObject, key=vurl)
 
     raise Ex.MediaNotAvailable
