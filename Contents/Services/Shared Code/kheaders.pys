@@ -88,8 +88,8 @@ class KissHeaders(object):
             else:
                 expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(days=364)))
                 Log.Warn(u'* <KissHeaders.set_header> -error: Cannot calculate expire time for {}.'.format(base_url))
-                #if 'kim' in base_url:
-                    #expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(hours=1)))
+                if 'kim' in base_url:
+                    expire = int(Datetime.TimestampFromDatetime(Datetime.Now() + Datetime.Delta(hours=1)))
 
             return {
                 type_title: {
