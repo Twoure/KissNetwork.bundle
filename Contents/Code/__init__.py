@@ -664,7 +664,7 @@ def DirectoryList(page, pname, category, base_url, type_title, art):
         listing = html.xpath('//div[@class="item"]')
 
     drama_test = type_title == 'Drama' and ('Search' not in pname)
-    drama_test = (type_title == 'Cartoon' and ('Search' not in pname)) if not drama_test else drama_test
+    drama_test = (type_title == 'Cartoon') if not drama_test else drama_test
     listing_count = len(listing)
     allowed_count = 200
     Logger('* {} items in Directory List.'.format(listing_count), kind='Info')
@@ -1337,7 +1337,7 @@ def Search(query=''):
         art = 'art-{}.jpg'.format(type_title.lower())
 
         html = KCore.network.ElementFromURL(search_url_filled)
-        if html.xpath('//table[@class="listing"]'):
+        if html.xpath('//table[@class="listing"]') or html.xpath('//div[@class="list-%s"]' %type_title.lower()):
             return SearchPage(type_title=type_title, search_url=search_url_filled, art=art)
     else:
         Logger('*' * 80)
@@ -1356,7 +1356,7 @@ def Search(query=''):
                 listing = True
                 if Prefs['search_all']:
                     html = KCore.network.ElementFromURL(search_url_filled)
-                    listing = bool(html.xpath('//table[@class="listing"]'))
+                    listing = bool(html.xpath('//table[@class="listing"]') or html.xpath('//div[@class="list-%s"]' %type_title.lower()))
 
                 if listing:
                     oc.add(DirectoryObject(
@@ -1377,7 +1377,7 @@ def Search(query=''):
 @route(PREFIX + '/searchpage')
 def SearchPage(type_title, search_url, art):
     """
-    Retrun searches for each kiss() page
+    Return searches for each kiss() page
     The results can return the Item itself via a url redirect.
     Check for "exact" matches and send them to ItemPage
     If normal seach result then send to DirectoryList
@@ -1388,7 +1388,7 @@ def SearchPage(type_title, search_url, art):
     cover_file = None
 
     # Check for results if none then give a pop up window saying so
-    if html.xpath('//table[@class="listing"]'):
+    if html.xpath('//table[@class="listing"]') or html.xpath('//div[@class="list-%s"]' %type_title.lower()):
         # Test for "exact" match, if True then send to 'ItemPage'
         node = html.xpath('//div[@id="headnav"]/script/text()')[0]
         search_match = Regex(r"var\ path\ =\ ('Search')").search(node)
@@ -1435,7 +1435,7 @@ def SearchPage(type_title, search_url, art):
             return DirectoryList(1, 'Search', query, search_url, type_title, art)
     # No results found :( keep trying
     else:
-        Logger('* Search returned no results.', kind='Warn')
+        Logger('* SearchPage returned no results.', kind='Warn')
         Logger('*' * 80)
         query = search_url.rsplit('=')[-1]
         return MC.message_container('Search',
