@@ -21,7 +21,6 @@ class network(object):
         ourl = req.history[0].url if req.history else req.url
 
         http_error_msg = ''
-        s = ''
         if isinstance(req.reason, requests.compat.bytes):
             try:
                 reason = req.reason.decode('utf-8')
@@ -30,7 +29,7 @@ class network(object):
         else:
             reason = req.reason
 
-        if Regex(r'(/recaptcha)').search(req.text):
+        if Regex(r'(/recaptcha)').search(req.text) or ('/Special/AreYouHuman/' in req.url):
             http_error_msg = u'%s Server Error: %s for url: %s' % (req.status_code, 'Captcha Present!', ourl)
         elif util.is_kiss_url(ourl) and req.history:
             tt = util.get_tt(ourl)
@@ -53,8 +52,8 @@ class network(object):
         if http_error_msg:
             raise requests.exceptions.HTTPError(http_error_msg, response=self)
 
-    def HTTPRequest(self, url, headers=None, data=None, follow_redirects=True, method='GET'):
-        """not sure how to do this part yet"""
+    def HTTPRequest(self, url, headers=None, data=None, follow_redirects=True, method='GET', count=0):
+        """handle requests with error correction"""
 
         if util.is_kiss_url(url):
             if not headers:
@@ -66,6 +65,11 @@ class network(object):
         rm = getattr(r, method.lower())
         try:
             req = rm(url, headers=headers, cookies=cookies, data=data, allow_redirects=follow_redirects)
+            if (count < 1) and ("Please wait 5 seconds..." in req.text):
+                count += 1
+                Log.Warn("* <network.HTTPRequest[WARN]>: detected cf_page, updating cookies, then trying again.")
+                headers = Headers.get_headers_for_url(url, True)
+                return self.HTTPRequest(url, headers, data, follow_redirects, method, count)
             self.raise_error_for_req(req)
         except Exception as e:
             Log.Error(u"* <network.request> -error: cannot handle '{}' >>>\n{}".format(url, e))
