@@ -329,8 +329,8 @@ class rks(object):
         elif ('$' in code):
             Log.Error(u"* <rks.get_rks> - error: cannot find bl_key")
 
-        Log.Error(u"* <rks.get_rks> - error: cannot process final rks >>>\n{}".format(code))
-        return False
+        Log.Warn(u"* <rks.get_rks> - error: cannot find final rks. Returning initial rks instead. >>>\n{}".format(code))
+        return irks
 
     def Decode(self, f, ttl, key):
         if ttl == 'anime':
