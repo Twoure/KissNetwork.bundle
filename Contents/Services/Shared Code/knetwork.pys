@@ -274,7 +274,6 @@ class rks(object):
         irks = self.get_base_rks(ttl, url, headers, data)
 
         cl = list()
-        bl = list()
         fn = ""
         key = ""
         code = ""
@@ -300,6 +299,7 @@ class rks(object):
             r3 = Regex(r'(%s)' %key).search(node) if key else None
             if r3:
                 rcl = list()
+                bl = list()
                 sc = len(node.split(';'))-1
                 for i, n in enumerate(reversed(node.split(';'))):
                     n = n.strip()
@@ -316,6 +316,7 @@ class rks(object):
                         n = Regex(r'\_[^\+\=]+?\(.*?\)').sub(r"'bl_key'", n)
                         n = n + "}" if not n.endswith("}") else n
                         rcl.append(n.lstrip('} \n') + ';')
+                rcl = [ s.replace('bl_key', (bl[0] if bl else '$')) for s in rcl ]
                 cl = cl + list(reversed(rcl)) if rcl else cl
 
         if key and cl and irks and [ s for s in cl if Regex(r'(%s)' %key).findall(s) ]:
@@ -323,7 +324,6 @@ class rks(object):
         if key and cl:
             code = ''.join(cl + [' %s' %key]) if cl else ''
 
-        code = code.replace('bl_key', (bl[0] if bl else '$'))
         if code and ('$' not in code):
             return js2py.eval_js(code)
         elif ('$' in code):
