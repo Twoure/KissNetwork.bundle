@@ -102,10 +102,13 @@ def Start():
     # setup auto-managed bookmark backups
     BookmarkTools.auto_backup()
 
-    # Clear Old Cached URLs, RKS, and Cover Thumbs
-    Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)
-    Thread.Create(ClearCache, itemname=KCore.cache.rks_cache_dir, timeout=TIMEOUT)
-    Thread.Create(ClearCache, itemname=THUMB_CACHE_DIR, timeout=Datetime.Delta(weeks=4))
+    # Clear Old Caches:
+    #   URLs, RKS, Zip, Archives, and Cover Thumbs
+    Thread.Create(ClearCache, itemname=URL_CACHE_DIR, timeout=TIMEOUT)  # urls
+    Thread.Create(ClearCache, itemname=KCore.cache.rks_cache_dir, timeout=TIMEOUT)  # rks
+    Thread.Create(ClearCache, itemname=KCore.cache.zip_cache_dir, timeout=TIMEOUT)  # zip
+    Thread.Create(ClearCache, itemname="Archives", timeout=TIMEOUT)  # archives (tmp for zip)
+    Thread.Create(ClearCache, itemname=THUMB_CACHE_DIR, timeout=Datetime.Delta(weeks=4))  # thumbs
 
     # remove/clear old style of caching prior to v1.2.7
     if Dict['current_ch_version']:
