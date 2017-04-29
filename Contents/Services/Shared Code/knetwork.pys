@@ -300,6 +300,7 @@ class rks(object):
             if r3:
                 rcl = list()
                 bl = list()
+                blr = False
                 sc = len(node.split(';'))-1
                 for i, n in enumerate(reversed(node.split(';'))):
                     n = n.strip()
@@ -307,7 +308,8 @@ class rks(object):
                         r4 = Regex(r'\s([^\(\=]+)\(').search(n)
                         if r4:
                             fn = r4.group(1)
-                        rcl.append(n.lstrip('} \n') + ';')
+                        s = n.lstrip('} \n')
+                        rcl.append(s+';' if not s.endswith(';') else s)
                     elif (i == sc):
                         r3 = Regex(r'var\s*?(\_[^\=]+)\=\[["\']([^"\']+)["\']\]').search(n)
                         if r3:
@@ -315,7 +317,12 @@ class rks(object):
                     elif fn and fn in n:
                         n = Regex(r'\_[^\+\=]+?\(.*?\)').sub(r"'bl_key'", n)
                         n = n + "}" if not n.endswith("}") else n
-                        rcl.append(n.lstrip('} \n') + ';')
+                        s = n.lstrip('} \n')
+                        rcl.append(s+';' if not s.endswith(';') else s)
+                        blr = True
+                    elif not blr:
+                        s = n.lstrip('} \n')
+                        rcl.append(s+';' if not s.endswith(';') else s)
                 rcl = [ s.replace('bl_key', (bl[0] if bl else '$')) for s in rcl ]
                 cl = cl + list(reversed(rcl)) if rcl else cl
 
