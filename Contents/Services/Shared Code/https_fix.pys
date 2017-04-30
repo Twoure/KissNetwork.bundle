@@ -1,0 +1,244 @@
+#!/usr/bin/env python
+#
+# Twoure
+# 02/09/2017
+# https://github.com/Twoure
+#
+# Adapted from Coder Alpha
+# https://github.com/coder-alpha/FMoviesPlus.bundle/blob/0d639fc92446d5cb604261507067853767c40669/Contents/Code/fmovies.py
+#
+# Adapted from lambda's Kodi plugin
+# https://github.com/lambda81/script.module.lamlib/blob/476efc70f7f4c73f4942f6f5f4392cfa3ff9f62b/lib/lamlib/client.py
+# and modified for use with Plex Media Server
+
+import urllib2
+import urlparse
+import sys, cookielib
+
+####################################################################################################
+def Request(url, close=True, redirect=True, followredirect=False, error=False, proxy=None,
+    post=None, headers=None, mobile=False, limit=None, referer=None, cookie=None, output='',
+    timeout='30', httpsskip=False):
+    try:
+
+        handlers = []
+        redirectURL = url
+
+        if (proxy != None):
+            handlers += [urllib2.ProxyHandler({'http':'%s' % (proxy)}), urllib2.HTTPHandler]
+            opener = urllib2.build_opener(*handlers)
+            opener = urllib2.install_opener(opener)
+
+        if (output == 'cookie2') or (output == 'cookie') or (output == 'extended') or (close != True):
+            cookies = cookielib.LWPCookieJar()
+            if httpsskip:
+                handlers += [urllib2.HTTPHandler(), urllib2.HTTPCookieProcessor(cookies)]
+            else:
+                handlers += [urllib2.HTTPHandler(), urllib2.HTTPSHandler(), urllib2.HTTPCookieProcessor(cookies)]
+            opener = urllib2.build_opener(*handlers)
+            opener = urllib2.install_opener(opener)
+
+        try:
+            if sys.version_info < (2, 7, 9):
+                version = '.'.join([str(i) for i in list(sys.version_info)[:3]])
+                Log.Error(u"* <HTTPS.Request> Error: Bundle Python v{} is too Old.".format(version))
+                raise Exception()
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            handlers += [urllib2.HTTPSHandler(context=ssl_context)]
+            opener = urllib2.build_opener(*handlers)
+            opener = urllib2.install_opener(opener)
+        except:
+            Log.Exception(u"* <HTTPS.Request> Error: >>>")
+            pass
+
+        try:
+            headers.update(headers)
+        except:
+            headers = {}
+
+        if ('User-Agent' not in headers) and (mobile != True):
+            headers['User-Agent'] = randomagent()
+        else:
+            headers['User-Agent'] = 'Apple-iPhone/701.341'
+
+        if ('Referer' not in headers) and (referer == None):
+            headers['Referer'] = '%s://%s/' % (urlparse.urlparse(url).scheme, urlparse.urlparse(url).netloc)
+        else:
+            headers['Referer'] = referer
+
+        if 'Accept-Language' not in headers:
+            headers['Accept-Language'] = 'en-US'
+        if cookie and ('Cookie' not in headers):
+            headers['Cookie'] = cookie
+
+        if (redirect == False):
+            class NoRedirection(urllib2.HTTPErrorProcessor):
+                def http_response(self, request, response):
+                    return response
+
+            opener = urllib2.build_opener(NoRedirection)
+            opener = urllib2.install_opener(opener)
+
+            try:
+                del headers['Referer']
+            except:
+                pass
+
+        redirectHandler = None
+        urlList = []
+        if followredirect:
+            class HTTPRedirectHandler(urllib2.HTTPRedirectHandler):
+                def redirect_request(self, req, fp, code, msg, headers, newurl):
+                    newreq = urllib2.HTTPRedirectHandler.redirect_request(self,
+                        req, fp, code, msg, headers, newurl)
+                    if newreq is not None:
+                        self.redirections.append(newreq.get_full_url())
+                    return newreq
+
+            redirectHandler = HTTPRedirectHandler()
+            redirectHandler.max_redirections = 10
+            redirectHandler.redirections = [url]
+
+            opener = urllib2.build_opener(redirectHandler)
+            opener = urllib2.install_opener(opener)
+
+        request = urllib2.Request(url, data=post, headers=headers)
+
+        try:
+            response = urllib2.urlopen(request, timeout=int(timeout))
+            if followredirect:
+                for redURL in redirectHandler.redirections:
+                    urlList.append(redURL) # make a list, might be useful
+                    redirectURL = redURL
+
+        except urllib2.HTTPError as response:
+            if (response.code == 307):
+                cookie = ''
+                try:
+                    cookie = '; '.join(['%s=%s' % (i.name, i.value) for i in cookies])
+                except:
+                    pass
+                headers['Cookie'] = cookie
+                request = urllib2.Request(response.headers['Location'], data=post, headers=headers)
+                response = urllib2.urlopen(request, timeout=int(timeout))
+
+            elif (error == False):
+                Log.Error("Response code",response.code, response.msg,url)
+                return
+
+        if output == 'cookie':
+            try:
+                result = '; '.join(['%s=%s' % (i.name, i.value) for i in cookies])
+            except:
+                pass
+            try:
+                result = cf
+            except:
+                pass
+
+        elif output == 'response':
+            if limit == '0':
+                result = (str(response.code), response.read(224 * 1024))
+            elif (limit != None):
+                result = (str(response.code), response.read(int(limit) * 1024))
+            else:
+                result = (str(response.code), response.read(5242880))
+
+        elif output == 'responsecodeext':
+            result = (str(response.code),redirectURL)
+
+        elif output == 'responsecode':
+            result = str(response.code)
+
+        elif output == 'chunk':
+            try:
+                content = int(response.headers['Content-Length'])
+            except:
+                content = (2049 * 1024)
+            if content < (2048 * 1024):
+                return
+            result = response.read(16 * 1024)
+            if (close == True):
+                response.close()
+            return result
+
+        elif output == 'extended':
+            try:
+                cookie = '; '.join(['%s=%s' % (i.name, i.value) for i in cookies])
+            except:
+                pass
+            try:
+                cookie = cf
+            except:
+                pass
+            content = response.headers
+            result = response.read(5242880)
+            return (result, headers, content, cookie)
+
+        elif output == 'geturl':
+            result = response.geturl()
+
+        elif output == 'headers':
+            content = response.headers
+            return content
+
+        else:
+            if limit == '0':
+                result = response.read(224 * 1024)
+            elif not limit == None:
+                result = response.read(int(limit) * 1024)
+            else:
+                result = response.read(5242880)
+
+        if (close == True):
+            response.close()
+
+        return result
+    except:
+        Log.Exception(u"* <HTTPS.Request> Error: Cannot handle {} >>>".format(url))
+    return
+
+####################################################################################################
+def randomagent():
+    br_vers = [
+        ['%s.0' % i for i in xrange(18, 43)],
+        ['37.0.2062.103', '37.0.2062.120', '37.0.2062.124', '38.0.2125.101', '38.0.2125.104',
+            '38.0.2125.111', '39.0.2171.71', '39.0.2171.95', '39.0.2171.99', '40.0.2214.93',
+            '40.0.2214.111', '40.0.2214.115', '42.0.2311.90', '42.0.2311.135', '42.0.2311.152',
+            '43.0.2357.81', '43.0.2357.124', '44.0.2403.155', '44.0.2403.157', '45.0.2454.101',
+            '45.0.2454.85', '46.0.2490.71', '46.0.2490.80', '46.0.2490.86', '47.0.2526.73',
+            '47.0.2526.80'], ['11.0']
+        ]
+    win_vers = [
+        'Windows NT 10.0', 'Windows NT 7.0', 'Windows NT 6.3', 'Windows NT 6.2',
+        'Windows NT 6.1', 'Windows NT 6.0', 'Windows NT 5.1', 'Windows NT 5.0'
+        ]
+    features = ['; WOW64', '; Win64; IA64', '; Win64; x64', '']
+    rand_uas = [
+        'Mozilla/5.0 ({win_ver}{feature}; rv:{br_ver}) Gecko/20100101 Firefox/{br_ver}',
+        'Mozilla/5.0 ({win_ver}{feature}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{br_ver} Safari/537.36',
+        'Mozilla/5.0 ({win_ver}{feature}; Trident/7.0; rv:{br_ver}) like Gecko'
+        ]
+    b = Util.RandomItemFromList(br_vers)
+    w = Util.RandomItemFromList(win_vers)
+    f = Util.RandomItemFromList(features)
+    u = Util.RandomItemFromList(rand_uas)
+    return Util.RandomItemFromList(rand_uas).format(win_ver=w, feature=f, br_ver=b)
+
+####################################################################################################
+def ElementFromURL(url, close=True, redirect=True, followredirect=False, error=False, proxy=None,
+    post=None, headers=None, mobile=False, limit=None, referer=None, cookie=None, output='',
+    timeout='30', httpsskip=False):
+    try:
+        return HTML.ElementFromString(
+            Request(
+                url, close, redirect, followredirect, error, proxy, post, headers, mobile,
+                limit, referer, cookie, output, timeout, httpsskip
+                )
+        )
+    except:
+        Log.Exception(u"* <HTTPS.ElementFromURL> Error: Cannot handle {} >>".format(url))
+    return

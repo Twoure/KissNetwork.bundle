@@ -7,17 +7,21 @@ import kcore as KCore
 import metadata as Metadata
 from kheaders import Headers
 from openload import OpenloadStreamFromURL
+import https_fix as HTTPS
 from io import open
 import requests
 import shutil
 
-RE_URL_OL = Regex(r'src\=["\'](https?://o(?:pen)?load.+?)["\']')
+RE_URL_OL = Regex(r'src\=["\'](https?://(?:www\.)?o(?:pen)?load.+?)["\']')
 RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
+RE_URL_RV = Regex(r'src\=["\'](https?://(?:www\.)?rapidvideo\.[^"\']+?)["\']')
+RE_RV_NORM = Regex(r'(https?://(?:www\.)?\w+\.\w+)/e(?:mbed)?/(\w+)')
 RE_ENC_TEST = Regex(r'/Scripts/((?:kissenc|oran|subo)(?:\.min)?\.j[^"\']+|vr\.j[^"\']+)')
 RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
 RE_WINDOW2 = Regex(r'(.+window[^\=]+[^\;]+)')
 RE_ITAG = Regex(r'itag\=(\d+)')
 RE_ATOB = Regex(r'contents *?\= *?atob\(["\']([^"\']+)')
+RE_SOURCES = Regex(r'(?i)["\']?sources["\']? *?(?:\:|\=) *?(\[.*?\{[^\]]+\}.*?\])')
 
 ########################################################################################
 def MetadataObjectForURL(url):
@@ -147,36 +151,36 @@ def PlayVideo(url, m, **kwargs):
     Video URL fallback system.
     Order as follows:
     * Preferred Server = KissNetwork
-        KissNetwork --> Openload --> Stream.moe
-    * Preferred Server = Openload
-        Openload --> Stream.moe --> KissNetwork
-    * Preferred Server = Stream
-        Stream.moe --> KissNetwork
+        KissNetwork --> Beta --> Openload --> RapidVideo
     """
 
     Log.Debug('*' * 80)
     Log.Debug('* Client.Product     = {}'.format(Client.Product))
     Log.Debug('* Client.Platform    = {}'.format(Client.Platform))
     Log.Debug('* Client.Version     = {}'.format(Client.Version))
-    Log.Debug('* Channel.Server     = {}'.format(Prefs['server']))
+    Log.Debug('* Channel.Server1    = {}'.format(Prefs['server']))
+    Log.Debug('* Channel.Server2    = {}'.format(Prefs['server2']))
 
     req_url = url + ('&s={}'.format(Prefs['server'].lower()) if Prefs['server'] != 'KissNetwork' else '')
     vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
-    # TODO remove stream.moe and add Beta once Beta finished
-    if (not vurl) and (Prefs['server'] == 'KissNetwork'):
-        Log.Warn("* GoogleVideo URL offline, falling back to Openload")
-        req_url = url + '&s=openload'
+    sl = set(['KissNetwork', 'Beta', 'RapidVideo', 'Openload'])
+    sp = set([Prefs['server'], Prefs['server2']])
+    slf = sl - sp
+    cs = Prefs['server']
+
+    if (not vurl):
+        cs = Prefs['server2']
+        Log.Warn("* {} URL offline, falling back to {}".format(Prefs['server'], Prefs['server2']))
+        req_url = url + '&s={}'.format(Prefs['server2'].lower())
         vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
-    if (not vurl) and (req_url.endswith('openload')):
-        Log.Warn("* Openload URL offline, falling back to Stream.moe")
-        req_url = url + '&s=stream'
-        vurl = get_video_url(url, m, KCore.network.Request(req_url))
-
-    if (not vurl) and (req_url.endswith('stream')) and (Prefs['server'] != 'KissNetwork'):
-        Log.Warn("* Stream.moe URL offline, falling back to KissNetwork")
-        vurl = get_video_url(url, m, KCore.network.Request(url))
+    for s in slf:
+        if (not vurl):
+            Log.Warn("* {} URL offline, falling back to {}".format(cs, s))
+            cs = s
+            req_url = url + '&s={}'.format(cs.lower())
+            vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
     Log.Debug('* PlayVideo URL      = {}'.format(vurl))
 
@@ -226,15 +230,27 @@ def PlayVideo(url, m, **kwargs):
 ########################################################################################
 def get_video_url(url, m, resp):
     ol = RE_URL_OL.search(resp.text)
-    st = RE_URL_SM.search(resp.text)
-    if ol:
-        Log.Debug('* OpenLoad URL       = {}'.format(ol.group(1)))
-        vurl = get_openload_url(ol.group(1))
-    elif st:
-        Log.Debug('* StreamMoe URL      = {}'.format(st.group(1)))
-        vurl = get_streammoe_url(st.group(1))
+    rv = RE_URL_RV.search(resp.text)
+    sd = {'Openload': ol, 'RapidVideo': rv}
+
+    r = Prefs['server2'] if Prefs['server2'] in sd.keys() else 'Openload'
+    r1 = (Prefs['server2'], sd[r])
+    if set(sd.keys()) & set([ Prefs['server2'] ]):
+        n2 = list( set(sd.keys()) - set([ Prefs['server2'] ]) )[0]
     else:
-        vurl = get_googlevideo_url(url, m, resp)
+        n2 = 'RapidVideo'
+    r2 = (n2, sd[n2])
+
+    vurl = None
+    for n, ir in [r1, r2, ('GoogleVideo', 0)]:
+        Log("* Testing for {} Video URL in {}".format(n, url))
+        if ir:
+            iurl = ir.group(1)
+            Log.Debug('* {} URL             = {}'.format(n, iurl))
+            vurl = get_openload_url(iurl) if n == 'Openload' else get_rapidvideo_url(iurl, m)
+        elif (ir == 0):
+            vurl = get_googlevideo_url(url, m, resp)
+
     return vurl
 
 ####################################################################################################
@@ -367,6 +383,54 @@ def get_streammoe_url(moe_url):
             return vurl[0]
 
     return False
+
+####################################################################################################
+def get_rapidvideo_url(url, m):
+    """Get RapidVideo.com URLs"""
+
+    page = None
+    try:
+        page = HTTP.Request(url, cacheTime=CACHE_1MINUTE).content
+    except Ex.URLError, e:
+        if 'SSLError' in str(e.args):
+            try:
+                page = HTTPS.Request(url)
+            except:
+                Log.Exception("* RapidVideo Error[0]: for '{}' >>>".format(url))
+    except:
+        Log.Exception("* RapidVideo Error[1]: for '{}' >>>".format(url))
+
+    if not page:
+        return False
+
+    rs = RE_SOURCES.search(page)
+    if not rs:
+        return False
+
+    s = rs.group(1).replace("'", '"')
+    sources = list()
+    for src in JSON.ObjectFromString(s):
+        src['res'] = int(src['res'][:-1] if src['res'].lower().endswith('p') else src['res'])
+        if src['file'].startswith('/'):
+            src['file'] = RE_RV_NORM.search(url).group(1) + src['file']
+        sources.append({'file': src['file'], 'res': src['res']})
+
+    fmt_dict = {'37': 1080, '22': 720, '59': 480, '18': 360}
+    Log.Debug('* pre resolution selected = {}({})'.format(m, fmt_dict[m[1:]]))
+    res = 0
+    vurl = None
+    for item in Util.ListSortedByKey(sources, 'res'):
+        vurl = item['file']
+        res = item['res']
+        if res == fmt_dict[m[1:]]:
+            break
+        elif res > fmt_dict[m[1:]]:
+            break
+    Log.Debug('* Selecting {}p stream'.format(res))
+
+    if not vurl:
+        return False
+    return vurl
 
 ####################################################################################################
 def get_url_redirect_v2(input_url, http_headers=None):

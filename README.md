@@ -17,6 +17,7 @@ KissNetwork
     - [Sort List by...](#sort-list-by)
     - [View Anime, Cartoon, Comic, Drama, Manga](#view-anime-cartoon-comic-drama-manga)
     - [Preferred Video Server](#preferred-video-server)
+    - [Fallback Video Server](#fallback-video-server)
     - [Search all sites together](#search-all-sites-together)
     - [Hide "Clear Bookmarks"](#hide-clear-bookmarks)
     - [Use "Custom Bookmarks Backup Path"](#use-custom-bookmarks-backup-path)
@@ -119,9 +120,13 @@ This plugin creates a new channel within [Plex Media Server](https://plex.tv/) (
 
 ##### Preferred Video Server
 - Select a Default Video Server from the drop-down list
-- Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), ~~[Stream](https://stream.moe/)~~
+- Currently supported servers: KissNetwork(_default_), [Openload](https://openload.co/), [RapidVideo](https://www.rapidvideo.com/)
   - Default behavior: Use GoogleVideo links when available, otherwise try using the provided links
   - If a server other than _KissNetwork_ is selected: Use selected video server, and default to GoogleVideo links when selected server fails.
+
+##### Fallback Video Server
+- Select a Default Fallback Video Server from the drop-down list
+- When `Preferred` server is offline, then the `Fallback` will be used
 
 ##### Search all sites together
 - **Enabled:** Check all sites before results are returned.  This will removed categories with empty results but will slow down search when sites preform a header refresh.
