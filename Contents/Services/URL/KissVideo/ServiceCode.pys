@@ -233,25 +233,24 @@ def get_video_url(url, m, resp):
     rv = RE_URL_RV.search(resp.text)
     sd = {'Openload': ol, 'RapidVideo': rv}
 
-    r = Prefs['server2'] if Prefs['server2'] in sd.keys() else 'Openload'
-    r1 = (Prefs['server2'], sd[r])
-    if set(sd.keys()) & set([ Prefs['server2'] ]):
-        n2 = list( set(sd.keys()) - set([ Prefs['server2'] ]) )[0]
-    else:
-        n2 = 'RapidVideo'
-    r2 = (n2, sd[n2])
+    r = Prefs['server2'] if Prefs['server2'] in sd.keys() else ('Openload' if Prefs['server'] != 'Openload' else 'RapidVideo')
+    r1 = (r, sd[r])
+    rr = 'Openload' if r1[0] == 'RapidVideo' else 'RapidVideo'
+    r2 = (rr, sd[rr])
 
-    vurl = None
     for n, ir in [r1, r2, ('GoogleVideo', 0)]:
         Log("* Testing for {} Video URL in {}".format(n, url))
         if ir:
             iurl = ir.group(1)
             Log.Debug('* {} URL             = {}'.format(n, iurl))
-            vurl = get_openload_url(iurl) if n == 'Openload' else get_rapidvideo_url(iurl, m)
+            if (n == 'Openload'):
+                return get_openload_url(iurl)
+            elif (n == 'RapidVideo'):
+                return get_rapidvideo_url(iurl, m)
         elif (ir == 0):
-            vurl = get_googlevideo_url(url, m, resp)
+            return get_googlevideo_url(url, m, resp)
 
-    return vurl
+    return False
 
 ####################################################################################################
 def get_googlevideo_url(url, m, resp):
