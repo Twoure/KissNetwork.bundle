@@ -7,7 +7,7 @@
 #   streamondemand: https://github.com/streamondemand/plugin.video.streamondemand/blob/master/servers/openload.py
 #
 # Edited by:    Twoure
-# Edit Date:    04/23/17
+# Edit Date:    05/17/17
 
 import js2py
 from aadecode import aadecode
@@ -40,7 +40,7 @@ def link_from_api(fid):
     return False
 
 def direct_decode(encode, numeros, ops):
-    Log("* <openload.direct_decode> - Trying direct method 04/23/17.")
+    Log("* <openload.direct_decode> - Trying direct method 05/17/17.")
     text_decode = ""
     try:
         mult = int(ops[0]) * int(ops[1])
@@ -81,11 +81,11 @@ def direct_decode(encode, numeros, ops):
             j += 1
         return unicode(text_decode)
     except:
-        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 04/23/17 >>>")
+        Log.Exception("* <openload.direct_decode> - error[1]: cannot directly decode with method 05/17/17 >>>")
     return False
 
 def js2py_decode(enc, wid, jscode):
-    rn = Regex(r'_[A-Fa-f0-9]+x[A-Fa-f0-9]+\s*=\s*([0-9]{4,}|0x[A-Fa-f0-9]{4,});').findall(jscode)
+    rn = Regex(r'_[A-f0-9]+x[A-f0-9]+\s*(?:=|\^)\s*([0-9]{4,}|0x[A-f0-9]{4,})').findall(jscode)
     rops = Regex(r'\(0x(\d),0x(\d)\);').search(jscode)
     ops = rops.groups() if rops else list()
     try:
