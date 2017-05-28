@@ -13,8 +13,8 @@ import requests
 import shutil
 
 RE_URL_OL = Regex(r'src\=["\'](https?://(?:www\.)?o(?:pen)?load.+?)["\']')
-RE_URL_SM = Regex(r'src\=["\'](https?://stream\.moe/embed.+?)["\']')
-RE_URL_RV = Regex(r'src\=["\'](https?://(?:www\.)?rapidvideo\.[^"\']+?)["\']')
+#RE_URL_RV = Regex(r'src\=["\'](https?://(?:www\.)?rapidvideo\.[^"\']+?)["\']')
+RE_URL_RV = Regex(r'(?:src\=["\']|\||^)(https?://(?:www\.)?rapidvideo\.[^"\'\|]+)["\']?')
 RE_RV_NORM = Regex(r'(https?://(?:www\.)?\w+\.\w+)/e(?:mbed)?/(\w+)')
 RE_ENC_TEST = Regex(r'/Scripts/((?:kissenc|oran|subo)(?:\.min)?\.j[^"\']+|vr\.j[^"\']+)')
 RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
@@ -229,6 +229,8 @@ def PlayVideo(url, m, **kwargs):
 
 ########################################################################################
 def get_video_url(url, m, resp):
+    if not resp:
+        return False
     ol = RE_URL_OL.search(resp.text)
     rv = RE_URL_RV.search(resp.text)
     sd = {'Openload': ol, 'RapidVideo': rv}
@@ -360,27 +362,6 @@ def get_openload_url(url):
         return rourl
 
     Log.Error(u"* OpenloadStreamFromURL: cannot parse for stream '{}'".format(url))
-    return False
-
-####################################################################################################
-def get_streammoe_url(moe_url):
-    """Get Stream.moe URLs"""
-
-    try:
-        page = HTTP.Request(moe_url, cacheTime=CACHE_1MINUTE).content
-    except:
-        Log.Exception('* StreamMoe Error: >>>')
-        return False
-
-    r = RE_ATOB.search(page)
-    if r:
-        html_text = String.Base64Decode(r.group(1))
-        html = HTML.ElementFromString(html_text)
-
-        vurl = html.xpath('//source/@src')
-        if vurl:
-            return vurl[0]
-
     return False
 
 ####################################################################################################

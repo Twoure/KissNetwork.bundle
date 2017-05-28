@@ -388,6 +388,7 @@ def DevToolsH(title=None, header=None, message=None):
 
     oc = ObjectContainer(title2='Header Tools', header=header, message=message)
 
+    fttl = [n for (n,u) in KCore.util.base_url_list_tuple]
     if title:
         header = 'Header Tools'
         if title == 'Header_Dict':
@@ -395,13 +396,12 @@ def DevToolsH(title=None, header=None, message=None):
             message = 'Resetting {}. New values for {} will be written soon'.format(title, title)
 
             return DevToolsH(header=header, message=message, title=None)
-        elif ( title == 'Anime' or title == 'Cartoon'
-            or title == 'Drama' or title == 'Manga' or title == 'Comic' ):
+        elif title in fttl:
             Log('\n----------Updating {} Headers in Header_Dict----------'.format(title))
 
             for (h_name, h_url) in KCore.util.base_url_list_tuple:
                 if h_name == title:
-                    Headers.get_headers_for_url(h_url, update=True)
+                    Headers.get_headers_for_url(h_url, update=True, mobile='Mobile' in h_name)
                     break
 
             message = 'Updated {} Headers.'.format(title)
@@ -410,7 +410,7 @@ def DevToolsH(title=None, header=None, message=None):
     oc.add(DirectoryObject(key=Callback(DevToolsH, title='Header_Dict'),
         title='Reset Header_Dict File',
         summary='Create backup of old Header_Dict, delete current, create new and fill with fresh headers. Remember Creating Header_Dict takes time, so the channel may timeout on the client while rebuilding.  Do not worry. Exit channel and refresh client. The channel should load normally now.'))
-    for name in sorted(KCore.util.tt_list):
+    for name in sorted(fttl):
         oc.add(DirectoryObject(key=Callback(DevToolsH, title=name),
             title='Update {} Headers'.format(name),
             summary='Update {} Headers Only in the \"Header_Dict\" file.'.format(name)))

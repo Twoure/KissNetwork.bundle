@@ -29,7 +29,7 @@ class network(object):
         else:
             reason = req.reason
 
-        if Regex(r'(/recaptcha)').search(req.text) or ('/Special/AreYouHuman/' in req.url):
+        if Regex(r'(/recaptcha)').search(req.text) or ('/Special/AreYouHuman' in req.url):
             http_error_msg = u'%s Server Error: %s for url: %s' % (req.status_code, 'Captcha Present!', ourl)
         elif util.is_kiss_url(ourl) and req.history:
             tt = util.get_tt(ourl)
@@ -72,6 +72,18 @@ class network(object):
                 return self.HTTPRequest(url, headers, data, follow_redirects, method, count)
             self.raise_error_for_req(req)
         except Exception as e:
+            if ('kissanime' in url) and ('id=' in url) and ('Captcha Present!' in str(e)) and (count < 1):
+                # try again but with mobile site
+                count += 1
+                Log.Warn("* <network.HTTPRequest[WARN]>: detected captcha video page, trying mobile url instead")
+                headers = Headers.get_headers_for_url(url, mobile=True)
+                eid = Regex(r'id\=(\d+)').search(url)
+                if not eid:
+                    Log.Error("* <network.HTTPRequest[ERROR]>: cannot find episode id for POST values")
+                    return None
+                data = {'eID': eid.group(1)}
+                url = util.get_base_url(url) + '/Mobile/GetEpisode'
+                return self.HTTPRequest(url, headers, data, follow_redirects, 'POST', count)
             Log.Error(u"* <network.request> -error: cannot handle '{}' >>>\n{}".format(url, e))
             return None
 
@@ -156,7 +168,6 @@ class network(object):
         Save images and videos
         Limit to videos for now...
         """
-        #tt = util.get_tt(url) if util.get_tt(url) else 'Unknown'
         filepath = self.stream_fpath(hash_name)
 
         if self.check_stream_fp(hash_name):
@@ -173,8 +184,8 @@ class network(object):
 
         self.setup_hash_fp(hash_name, filepath)
         with open(filepath, 'wb') as f:
-            for chunk in res.iter_content(chunk_size=1024):
             #for chunk in res.iter_content():
+            for chunk in res.iter_content(chunk_size=1024):
                 if not chunk:
                     continue  # filter out keep-alive new chunks
                 f.write(chunk)

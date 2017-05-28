@@ -8,7 +8,8 @@ class core(object):
     prefix              = '/video/kissnetwork'
     channel_title       = 'KissNetwork'
     list_view_clients   = ['Android', 'iOS']
-    user_agent          = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/49.0.2623.110 Safari/537.36'
+    user_agent          = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'
+    user_agent_mobile   = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Mobile Safari/537.36'
 
 class cache(object):
     # storage

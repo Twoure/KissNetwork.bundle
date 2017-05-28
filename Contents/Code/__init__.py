@@ -148,7 +148,9 @@ def MainMenu():
     cp_match = True if Client.Platform in KCore.core.list_view_clients else False
 
     data = list()
-    for t, u in KCore.util.base_url_list_tuple:
+    for (t, u) in KCore.util.base_url_list_tuple:
+        if 'Mobile' in t:
+            continue
         thumb = 'icon-{}.png'.format(t.lower())
         rthumb = None if cp_match else R(thumb)
         art = 'art-{}.jpg'.format(t.lower())

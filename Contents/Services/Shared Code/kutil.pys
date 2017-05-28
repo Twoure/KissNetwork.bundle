@@ -4,7 +4,6 @@ import os
 import sys
 import pickle
 import shutil
-import datetime
 from io import open
 from kbase import core, cache, paths
 from kdomain import domain
@@ -235,8 +234,8 @@ class util(object):
         except: return version
 
     def datetime_to_utc(self, dt):
-        n = datetime.datetime.now().replace(microsecond=0)
-        nutc = datetime.datetime.utcnow().replace(microsecond=0)
+        n = Datetime.Now().replace(microsecond=0)
+        nutc = Datetime.UTCNow().replace(microsecond=0)
         if n < nutc:
             return dt + (nutc - n)
         elif n == nutc:
@@ -247,8 +246,8 @@ class util(object):
         if os.path.exists(path):
             ts = os.path.getmtime(path)
             if utc:
-                return datetime_to_utc(datetime.datetime.fromtimestamp(ts)).replace(microsecond=0)
-            return datetime.datetime.fromtimestamp(ts).replace(microsecond=0)
+                return self.datetime_to_utc(Datetime.FromTimestamp(ts)).replace(microsecond=0)
+            return Datetime.Fromtimestamp(ts).replace(microsecond=0)
         return False
 
     def is_kiss_url(self, url):
@@ -265,13 +264,18 @@ class util(object):
 
     @property
     def base_url_list_tuple(self):
-        return [ (self.get_tt(u), u) for u in self.base_url_list ]
+        tmp = list()
+        for (n,u) in [ (self.get_tt(u), u) for u in self.base_url_list ]:
+            tmp.append((n,u))
+            u = u + '/M' if (n == 'Anime') else u
+            tmp.append(("{}_Mobile".format(n),u))
+        return tmp
 
     def base_url(self, kind):
         return [u for t, u in self.base_url_list_tuple if t == kind][0]
 
     def search_url(self, kind):
-        return self.base_url(kind) + '/Search/' + kind + '?keyword={}'
+        return self.base_url(kind) + '/Search/' + kind.split('_')[0] + '?keyword={}'
 
     @property
     def search_url_list(self):
