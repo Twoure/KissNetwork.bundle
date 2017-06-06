@@ -16,14 +16,14 @@
     "id": "server",
     "label": "Preferred Video Server",
     "type": "enum",
-    "values": ["KissNetwork", "Openload", "RapidVideo", "Beta"],
+    "values": ["KissNetwork", "Openload", "RapidVideo", "Streamango", "Beta"],
     "default": "KissNetwork"
   },
   {
     "id": "server2",
     "label": "Fallback Video Server",
     "type": "enum",
-    "values": ["KissNetwork", "Openload", "RapidVideo", "Beta"],
+    "values": ["KissNetwork", "Openload", "RapidVideo", "Streamango", "Beta"],
     "default": "Openload"
   },
   {

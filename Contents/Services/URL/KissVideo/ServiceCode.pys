@@ -15,6 +15,7 @@ import shutil
 RE_URL_OL = Regex(r'src\=["\'](https?://(?:www\.)?o(?:pen)?load.+?)["\']')
 #RE_URL_RV = Regex(r'src\=["\'](https?://(?:www\.)?rapidvideo\.[^"\']+?)["\']')
 RE_URL_RV = Regex(r'(?:src\=["\']|\||^)(https?://(?:www\.)?rapidvideo\.[^"\'\|]+)["\']?')
+RE_URL_SM = Regex(r'(?:src\=["\']|\||^)(https?://(?:www\.)?streamango\.[^"\'\|]+)["\']?')
 RE_RV_NORM = Regex(r'(https?://(?:www\.)?\w+\.\w+)/e(?:mbed)?/(\w+)')
 RE_ENC_TEST = Regex(r'/Scripts/((?:kissenc|oran|subo)(?:\.min)?\.j[^"\']+|vr\.j[^"\']+)')
 RE_WINDOW1 = Regex(r'(?s)type\=["\']text/javascript["\']\>(.*?(window\[[^\=]+).*?)\</script\>')
@@ -161,25 +162,34 @@ def PlayVideo(url, m, **kwargs):
     Log.Debug('* Channel.Server1    = {}'.format(Prefs['server']))
     Log.Debug('* Channel.Server2    = {}'.format(Prefs['server2']))
 
-    req_url = url + ('&s={}'.format(Prefs['server'].lower()) if Prefs['server'] != 'KissNetwork' else '')
+    def setup_req_url(url, ser):
+        if (ser == 'RapidVideo'):
+            req_url = '{}&s=rapid{}'.format(url, '' if 'kissasian' in url else 'video')
+        elif (ser != 'KissNetwork'):
+            req_url = '{}&s={}'.format(url, ser.lower())
+        else:
+            req_url = url
+        return req_url
+
+    req_url = setup_req_url(url, Prefs['server'])
     vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
-    sl = set(['KissNetwork', 'Beta', 'RapidVideo', 'Openload'])
-    sp = set([Prefs['server'], Prefs['server2']])
-    slf = sl - sp
     cs = Prefs['server']
-
     if (not vurl):
         cs = Prefs['server2']
         Log.Warn("* {} URL offline, falling back to {}".format(Prefs['server'], Prefs['server2']))
-        req_url = url + '&s={}'.format(Prefs['server2'].lower())
+        #req_url = url + '&s={}'.format(Prefs['server2'].lower())
+        req_url = setup_req_url(url, Prefs['server2'])
         vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
-    for s in slf:
+    sl = set(['KissNetwork', 'Beta', 'RapidVideo', 'Openload', 'Streamango'])
+    sp = set([Prefs['server'], Prefs['server2']])
+    for s in (sl - sp):
         if (not vurl):
             Log.Warn("* {} URL offline, falling back to {}".format(cs, s))
             cs = s
-            req_url = url + '&s={}'.format(cs.lower())
+            #req_url = url + '&s={}'.format(cs.lower())
+            req_url = setup_req_url(url, cs)
             vurl = get_video_url(url, m, KCore.network.Request(req_url))
 
     Log.Debug('* PlayVideo URL      = {}'.format(vurl))
@@ -233,23 +243,28 @@ def get_video_url(url, m, resp):
         return False
     ol = RE_URL_OL.search(resp.text)
     rv = RE_URL_RV.search(resp.text)
-    sd = {'Openload': ol, 'RapidVideo': rv}
+    sm = RE_URL_SM.search(resp.text)
+    sd = {'Openload': ol, 'RapidVideo': rv, 'Streamango': sm, 'KissNetwork': 0}
 
-    r = Prefs['server2'] if Prefs['server2'] in sd.keys() else ('Openload' if Prefs['server'] != 'Openload' else 'RapidVideo')
-    r1 = (r, sd[r])
-    rr = 'Openload' if r1[0] == 'RapidVideo' else 'RapidVideo'
-    r2 = (rr, sd[rr])
+    sl = ['RapidVideo', 'Openload', 'Streamango', 'KissNetwork']
+    sp = [s for s in [Prefs['server'], Prefs['server2']] if s != 'KissNetwork']
+    for s in sp:
+        si = sl.index(s)
+        sl = sl[:si] + sl[si+1:]
 
-    for n, ir in [r1, r2, ('GoogleVideo', 0)]:
+    for n in (sp + sl):
         Log("* Testing for {} Video URL in {}".format(n, url))
-        if ir:
-            iurl = ir.group(1)
+        r = sd[n]
+        if r:
+            iurl = r.group(1)
             Log.Debug('* {} URL             = {}'.format(n, iurl))
             if (n == 'Openload'):
                 return get_openload_url(iurl)
             elif (n == 'RapidVideo'):
                 return get_rapidvideo_url(iurl, m)
-        elif (ir == 0):
+            elif (n == 'Streamango'):
+                return get_streamango_url(iurl, m)
+        elif (r == 0):
             return get_googlevideo_url(url, m, resp)
 
     return False
@@ -276,7 +291,8 @@ def get_googlevideo_url(url, m, resp):
     ttl = tt.lower()
     if not olist and (not page_url.endswith('openload')):
         Log.Error('* This Video is broken, Kiss{} is working to fix it.'.format(tt))
-        raise Ex.MediaNotAvailable
+        #raise Ex.MediaNotAvailable
+        return False
 
     vurl = False
     vurls = list()
@@ -299,7 +315,11 @@ def get_googlevideo_url(url, m, resp):
 
     for node in olist:
         if enc_test:
-            vurl_old = KCore.rks.decrypt(node.get('value'), url, headers)
+            try:
+                vurl_old = KCore.rks.decrypt(node.get('value'), url, headers)
+            except Exception as e:
+                Log.Error(u"* get_google_video[Error]: Cannot decrypt values in {} >>> {}".format(url, e))
+                vurl_old = ['tmp']
         else:
             vurl_old = String.Base64Decode(node.get('value'))
 
@@ -340,6 +360,9 @@ def get_googlevideo_url(url, m, resp):
     elif enc_test and page_url.endswith('openload'):
         olr = Regex(r'\$kissenc\.decrypt\(["\']([^"\']+)["\']').findall(page)
         vurl = get_openload_url(KCore.rks.decrypt(olr[0], url, headers)) if olr else False
+    elif enc_test and ('rapid' in page_url.split('?')[-1]):
+        rvr = Regex(r'\$kissenc\.decrypt\(["\']([^"\']+)["\']').findall(page)
+        vurl = get_rapidvideo_url(KCore.rks.decrypt(rvr[0], m)) if rvr else False
 
     if ((ttl == 'cartoon') or (ttl == 'drama')) and ('Play?' in vurl):
         Log.Debug(u"* Trying to get {} Redirect Link for '{}'".format(ttl, vurl))
@@ -408,6 +431,53 @@ def get_rapidvideo_url(url, m):
             break
     Log.Debug('* Selecting {}p stream'.format(res))
 
+    if not vurl:
+        return False
+    return vurl
+
+####################################################################################################
+def get_streamango_url(url, m):
+    """Get Streamango.com URLs"""
+
+    page = None
+    try:
+        page = HTTP.Request(url, cacheTime=CACHE_1MINUTE).content
+    except Ex.URLError, e:
+        if 'SSLError' in str(e.args):
+            try:
+                page = HTTPS.Request(url)
+            except:
+                Log.Exception("* Streamango Error[0]: for '{}' >>>".format(url))
+    except:
+        Log.Exception("* Streamango Error[1]: for '{}' >>>".format(url))
+
+    if not page:
+        return False
+
+    sl = list()
+    if Regex(r'(?i)s(?:ou)?rces *?\= *?(\[\])\;').search(page):
+        for s in Regex(r'(?i)s(?:ou)?rces\.push\((\{[^\)]+)\)').findall(page):
+            d = JSON.ObjectFromString(s)
+            if d['type'] != 'video/mp4':
+                continue
+            if d['src'].startswith('//'):
+                d['src'] = 'https:' + d['src']
+            sl.append(d)
+    if not sl:
+        return False
+
+    fmt_dict = {'37': 1080, '22': 720, '59': 480, '18': 360}
+    Log.Debug('* pre resolution selected = {}({})'.format(m, fmt_dict[m[1:]]))
+    res = 0
+    vurl = None
+    for item in Util.ListSortedByKey(sl, 'height'):
+        vurl = item['src']
+        res = item['height']
+        if res == fmt_dict[m[1:]]:
+            break
+        elif res > fmt_dict[m[1:]]:
+            break
+    Log.Debug('* Selecting {}p stream'.format(res))
     if not vurl:
         return False
     return vurl
