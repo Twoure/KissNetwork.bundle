@@ -7,7 +7,7 @@
 #   streamondemand: https://github.com/streamondemand/plugin.video.streamondemand/blob/master/servers/openload.py
 #
 # Edited by:    Twoure
-# Edit Date:    05/17/17
+# Edit Date:    06/21/17
 
 import js2py
 from aadecode import aadecode
@@ -75,7 +75,7 @@ def direct_decode(encode, numeros, ops):
             value5 = index1 * 2 + 127
             for h in range(4):
                 valorfinal = (value4 >> 8 * h) & (value5)
-                valorfinal = chr(valorfinal)
+                valorfinal = chr(valorfinal - 1)
                 if valorfinal != "%":
                     text_decode += valorfinal
             j += 1
